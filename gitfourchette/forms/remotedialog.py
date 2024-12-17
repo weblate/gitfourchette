@@ -6,6 +6,7 @@
 
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_remotedialog import Ui_RemoteDialog
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
@@ -30,8 +31,8 @@ class RemoteDialog(QDialog):
         self.ui.keyFilePicker.checkBox.setChecked(bool(customKeyFile))
 
         # Set up input validator
-        nameTaken = translate("NameValidationError", "This name is already taken by another remote.")
-        cannotBeEmpty = translate("NameValidationError", "Cannot be empty.")
+        nameTaken = _p("NameValidationError", "This name is already taken by another remote.")
+        cannotBeEmpty = _p("NameValidationError", "Cannot be empty.")
         validator = ValidatorMultiplexer(self)
         validator.setGatedWidgets(okButton)
         validator.connectInput(self.ui.nameEdit, lambda s: nameValidationMessage(s, existingRemotes, nameTaken))
@@ -40,17 +41,17 @@ class RemoteDialog(QDialog):
         # Different behavior if editing existing remote or creating a new one
         if editExistingRemote:
             # Edit existing remote
-            title = self.tr("Edit remote {0}").format(hquoe(name))
-            self.setWindowTitle(self.tr("Edit remote"))
-            okButton.setText(self.tr("Save"))
+            title = _("Edit remote {0}").format(hquoe(name))
+            self.setWindowTitle(_("Edit remote"))
+            okButton.setText(_("Save"))
             self.ui.fetchAfterAddCheckBox.setVisible(False)
             # Don't touch name automatically on existing remotes
             self.allowAutoFillName = False
         else:
             # Create new remote
-            title = self.tr("Add remote")
-            self.setWindowTitle(self.tr("Add remote"))
-            okButton.setText(self.tr("Add"))
+            title = _("Add remote")
+            self.setWindowTitle(_("Add remote"))
+            okButton.setText(_("Add"))
             self.ui.fetchAfterAddCheckBox.setVisible(True)
             # Autofill name on new remotes
             self.allowAutoFillName = True

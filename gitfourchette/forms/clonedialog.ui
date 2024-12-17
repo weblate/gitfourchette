@@ -90,7 +90,7 @@
      <item>
       <widget class="QToolButton" name="browseButton">
        <property name="text">
-        <string>&amp;Browse...</string>
+        <string>&amp;Browse…</string>
        </property>
        <property name="toolButtonStyle">
         <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>
@@ -112,7 +112,7 @@
    <item row="2" column="1">
     <widget class="QCheckBox" name="recurseSubmodulesCheckBox">
      <property name="text">
-      <string>Recurse into submodules (if any)</string>
+      <string>Initialize submodules recursively (if any)</string>
      </property>
      <property name="checked">
       <bool>true</bool>

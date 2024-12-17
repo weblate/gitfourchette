@@ -10,6 +10,7 @@ import os
 from gitfourchette import settings
 from gitfourchette.exttools import openInTextEditor
 from gitfourchette.filelists.filelist import FileList, SelectedFileBatchError
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -32,7 +33,7 @@ class CommittedFiles(FileList):
         if not anySubmodules:
             actions += [
                 ActionDef(
-                    self.tr("Open Diff in New &Window"),
+                    _("Open Diff in New &Window"),
                     self.wantOpenDiffInNewWindow,
                 ),
 
@@ -41,34 +42,35 @@ class CommittedFiles(FileList):
                 ActionDef.SEPARATOR,
 
                 ActionDef(
-                    self.tr("&Revert This Change...", "", n),
+                    _n("&Revert This Change…", "&Revert These Changes…", n),
                     self.revertPaths,
                 ),
 
                 ActionDef(
-                    self.tr("Restor&e File Revision..."),
+                    _("Restor&e File Revision…"),
                     submenu=[
-                        ActionDef(self.tr("&As Of This Commit"), self.restoreNewRevision),
-                        ActionDef(self.tr("&Before This Commit"), self.restoreOldRevision),
+                        ActionDef(_("&As Of This Commit"), self.restoreNewRevision),
+                        ActionDef(_("&Before This Commit"), self.restoreOldRevision),
                     ]
                 ),
 
                 ActionDef.SEPARATOR,
 
                 ActionDef(
-                    self.tr("&Open File in {0}", "", n).format(settings.getExternalEditorName()),
+                    # TODO: GETTEXT?
+                    _n("&Open File in {0}", "&Open {n} Files in {0}", n, settings.getExternalEditorName()),
                     icon="SP_FileIcon", submenu=[
-                        ActionDef(self.tr("&As Of This Commit"), self.openNewRevision),
-                        ActionDef(self.tr("&Before This Commit"), self.openOldRevision),
-                        ActionDef(self.tr("&Current Revision (Working Copy)"), self.openWorkingCopyRevision),
+                        ActionDef(_("&As Of This Commit"), self.openNewRevision),
+                        ActionDef(_("&Before This Commit"), self.openOldRevision),
+                        ActionDef(_("&Current Revision (Working Copy)"), self.openWorkingCopyRevision),
                     ]
                 ),
 
                 ActionDef(
-                    self.tr("&Save a Copy..."),
+                    _("&Save a Copy…"),
                     icon="SP_DialogSaveButton", submenu=[
-                        ActionDef(self.tr("&As Of This Commit"), self.saveNewRevision),
-                        ActionDef(self.tr("&Before This Commit"), self.saveOldRevision),
+                        ActionDef(_("&As Of This Commit"), self.saveNewRevision),
+                        ActionDef(_("&Before This Commit"), self.saveOldRevision),
                     ]
                 ),
             ]
@@ -76,18 +78,18 @@ class CommittedFiles(FileList):
         elif onlySubmodules:
             actions += [
                 ActionDef(
-                    self.tr("%n Submodules", "please omit %n in singular form", n),
+                    _n("Submodule", "{n} Submodules", n),
                     kind=ActionDef.Kind.Section,
                 ),
 
                 ActionDef(
-                    self.tr("Open %n Submodules in New Tabs", "please omit %n in singular form", n),
+                    _n("Open Submodule in New Tab", "Open {n} Submodules in New Tabs", n),
                     self.openSubmoduleTabs,
                 ),
             ]
 
         else:
-            sorry = translate("FileList", "Please review the files individually.")
+            sorry = _("Please review the files individually.")
             actions += [
                 ActionDef(sorry, enabled=False),
             ]
@@ -122,7 +124,7 @@ class CommittedFiles(FileList):
 
     def saveRevisionAsTempFile(self, patch: Patch, beforeCommit: bool = False):
         try:
-            name, blob, _ = self.getFileRevisionInfo(patch, beforeCommit)
+            name, blob, _dummy = self.getFileRevisionInfo(patch, beforeCommit)
         except FileNotFoundError as fnf:
             raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror) from fnf
 
@@ -140,12 +142,11 @@ class CommittedFiles(FileList):
             openInTextEditor(self, tempPath)
 
         if beforeCommit:
-            title = self.tr("Open revision before commit")
+            title = _("Open revision before commit")
         else:
-            title = self.tr("Open revision at commit")
+            title = _("Open revision at commit")
 
-        self.confirmBatch(run, title,
-                          self.tr("Really open <b>{0} files</b> in external editor?"))
+        self.confirmBatch(run, title, _("Really open <b>{n} files</b> in external editor?"))
 
     # TODO: Perhaps this could be a RepoTask?
     def saveRevisionAs(self, beforeCommit: bool = False):
@@ -160,26 +161,26 @@ class CommittedFiles(FileList):
             except FileNotFoundError as fnf:
                 raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror) from fnf
 
-            qfd = PersistentFileDialog.saveFile(self, "SaveFile", self.tr("Save file revision as"), name)
+            qfd = PersistentFileDialog.saveFile(self, "SaveFile", _("Save file revision as"), name)
             qfd.fileSelected.connect(lambda path: dump(path, diffFile.mode, blob.data))
             qfd.show()
 
         if beforeCommit:
-            title = self.tr("Save revision before commit")
+            title = _("Save revision before commit")
         else:
-            title = self.tr("Save revision at commit")
+            title = _("Save revision at commit")
 
-        self.confirmBatch(run, title, self.tr("Really export <b>{0} files</b>?"))
+        self.confirmBatch(run, title, _("Really export <b>{n} files</b>?"))
 
     def getFileRevisionInfo(self, patch: Patch, beforeCommit: bool = False) -> tuple[str, Blob, DiffFile]:
         if beforeCommit:
             diffFile = patch.delta.old_file
             if patch.delta.status == DeltaStatus.ADDED:
-                raise FileNotFoundError(errno.ENOENT, self.tr("This file didn’t exist before the commit."), diffFile.path)
+                raise FileNotFoundError(errno.ENOENT, _("This file didn’t exist before the commit."), diffFile.path)
         else:
             diffFile = patch.delta.new_file
             if patch.delta.status == DeltaStatus.DELETED:
-                raise FileNotFoundError(errno.ENOENT, self.tr("This file was deleted by the commit."), diffFile.path)
+                raise FileNotFoundError(errno.ENOENT, _("This file was deleted by the commit."), diffFile.path)
 
         blob = self.repo.peel_blob(diffFile.id)
 
@@ -199,12 +200,12 @@ class CommittedFiles(FileList):
             if os.path.isfile(path):
                 openInTextEditor(self, path)
             else:
-                raise SelectedFileBatchError(self.tr("{0}: There’s no file at this path in the working copy.").format(diffFile.path))
+                raise SelectedFileBatchError(_("{0}: There’s no file at this path in the working copy.").format(diffFile.path))
 
-        self.confirmBatch(run, self.tr("Open working copy revision"), self.tr("Really open <b>{0} files</b>?"))
+        self.confirmBatch(run, _("Open working copy revision"), _("Really open <b>{n} files</b>?"))
 
     def wantOpenDiffInNewWindow(self):
         def run(patch: Patch):
             self.openDiffInNewWindow.emit(patch, NavLocator(self.navContext, self.commitId, patch.delta.new_file.path))
 
-        self.confirmBatch(run, self.tr("Open diff in new window"), self.tr("Really open <b>{0} windows</b>?"))
+        self.confirmBatch(run, _("Open diff in new window"), _("Really open <b>{n} windows</b>?"))

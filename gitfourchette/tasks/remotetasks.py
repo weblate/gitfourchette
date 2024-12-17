@@ -9,6 +9,7 @@ Remote management tasks.
 """
 
 from gitfourchette.forms.remotedialog import RemoteDialog
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
@@ -40,7 +41,7 @@ class NewRemote(RepoTask):
         self.effects |= TaskEffects.Refs | TaskEffects.Remotes
         self.repo.create_remote(newRemoteName, newRemoteUrl)
 
-        self.postStatus = self.tr("Remote {0} added.").format(tquo(newRemoteName))
+        self.postStatus = _("Remote {0} added.").format(tquo(newRemoteName))
 
         if fetchAfterAdd:
             yield from self.flowEnterUiThread()
@@ -84,15 +85,15 @@ class DeleteRemote(RepoTask):
     def flow(self, remoteName: str):
         yield from self.flowConfirm(
             text=paragraphs(
-                self.tr("Really remove remote {0}?"),
-                self.tr("This will merely detach the remote from your local repository. "
+                _("Really remove remote {0}?"),
+                _("This will merely detach the remote from your local repository. "
                         "The remote server itself will not be affected.")
             ).format(bquo(remoteName)),
-            verb=self.tr("Remove remote", "Button label"),
+            verb=_("Remove remote"),
             buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Refs | TaskEffects.Remotes
         self.repo.delete_remote(remoteName)
 
-        self.postStatus = self.tr("Remote {0} removed.").format(tquo(remoteName))
+        self.postStatus = _("Remote {0} removed.").format(tquo(remoteName))

@@ -4,13 +4,14 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from gitfourchette.forms.stashdialog import StashDialog
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, TaskPrereqs
-from gitfourchette.trash import Trash
 from gitfourchette.toolbox import *
-from gitfourchette.forms.stashdialog import StashDialog
+from gitfourchette.trash import Trash
 
 
 def backupStash(repo: Repo, stashCommitId: Oid):
@@ -45,7 +46,7 @@ class NewStash(RepoTask):
         status = self.repo.status(untracked_files="all", ignored=False)
 
         if not status:
-            raise AbortTask(self.tr("There are no uncommitted changes to stash."), "information")
+            raise AbortTask(_("There are no uncommitted changes to stash."), "information")
 
         # Prevent stashing any submodules
         with Benchmark("Query submodules"):
@@ -53,7 +54,7 @@ class NewStash(RepoTask):
                 status.pop(submodulePath, None)
 
         if not status:
-            raise AbortTask(self.tr("There are no uncommitted changes to stash (submodules cannot be stashed)."), "information")
+            raise AbortTask(_("There are no uncommitted changes to stash (submodules cannot be stashed)."), "information")
 
         dlg = StashDialog(status, paths or [], self.parentWidget())
         dlg.setWindowModality(Qt.WindowModality.WindowModal)
@@ -75,7 +76,7 @@ class NewStash(RepoTask):
             self.effects |= TaskEffects.Workdir
             self.repo.restore_files_from_head(tickedFiles)
 
-        self.postStatus = self.tr("%n files stashed.", "please omit %n in singular form", len(tickedFiles))
+        self.postStatus = _n("File stashed.", "{n} files stashed.", len(tickedFiles))
 
 
 class ApplyStash(RepoTask):
@@ -87,8 +88,8 @@ class ApplyStash(RepoTask):
         stashCommit: Commit = self.repo.peel_commit(stashCommitId)
         stashMessage = strip_stash_message(stashCommit.message)
 
-        question = self.tr("Do you want to apply the changes stashed in {0} to your working directory?"
-                           ).format(bquoe(stashMessage))
+        question = _("Do you want to apply the changes stashed in {0} to your working directory?"
+                     ).format(bquoe(stashMessage))
 
         qmb = asyncMessageBox(self.parentWidget(), 'question', self.name(), question,
                               QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
@@ -96,9 +97,9 @@ class ApplyStash(RepoTask):
 
         def updateButtonText(ticked: bool):
             okButton = qmb.button(QMessageBox.StandardButton.Ok)
-            okButton.setText(self.tr("&Apply && Delete") if ticked else self.tr("&Apply && Keep"))
+            okButton.setText(_("&Apply && Delete") if ticked else _("&Apply && Keep"))
 
-        deleteCheckBox = QCheckBox(self.tr("&Delete the stash if it applies cleanly"), qmb)
+        deleteCheckBox = QCheckBox(_("&Delete the stash if it applies cleanly"), qmb)
         deleteCheckBox.clicked.connect(updateButtonText)
         deleteCheckBox.setChecked(tickDelete)
         qmb.setCheckBox(deleteCheckBox)
@@ -114,24 +115,24 @@ class ApplyStash(RepoTask):
 
         self.repo.stash_apply_id(stashCommitId)
 
-        self.postStatus = self.tr("Stash {0} applied.").format(tquoe(stashMessage))
+        self.postStatus = _("Stash {0} applied.").format(tquoe(stashMessage))
 
         if self.repo.index.conflicts:
             yield from self.flowEnterUiThread()
-            self.postStatus = self.tr("Stash {0} applied, with conflicts.").format(tquoe(stashMessage))
-            message = [self.tr("Applying the stash {0} has caused merge conflicts "
-                               "because your files have diverged since they were stashed."
-                               ).format(bquoe(stashMessage))]
+            self.postStatus = _("Stash {0} applied, with conflicts.").format(tquoe(stashMessage))
+            message = [_("Applying the stash {0} has caused merge conflicts "
+                         "because your files have diverged since they were stashed."
+                         ).format(bquoe(stashMessage))]
             if deleteAfterApply:
-                message.append(self.tr("The stash wasn’t deleted in case you need to re-apply it later."))
-            showWarning(self.parentWidget(), self.tr("Conflicts caused by stash application"), paragraphs(message))
+                message.append(_("The stash wasn’t deleted in case you need to re-apply it later."))
+            showWarning(self.parentWidget(), _("Conflicts caused by stash application"), paragraphs(message))
             return
 
         if deleteAfterApply:
             self.effects |= TaskEffects.Refs
             backupStash(self.repo, stashCommitId)
             self.repo.stash_drop_id(stashCommitId)
-            self.postStatus = self.tr("Stash {0} applied and deleted.").format(tquoe(stashMessage))
+            self.postStatus = _("Stash {0} applied and deleted.").format(tquoe(stashMessage))
 
 
 class DropStash(RepoTask):
@@ -139,8 +140,8 @@ class DropStash(RepoTask):
         stashCommit = self.repo.peel_commit(stashCommitId)
         stashMessage = strip_stash_message(stashCommit.message)
         yield from self.flowConfirm(
-            text=self.tr("Really delete stash {0}?").format(bquoe(stashMessage)),
-            verb=self.tr("Delete stash"),
+            text=_("Really delete stash {0}?").format(bquoe(stashMessage)),
+            verb=_("Delete stash"),
             buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
@@ -148,4 +149,4 @@ class DropStash(RepoTask):
 
         backupStash(self.repo, stashCommitId)
         self.repo.stash_drop_id(stashCommitId)
-        self.postStatus = self.tr("Stash {0} deleted.").format(tquoe(stashMessage))
+        self.postStatus = _("Stash {0} deleted.").format(tquoe(stashMessage))

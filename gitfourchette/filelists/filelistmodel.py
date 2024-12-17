@@ -4,15 +4,16 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-from contextlib import suppress
 import logging
 import os
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any
 
 from gitfourchette import settings
-from gitfourchette.porcelain import *
+from gitfourchette.localization import *
 from gitfourchette.nav import NavContext
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
@@ -57,13 +58,15 @@ def fileTooltip(repo: Repo, delta: DiffDelta, navContext: NavContext, isCounterp
     text = "<table style='white-space: pre'>"
 
     def newLine(heading, caption):
-        return f"<tr><td style='color:{mutedToolTipColorHex()}; text-align: right;'>{heading} </td><td>{caption}</td>"
+        colon = _(':')
+        color = mutedToolTipColorHex()
+        return f"<tr><td style='color:{color}; text-align: right;'>{heading}{colon} </td><td>{caption}</td>"
 
     if sc == 'R':
-        text += newLine(translate("FileList", "old name:"), escape(of.path))
-        text += newLine(translate("FileList", "new name:"), escape(nf.path))
+        text += newLine(_("old name"), escape(of.path))
+        text += newLine(_("new name"), escape(nf.path))
     else:
-        text += newLine(translate("FileList", "name:"), escape(nf.path))
+        text += newLine(_("name"), escape(nf.path))
 
     # Status caption
     statusCaption = TrTables.diffStatusChar(sc)
@@ -73,15 +76,15 @@ def fileTooltip(repo: Repo, delta: DiffDelta, navContext: NavContext, isCounterp
         diffConflict = repo.wrap_conflict(nf.path)
         postfix = TrTables.conflictSides(diffConflict.sides)
         statusCaption += f" ({postfix})"
-    text += newLine(translate("FileList", "status:"), statusCaption)
+    text += newLine(_("status"), statusCaption)
 
     # Similarity + Old name
     if sc == 'R':
-        text += newLine(translate("FileList", "similarity:"), f"{delta.similarity}%")
+        text += newLine(_("similarity"), f"{delta.similarity}%")
 
     # File Mode
     if sc not in 'DU':
-        legend = translate("FileList", "file mode:")
+        legend = _("file mode")
         if sc in 'A?':
             text += newLine(legend, TrTables.fileMode(nf.mode))
         elif of.mode != nf.mode:
@@ -89,7 +92,7 @@ def fileTooltip(repo: Repo, delta: DiffDelta, navContext: NavContext, isCounterp
 
     # Size (if available)
     if sc not in 'DU' and nf.size != 0 and (nf.mode & FileMode.BLOB == FileMode.BLOB):
-        text += newLine(translate("FileList", "size:"), locale.formattedDataSize(nf.size, 1))
+        text += newLine(_("size"), locale.formattedDataSize(nf.size, 1))
 
     # Modified time
     if navContext.isWorkdir() and sc not in 'DU':
@@ -98,22 +101,22 @@ def fileTooltip(repo: Repo, delta: DiffDelta, navContext: NavContext, isCounterp
             fileStat = os.stat(fullPath)
             timeQdt = QDateTime.fromSecsSinceEpoch(int(fileStat.st_mtime))
             timeText = locale.toString(timeQdt, settings.prefs.shortTimeFormat)
-            text += newLine(translate("FileList", "modified:"), timeText)
+            text += newLine(_("modified"), timeText)
 
     # Blob IDs (DEVDEBUG only)
     if settings.DEVDEBUG:
         nChars = settings.prefs.shortHashChars
         oldBlobId = shortHash(of.id) if of.flags & DiffFlag.VALID_ID else "?" * nChars
         newBlobId = shortHash(nf.id) if nf.flags & DiffFlag.VALID_ID else "?" * nChars
-        text += newLine(translate("FileList", "blob id:"), f"{oldBlobId} &rarr; {newBlobId}")
+        text += newLine(_("blob id"), f"{oldBlobId} &rarr; {newBlobId}")
 
     if isCounterpart:
         if navContext == NavContext.UNSTAGED:
-            counterpartText = translate("FileList", "Currently viewing diff of staged changes "
-                                                    "in this file; it also has <u>unstaged</u> changes.")
+            counterpartText = _("Currently viewing diff of staged changes in this file; "
+                                "it also has <u>unstaged</u> changes.")
         else:
-            counterpartText = translate("FileList", "Currently viewing diff of unstaged changes "
-                                                    "in this file; it also has <u>staged</u> changes.")
+            counterpartText = _("Currently viewing diff of unstaged changes in this file; "
+                                "it also has <u>staged</u> changes.")
         text += f"<p>{counterpartText}</p>"
 
     return text

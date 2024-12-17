@@ -4,11 +4,11 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+import io
 from collections.abc import Iterable
 from dataclasses import dataclass
-from gitfourchette.porcelain import *
-import io
 
+from gitfourchette.porcelain import *
 
 REVERSE_ORIGIN_MAP = {
     ' ': ' ',

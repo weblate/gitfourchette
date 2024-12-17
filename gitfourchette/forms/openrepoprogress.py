@@ -4,9 +4,10 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from gitfourchette.forms.ui_openrepoprogress import Ui_OpenRepoProgress
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.forms.ui_openrepoprogress import Ui_OpenRepoProgress
 
 
 class OpenRepoProgress(QWidget):
@@ -21,7 +22,7 @@ class OpenRepoProgress(QWidget):
         self.ui.abortButton.setEnabled(False)
 
         if name:
-            self.initialMessage = self.tr("Opening {0}...").format(tquo(name))
+            self.initialMessage = _("Opening {0}…").format(tquo(name))
             self.ui.label.setText(self.initialMessage)
         else:
             self.initialMessage = self.ui.label.text()

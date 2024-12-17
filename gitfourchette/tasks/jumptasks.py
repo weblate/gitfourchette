@@ -17,6 +17,7 @@ from collections.abc import Generator
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
 from gitfourchette.graphview.commitlogmodel import SpecialRow
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import DeltaStatus, NULL_OID, Oid, Patch
 from gitfourchette.qt import *
@@ -141,9 +142,9 @@ class Jump(RepoTask):
 
             nDirty = rw.dirtyFiles.model().rowCount()
             nStaged = rw.stagedFiles.model().rowCount()
-            rw.diffArea.dirtyHeader.setText(self.tr("Unstaged (%n)", "", nDirty))
-            rw.diffArea.stagedHeader.setText(self.tr("Staged (%n)", "", nStaged))
-            rw.diffArea.commitButton.setText(self.tr("Commit %n files", "", nStaged))
+            rw.diffArea.dirtyHeader.setText(_n("Unstaged ({n})", "Unstaged ({n})", nDirty))
+            rw.diffArea.stagedHeader.setText(_n("Staged ({n})", "Staged ({n})", nStaged))
+            rw.diffArea.commitButton.setText(_n("Commit {n} file", "Commit {n} files", nStaged))
 
             commitButtonFont = rw.diffArea.commitButton.font()
             commitButtonBold = nStaged != 0
@@ -173,10 +174,10 @@ class Jump(RepoTask):
         # Early out if workdir is clean
         if rw.dirtyFiles.isEmpty() and rw.stagedFiles.isEmpty():
             locator = locator.replace(path="")
-            header = toLengthVariants(self.tr("Working directory clean|Workdir clean"))
+            header = toLengthVariants(_("Working directory clean|Workdir clean"))
             sde = SpecialDiffError(
-                self.tr("The working directory is clean."),
-                self.tr("There aren’t any changes to commit."))
+                _("The working directory is clean."),
+                _("There aren’t any changes to commit."))
             raise Jump.Result(locator, header, sde)
 
         # (Un)Staging a file makes it vanish from its file list.
@@ -209,9 +210,9 @@ class Jump(RepoTask):
 
         if locator.path == str(SpecialRow.EndOfShallowHistory):
             sde = SpecialDiffError(
-                self.tr("Shallow clone – End of available history.").format(locale.toString(self.repoModel.numRealCommits)),
-                self.tr("More commits may be available in a full clone."))
-            raise Jump.Result(locator, self.tr("Shallow clone – End of commit history"), sde)
+                _("Shallow clone – End of available history.").format(locale.toString(self.repoModel.numRealCommits)),
+                _("More commits may be available in a full clone."))
+            raise Jump.Result(locator, _("Shallow clone – End of commit history"), sde)
 
         elif locator.path == str(SpecialRow.TruncatedHistory):
             from gitfourchette import settings
@@ -221,15 +222,15 @@ class Jump(RepoTask):
             expandAll = makeInternalLink("expandlog", n=str(0))
             changePref = makeInternalLink("prefs", "maxCommits")
             options = [
-                linkify(self.tr("Load up to {0} commits").format(locale.toString(nextThreshold)), expandSome),
-                linkify(self.tr("[Load full commit history] (this may take a moment)"), expandAll),
-                linkify(self.tr("[Change threshold setting] (currently {0} commits)"), changePref).format(locale.toString(prefThreshold)),
+                linkify(_("Load up to {0} commits").format(locale.toString(nextThreshold)), expandSome),
+                linkify(_("[Load full commit history] (this may take a moment)"), expandAll),
+                linkify(_("[Change threshold setting] (currently {0} commits)"), changePref).format(locale.toString(prefThreshold)),
             ]
             sde = SpecialDiffError(
-                self.tr("History truncated to {0} commits.").format(locale.toString(self.repoModel.numRealCommits)),
-                self.tr("More commits may be available."),
+                _("History truncated to {0} commits.").format(locale.toString(self.repoModel.numRealCommits)),
+                _("More commits may be available."),
                 longform=toRoomyUL(options))
-            raise Jump.Result(locator, self.tr("History truncated"), sde)
+            raise Jump.Result(locator, _("History truncated"), sde)
 
         else:
             raise NotImplementedError(f"Unsupported special locator: {locator}")
@@ -251,7 +252,7 @@ class Jump(RepoTask):
                 oid = self.repoModel.refs[locator.ref]
                 locator = locator.replace(commit=oid, ref="")
             except KeyError as exc:
-                raise AbortTask(self.tr("Unknown reference {0}.").format(tquo(locator.ref))) from exc
+                raise AbortTask(_("Unknown reference {0}.").format(tquo(locator.ref))) from exc
 
         assert locator.commit
         assert not locator.ref
@@ -316,27 +317,26 @@ class Jump(RepoTask):
                 numChanges = flv.model().rowCount()
 
             # Set header text
-            headerText = self.tr("%n changes:|%n ch.:", "", numChanges)
-            headerText = toLengthVariants(headerText)
+            headerText = toLengthVariants(_n("{n} change:|{n} ch.:", "{n} changes:|{n} ch.:", numChanges))
             area.committedHeader.setText(headerText)
             area.committedHeader.setToolTip("<p>" + escape(summary).replace("\n", "<br>"))
 
         # Early out if the commit is empty
         if flv.isEmpty():
             locator = locator.replace(path="")
-            header = self.tr("Empty commit")
+            header = _("Empty commit")
             sde = SpecialDiffError(
-                self.tr("This commit is empty."),
-                self.tr("Commit {0} doesn’t affect any files.").format(hquo(shortHash(locator.commit))))
+                _("This commit is empty."),
+                _("Commit {0} doesn’t affect any files.").format(hquo(shortHash(locator.commit))))
             raise Jump.Result(locator, header, sde)
 
         # Warning banner
         if not area.diffBanner.lastWarningWasDismissed:
             if flv.skippedRenameDetection:
-                warnings.append(self.tr("Rename detection was skipped to load this large commit faster."))
+                warnings.append(_("Rename detection was skipped to load this large commit faster."))
             elif locator.hasFlags(NavFlags.AllowLargeCommits | NavFlags.ForceDiff):
                 n = sum(sum(1 if delta.status == DeltaStatus.RENAMED else 0 for delta in diff.deltas) for diff in diffs)
-                warnings.append(self.tr("%n renames detected.", "", n))
+                warnings.append(_n("{n} rename detected.", "{n} renames detected.", n))
 
             if warnings:
                 warningText = "<br>".join(warnings)
@@ -344,7 +344,7 @@ class Jump(RepoTask):
 
             if flv.skippedRenameDetection:
                 area.diffBanner.addButton(
-                    self.tr("Detect Renames"),
+                    _("Detect Renames"),
                     lambda: Jump.invoke(rw, locator.withExtraFlags(NavFlags.AllowLargeCommits | NavFlags.ForceDiff)))
 
         return locator

@@ -14,6 +14,7 @@ from contextlib import suppress
 
 from gitfourchette import settings
 from gitfourchette.forms.textinputdialog import TextInputDialog
+from gitfourchette.localization import *
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repoprefs import RepoPrefs
@@ -90,7 +91,7 @@ class RemoteLink(QObject, RemoteCallbacks):
         def wrapper(*args):
             x: RemoteLink = args[0]
             if x._aborting:
-                raise InterruptedError(translate("RemoteLink", "Remote operation interrupted by user."))
+                raise InterruptedError(_("Remote operation interrupted by user."))
             return f(*args)
         return wrapper
 
@@ -149,10 +150,10 @@ class RemoteLink(QObject, RemoteCallbacks):
             pubkey = privkey + ".pub"
 
             if not os.path.isfile(pubkey):
-                raise FileNotFoundError(self.tr("Remote-specific public key file not found:") + " " + compactPath(pubkey))
+                raise FileNotFoundError(_("Remote-specific public key file not found:") + " " + compactPath(pubkey))
 
             if not os.path.isfile(privkey):
-                raise FileNotFoundError(self.tr("Remote-specific private key file not found:") + " " + compactPath(privkey))
+                raise FileNotFoundError(_("Remote-specific private key file not found:") + " " + compactPath(privkey))
 
             logger.info(f"Using remote-specific key pair {privkey}")
 
@@ -190,7 +191,7 @@ class RemoteLink(QObject, RemoteCallbacks):
         return self._busy
 
     def raiseAbortFlag(self):
-        self.message.emit(self.tr("Aborting remote operation..."))
+        self.message.emit(_("Aborting remote operation…"))
         self.progress.emit(0, 0)
         self.userAbort.emit()
 
@@ -223,7 +224,7 @@ class RemoteLink(QObject, RemoteCallbacks):
         self.lastAttemptKey = ""
 
         if self.attempts > 10:
-            raise ConnectionRefusedError(self.tr("Too many credential retries."))
+            raise ConnectionRefusedError(_("Too many credential retries."))
 
         if self.attempts == 1:
             logger.info(f"Auths accepted by server: {getAuthNamesFromFlags(allowed_types)}")
@@ -232,7 +233,7 @@ class RemoteLink(QObject, RemoteCallbacks):
             pubkey, privkey = self.keypairFiles.pop(0)
             logger.info(f"Logging in with: {compactPath(pubkey)}")
 
-            self.message.emit(self.tr("Logging in with key:") + " " + compactPath(pubkey))
+            self.message.emit(_("Logging in with key:") + " " + compactPath(pubkey))
 
             secret = None
             if isPrivateKeyPassphraseProtected(privkey):
@@ -244,21 +245,21 @@ class RemoteLink(QObject, RemoteCallbacks):
             # return KeypairFromAgent(username_from_url)
         elif self.attempts == 0:
             raise NotImplementedError(
-                self.tr("Unsupported authentication type.") + " " +
-                self.tr("The remote claims to accept: {0}.").format(getAuthNamesFromFlags(allowed_types)))
+                _("Unsupported authentication type.") + " " +
+                _("The remote claims to accept: {0}.").format(getAuthNamesFromFlags(allowed_types)))
         elif self.anyKeyIsUnreadable:
             raise ConnectionRefusedError(
-                self.tr("Could not find suitable key files for this remote.") + " " +
-                self.tr("The key files couldn’t be opened (permission issues?)."))
+                _("Could not find suitable key files for this remote.") + " " +
+                _("The key files couldn’t be opened (permission issues?)."))
         elif self.usingCustomKeyFile:
-            message = self.tr("The remote has rejected your custom key file ({0})."
+            message = _("The remote has rejected your custom key file ({0})."
                               ).format(compactPath(self.usingCustomKeyFile))
             if self.moreDetailsOnCustomKeyFileFail:
-                message += " " + self.tr("To change key file settings for this remote, "
+                message += " " + _("To change key file settings for this remote, "
                                          "right-click on the remote in the sidebar and pick “Edit Remote”.")
             raise ConnectionRefusedError(message)
         else:
-            raise ConnectionRefusedError(self.tr("Credentials rejected by remote."))
+            raise ConnectionRefusedError(_("Credentials rejected by remote."))
 
     @mayAbortNetworkOperation
     def transfer_progress(self, stats: TransferProgress):
@@ -285,13 +286,13 @@ class RemoteLink(QObject, RemoteCallbacks):
 
         message = ""
         if stats.received_objects != stats.total_objects:
-            message += self.tr("Downloading: {0}...").format(sizeText)
+            message += _("Downloading: {0}…").format(sizeText)
             if self.downloadRate != 0:
                 rateText = locale.formattedDataSize(self.downloadRate, 0 if self.downloadRate < 1e6 else 1)
-                message += "\n" + self.tr("({0}/s)", "download speed (per second)").format(rateText)
+                message += "\n" + _p("download speed", "({0}/s)").format(rateText)
         else:
-            message += self.tr("Download complete ({0}).").format(sizeText)
-            message += "\n" + self.tr("Indexing {0} of {1} objects...").format(locale.toString(obj), locale.toString(stats.total_objects))
+            message += _("Download complete ({0}).").format(sizeText)
+            message += "\n" + _("Indexing {0} of {1} objects…").format(locale.toString(obj), locale.toString(stats.total_objects))
 
         self.message.emit(message)
 
@@ -302,7 +303,7 @@ class RemoteLink(QObject, RemoteCallbacks):
     def push_update_reference(self, refname: str, message: str | None):
         if not message:
             message = ""
-        self.message.emit(self.tr("Push update reference:") + f"\n{refname} {message}")
+        self.message.emit(_("Push update reference:") + f"\n{refname} {message}")
 
     def rememberSuccessfulKeyFile(self):
         if self.lastAttemptKey and self.lastAttemptUrl and not self.usingCustomKeyFile:
@@ -331,8 +332,8 @@ class RemoteLink(QObject, RemoteCallbacks):
         assert onAppThread()
         dlg = TextInputDialog(
             findParentWidget(self),
-            self.tr("Passphrase-protected key file"),
-            self.tr("Enter passphrase to use this key file:"),
+            _("Passphrase-protected key file"),
+            _("Enter passphrase to use this key file:"),
             subtitle=escape(compactPath(keyfile)))
         dlg.textAccepted.connect(lambda secret: self.secretReady.emit(keyfile, secret))
         dlg.rejected.connect(lambda: self.secretReady.emit(keyfile, None))
@@ -346,16 +347,16 @@ class RemoteLink(QObject, RemoteCallbacks):
             rb = RefPrefix.split(ref)[1]
             oldTip, newTip = self.updatedTips[ref]
             if oldTip == newTip:  # for pushing
-                ps = self.tr("{0} is already up-to-date with {1}.").format(tquo(rb), tquo(shortHash(oldTip)))
+                ps = _("{0} is already up-to-date with {1}.").format(tquo(rb), tquo(shortHash(oldTip)))
             elif oldTip == NULL_OID:
-                ps = self.tr("{0} created: {1}.").format(tquo(rb), shortHash(newTip))
+                ps = _("{0} created: {1}.").format(tquo(rb), shortHash(newTip))
             elif newTip == NULL_OID:
-                ps = self.tr("{0} deleted, was {1}.").format(tquo(rb), shortHash(oldTip))
+                ps = _("{0} deleted, was {1}.").format(tquo(rb), shortHash(oldTip))
             else:
-                ps = self.tr("{0}: {1} → {2}.").format(tquo(rb), shortHash(oldTip), shortHash(newTip))
+                ps = _("{0}: {1} → {2}.").format(tquo(rb), shortHash(oldTip), shortHash(newTip))
             messages.append(ps)
         if not self.updatedTips:
-            messages.append(noNewCommits or self.tr("No new commits."))
+            messages.append(noNewCommits or _("No new commits."))
         return " ".join(messages)
 
     class RemoteContext:

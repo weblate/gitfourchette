@@ -11,6 +11,7 @@ import traceback
 from collections.abc import Callable
 from typing import Literal
 
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox.excutils import shortenTracebackPath
 from gitfourchette.toolbox.qtutils import onAppThread, MakeNonNativeDialog
@@ -35,8 +36,8 @@ def excMessageBox(
 ):
     try:
         if exc.__class__.__name__ == 'NoRepoWidgetError':
-            title = tr("No repository")
-            message = tr("Please open a repository before performing this action.")
+            title = _("No repository")
+            message = _("Please open a repository before performing this action.")
             showExcSummary = False
             icon = 'information'
 
@@ -58,9 +59,9 @@ def excMessageBox(
             return
 
         if not title:
-            title = tr("Unhandled exception")
+            title = _("Unhandled exception")
         if not message:
-            message = tr("An exception was raised.")
+            message = _("An exception was raised.")
 
         if showExcSummary:
             try:
@@ -72,11 +73,11 @@ def excMessageBox(
                 summary = ''.join(summaryLines).strip()
 
             if len(summary) > 500:
-                summary = summary[:500] + "... " + tr("(MESSAGE TRUNCATED)")
+                summary = summary[:500] + "... " + _("(MESSAGE TRUNCATED)")
             message += "<br><br>" + html.escape(summary)
             if isCritical:
-                message += "<p><small>" + tr("If you want to file a bug report, please click “Show Details” "
-                                             "and copy the <b>entire</b> message.")
+                message += "<p><small>" + _("If you want to file a bug report, please click “Show Details” "
+                                            "and copy the <b>entire</b> message.")
 
             tracebackLines = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
             details = ''.join(shortenTracebackPath(line) for line in tracebackLines).strip()
@@ -100,7 +101,7 @@ def excMessageBox(
             from gitfourchette.settings import DEVDEBUG
             if DEVDEBUG:
                 quitButton = qmb.addButton(QMessageBox.StandardButton.Reset)  # Reset button is leftmost in KDE
-                quitButton.setText(tr("Quit application"))
+                quitButton.setText(_("Quit application"))
 
         dismissButton = qmb.addButton(QMessageBox.StandardButton.Ok)
         qmb.setDefaultButton(dismissButton)
@@ -150,7 +151,7 @@ def _popExcMessageBoxQueue(result=QMessageBox.StandardButton.Ok):
     numRemaining = len(_excMessageBoxQueue) - 1
     if numRemaining >= 1:
         dismissAllButton = qmb.addButton(QMessageBox.StandardButton.NoToAll)
-        dismissAllButton.setText(tr("Skip %n more errors", "", numRemaining))
+        dismissAllButton.setText(_n("Skip {n} more error", "Skip {n} more errors", numRemaining))
 
     _showExcMessageBox(qmb)
 
@@ -276,7 +277,7 @@ def askConfirmation(
 
 
 def addULToMessageBox(qmb: QMessageBox, items: list[str], limit=10):
-    ul = ulify(items, limit=limit, moreText=tr("...and {0} more. Click “Show Details” to view all."))
+    ul = ulify(items, limit=limit, moreText=_("…and {0} more. Click “Show Details” to view all."))
 
     qmb.setText(qmb.text() + ul)
 
@@ -297,5 +298,5 @@ class NonCriticalOperation:
 
     def __exit__(self, excType, excValue, excTraceback):
         if excValue:
-            excMessageBox(excValue, message=tr("Operation failed: {0}.").format(html.escape(self.operation)))
+            excMessageBox(excValue, message=_("Operation failed: {0}.").format(html.escape(self.operation)))
             return True  # don't propagate

@@ -9,6 +9,7 @@ from contextlib import suppress
 
 from gitfourchette import settings
 from gitfourchette.forms.reposettingsdialog import RepoSettingsDialog
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import Oid, Signature
 from gitfourchette.qt import *
@@ -59,7 +60,7 @@ class GetCommitInfo(RepoTask):
             return html
 
         def tableRow(th, td):
-            colon = tr(":", "generic caption suffix")
+            colon = _(":")
             return f"<tr><th>{th}{colon}</th><td>{td}</td></tr>"
 
         repo = self.repo
@@ -73,26 +74,26 @@ class GetCommitInfo(RepoTask):
         # Parent commits
         parentHashes = [commitLink(p) for p in commit.parent_ids]
         numParents = len(parentHashes)
-        parentTitle = self.tr("%n Parents", "please omit %n in singular form", numParents)
+        parentTitle = _n("Parent", "{n} Parents", numParents)
         if numParents > 0:
             parentMarkup = ', '.join(parentHashes)
         elif not repo.is_shallow:
             parentMarkup = "-"
         else:
-            parentMarkup = tagify(self.tr("You’re working in a shallow clone. This commit may actually "
-                                          "have parents in the full history."), "<p><em>")
+            shallowCloneBlurb = _("You’re working in a shallow clone. This commit may actually have parents in the full history.")
+            parentMarkup = tagify(shallowCloneBlurb, "<p><em>")
 
         # Committer
         if commit.author == commit.committer:
-            committerMarkup = tagify(self.tr("(same as author)"), "<i>")
+            committerMarkup = tagify(_("(same as author)"), "<i>")
         else:
             committerMarkup = self.formatSignature(commit.committer)
 
         # Assemble table rows
-        table = tableRow(self.tr("Hash"), commit.id)
+        table = tableRow(_("Hash"), commit.id)
         table += tableRow(parentTitle, parentMarkup)
-        table += tableRow(self.tr("Author"), self.formatSignature(commit.author))
-        table += tableRow(self.tr("Committer"), committerMarkup)
+        table += tableRow(_("Author"), self.formatSignature(commit.author))
+        table += tableRow(_("Committer"), committerMarkup)
 
         # Graph debug info
         if withDebugInfo:
@@ -108,7 +109,7 @@ class GetCommitInfo(RepoTask):
             # table += tableRow("View row", self.rw.graphView.currentIndex().row())
             details = str(frame) + "\n\n" + details
 
-        title = self.tr("Commit info: {0}").format(shortHash(commit.id))
+        title = _("Commit info: {0}").format(shortHash(commit.id))
 
         markup = f"""\
         <style>

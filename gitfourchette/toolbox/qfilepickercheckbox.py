@@ -4,6 +4,7 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox.pathutils import compactPath
 from gitfourchette.toolbox.qelidedlabel import QElidedLabel
@@ -22,7 +23,7 @@ class QFilePickerCheckBox(QWidget):
         self.pathLabel = QElidedLabel(self)
         self.pathLabel.setTextFormat(Qt.TextFormat.PlainText)
         self.browseButton = QToolButton()
-        self.browseButton.setText(tr("Select...", "select a file"))
+        self.browseButton.setText(_p("button to open a file browser to select a file", "Select…"))
 
         self.warningButton = QHintButton(self, iconKey="achtung")
 

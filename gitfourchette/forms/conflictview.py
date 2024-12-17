@@ -11,6 +11,7 @@ from typing import Literal
 from gitfourchette import settings, colors
 from gitfourchette.exttools import PREFKEY_MERGETOOL
 from gitfourchette.forms.ui_conflictview import Ui_ConflictView
+from gitfourchette.localization import *
 from gitfourchette.mergedriver import MergeDriver
 from gitfourchette.porcelain import NULL_OID, DiffConflict, ConflictSides, Repo
 from gitfourchette.qt import *
@@ -220,8 +221,8 @@ class ConflictView(QWidget):
         # Merge busy/ready
         if isMergeBusy:
             assert merge.process is not None
-            progressMessage = self.tr("Waiting for you to finish merging this file in {0} (PID {1})..."
-                                      ).format(lquoe(merge.processName), merge.process.processId())
+            progressMessage = _("Waiting for you to finish merging this file in {0} (PID {1})…"
+                                ).format(lquoe(merge.processName), merge.process.processId())
             self.ui.mergeInProgressLabel.setText(progressMessage)
             self.ui.stackedWidget.setCurrentWidget(self.ui.mergeInProgressPage)
         elif isMergeReady:
@@ -253,90 +254,90 @@ class ConflictView(QWidget):
         kitTable = {
             ConflictSides.MODIFIED_BY_BOTH: ConflictViewKit(
                 page=self.ui.mergePage,
-                description=self.tr("This file has received changes from both <i>our</i> branch "
+                description=_("This file has received changes from both <i>our</i> branch "
                                     "and <i>their</i> branch."),
-                captionO=self.tr("Keep OURS"),
-                captionT=self.tr("Accept THEIRS"),
+                captionO=_("Keep OURS"),
+                captionT=_("Accept THEIRS"),
                 tipO=paragraphs(
-                    self.tr("Resolve the conflict by <b>rejecting incoming changes</b>."),
-                    self.tr("The file will remain unchanged from its state in HEAD.")),
+                    _("Resolve the conflict by <b>rejecting incoming changes</b>."),
+                    _("The file will remain unchanged from its state in HEAD.")),
                 tipT=paragraphs(
-                    self.tr("Resolve the conflict by <b>accepting incoming changes</b>."),
-                    self.tr("The file will be <b>replaced</b> with the incoming version.")),
+                    _("Resolve the conflict by <b>accepting incoming changes</b>."),
+                    _("The file will be <b>replaced</b> with the incoming version.")),
                 iconO="status_m",
                 iconT="status_m",
             ),
 
             ConflictSides.DELETED_BY_US: ConflictViewKit(
                 page=self.ui.emptyPage,
-                description=self.tr("This file was deleted from <i>our</i> branch, "
+                description=_("This file was deleted from <i>our</i> branch, "
                                     "but <i>their</i> branch kept it and made changes to it."),
-                captionO=self.tr("Keep OUR deletion"),
-                captionT=self.tr("Accept THEIR version"),
+                captionO=_("Keep OUR deletion"),
+                captionT=_("Accept THEIR version"),
                 tipO=paragraphs(
-                    self.tr("Resolve the conflict by <b>rejecting incoming changes</b>."),
-                    self.tr("The file won’t be added back to your branch.")),
+                    _("Resolve the conflict by <b>rejecting incoming changes</b>."),
+                    _("The file won’t be added back to your branch.")),
                 tipT=paragraphs(
-                    self.tr("Resolve the conflict by <b>accepting incoming changes</b>."),
-                    self.tr("The file will be restored to your branch with the incoming changes.")),
+                    _("Resolve the conflict by <b>accepting incoming changes</b>."),
+                    _("The file will be restored to your branch with the incoming changes.")),
                 iconO="status_d",
                 iconT="status_m",
             ),
 
             ConflictSides.DELETED_BY_THEM: ConflictViewKit(
                 page=self.ui.emptyPage,
-                description=self.tr("We’ve made changes to this file in <i>our</i> branch, "
+                description=_("We’ve made changes to this file in <i>our</i> branch, "
                                     "but <i>their</i> branch has deleted it."),
-                captionO=self.tr("Keep OURS"),
-                captionT=self.tr("Accept deletion"),
+                captionO=_("Keep OURS"),
+                captionT=_("Accept deletion"),
                 tipO=paragraphs(
-                    self.tr("Resolve the conflict by <b>rejecting the incoming deletion</b>."),
-                    self.tr("Our version of the file will be kept intact.")),
+                    _("Resolve the conflict by <b>rejecting the incoming deletion</b>."),
+                    _("Our version of the file will be kept intact.")),
                 tipT=paragraphs(
-                    self.tr("Resolve the conflict by <b>accepting the incoming deletion</b>."),
-                    self.tr("The file will be deleted.")),
+                    _("Resolve the conflict by <b>accepting the incoming deletion</b>."),
+                    _("The file will be deleted.")),
                 iconO="status_m",
                 iconT="status_d",
             ),
 
             ConflictSides.ADDED_BY_US: ConflictViewKit(
                 page=self.ui.emptyPage,
-                description=self.tr("No common ancestor."),
-                captionO=self.tr("Keep OURS"),
-                captionT=self.tr("Delete it"),
+                description=_("No common ancestor."),
+                captionO=_("Keep OURS"),
+                captionT=_("Delete it"),
                 iconO="status_a",
                 iconT="status_missing",
             ),
 
             ConflictSides.ADDED_BY_THEM: ConflictViewKit(
                 page=self.ui.emptyPage,
-                description=self.tr("No common ancestor."),
-                captionO=self.tr("Don’t add"),
-                captionT=self.tr("Accept THEIRS"),
+                description=_("No common ancestor."),
+                captionO=_("Don’t add"),
+                captionT=_("Accept THEIRS"),
                 iconO="status_missing",
                 iconT="status_a",
             ),
 
             ConflictSides.ADDED_BY_BOTH: ConflictViewKit(
                 page=self.ui.mergePage,
-                description=self.tr("This file has been created in both <i>our</i> branch "
+                description=_("This file has been created in both <i>our</i> branch "
                                     "and <i>their</i> branch, independently from each other. "
                                     "There is no common ancestor."),
-                captionO=self.tr("Keep OURS"),
-                captionT=self.tr("Accept THEIRS"),
+                captionO=_("Keep OURS"),
+                captionT=_("Accept THEIRS"),
                 tipO=paragraphs(
-                    self.tr("Resolve the conflict by <b>rejecting incoming changes</b>."),
-                    self.tr("The file will remain unchanged from its state in HEAD.")),
+                    _("Resolve the conflict by <b>rejecting incoming changes</b>."),
+                    _("The file will remain unchanged from its state in HEAD.")),
                 tipT=paragraphs(
-                    self.tr("Resolve the conflict by <b>accepting incoming changes</b>."),
-                    self.tr("The file will be <b>replaced</b> with the incoming version.")),
+                    _("Resolve the conflict by <b>accepting incoming changes</b>."),
+                    _("The file will be <b>replaced</b> with the incoming version.")),
                 iconO="status_a",
                 iconT="status_a",
             ),
 
             ConflictSides.DELETED_BY_BOTH: ConflictViewKit(
                 page=self.ui.confirmDeletionPage,
-                description=self.tr("The file was deleted from <i>our</i> branch, "
+                description=_("The file was deleted from <i>our</i> branch, "
                                     "and <i>their</i> branch has deleted it too."),
                 iconO="status_d",
                 iconT="status_d",

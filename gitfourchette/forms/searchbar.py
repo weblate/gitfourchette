@@ -10,6 +10,7 @@ from collections.abc import Callable
 
 from gitfourchette import colors
 from gitfourchette.forms.ui_searchbar import Ui_SearchBar
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.settings import TEST_MODE
 from gitfourchette.toolbox import *
@@ -182,7 +183,7 @@ class SearchBar(QWidget):
 
     @staticmethod
     def defaultNotFoundMessage(searchTerm: str) -> str:
-        return translate("SearchBar", "{0} not found.").format(bquo(searchTerm))
+        return _p("SearchBar", "{0} not found.").format(bquo(searchTerm))
 
     # --------------------------------
     # Ready-made QAbstractItemView search flow

@@ -12,6 +12,7 @@ from contextlib import suppress
 from typing import Any
 
 from gitfourchette import settings
+from gitfourchette.localization import *
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repomodel import RepoModel
@@ -427,7 +428,7 @@ class SidebarModel(QAbstractItemModel):
             submoduleRoot.appendChild(node)
 
             if submoduleKey not in repoModel.initializedSubmodules:
-                node.warning = self.tr("Submodule not initialized.")
+                node.warning = _("Submodule not initialized.")
 
         # -----------------------------
         # Commit new model
@@ -565,16 +566,16 @@ class SidebarModel(QAbstractItemModel):
                 return refName
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
-                text += self.tr("{0} (local branch)").format(btag(branchName))
+                text += _("{0} (local branch)").format(btag(branchName))
                 # Try to get the upstream (branch.upstream_name raises KeyError if there isn't one)
                 # Warning: branch.upstream_name can be a bit expensive
                 with suppress(KeyError):
                     branch = self.repo.branches.local[branchName]
                     upstream = branch.upstream_name.removeprefix(RefPrefix.REMOTES)
-                    text += "\n" + self.tr("Upstream: {0}").format(escape(upstream))
+                    text += "\n" + _("Upstream: {0}").format(escape(upstream))
                 if branchName == self._checkedOut:
                     text += "\n<img src='assets:icons/git-head' style='vertical-align: bottom;'/> "
-                    text += "HEAD " + self.tr("(this is the checked-out branch)")
+                    text += "HEAD " + _("(this is the checked-out branch)")
                 self.cacheTooltip(index, text)
                 return text
             elif iconKeyRole:
@@ -583,21 +584,21 @@ class SidebarModel(QAbstractItemModel):
         elif item == SidebarItem.UnbornHead:
             target = node.data
             if displayRole:
-                return self.tr("[unborn]") + " " + target
+                return _("[unborn]") + " " + target
             elif toolTipRole:
                 text = ("<p style='white-space: pre'>"
-                        + self.tr("Unborn HEAD: does not point to a commit yet.") + "\n"
-                        + self.tr("Local branch {0} will be created when you create the initial commit.")
+                        + _("Unborn HEAD: does not point to a commit yet.") + "\n"
+                        + _("Local branch {0} will be created when you create the initial commit.")
                         ).format(bquo(target))
                 self.cacheTooltip(index, text)
                 return text
 
         elif item == SidebarItem.DetachedHead:
             if displayRole:
-                return self.tr("Detached HEAD")
+                return _("Detached HEAD")
             elif toolTipRole:
                 oid = Oid(hex=node.data)
-                caption = self.tr("Detached HEAD")
+                caption = _("Detached HEAD")
                 return f"<p style='white-space: pre'>{caption} @ {shortHash(oid)}"
             elif refRole:
                 return "HEAD"
@@ -626,9 +627,9 @@ class SidebarModel(QAbstractItemModel):
                 return refName
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
-                text += self.tr("{0} (remote-tracking branch)").format(btag(shorthand))
+                text += _("{0} (remote-tracking branch)").format(btag(shorthand))
                 if self._checkedOutUpstream == shorthand:
-                    text += ("<br><i>" + self.tr("Upstream for the checked-out branch ({0})")
+                    text += ("<br><i>" + _("Upstream for the checked-out branch ({0})")
                              ).format(hquoe(self._checkedOut))
                 return text
             elif fontRole:
@@ -650,11 +651,11 @@ class SidebarModel(QAbstractItemModel):
                 text = "<p style='white-space: pre'>"
                 text += "<img src='assets:icons/git-folder' style='vertical-align: bottom;'/> "
                 if prefix == RefPrefix.REMOTES:
-                    text += self.tr("{0} (remote branch folder)").format(btag(name))
+                    text += _("{0} (remote branch folder)").format(btag(name))
                 elif prefix == RefPrefix.TAGS:
-                    text += self.tr("{0} (tag folder)").format(btag(name))
+                    text += _("{0} (tag folder)").format(btag(name))
                 else:
-                    text += self.tr("{0} (local branch folder)").format(btag(name))
+                    text += _("{0} (local branch folder)").format(btag(name))
                 return text
             elif iconKeyRole:
                 return "git-folder"
@@ -670,7 +671,7 @@ class SidebarModel(QAbstractItemModel):
                 return refName
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
-                text += self.tr("Tag {0}").format(bquo(tagName))
+                text += _("Tag {0}").format(bquo(tagName))
                 return text
             elif iconKeyRole:
                 return "git-tag"
@@ -686,7 +687,7 @@ class SidebarModel(QAbstractItemModel):
                 dateText = signatureDateFormat(commit.committer, settings.prefs.shortTimeFormat)
                 text = "<p style='white-space: pre'>"
                 text += f"<b>stash@{{{row}}}</b>: {escape(commit.message)}<br/>"
-                text += f"<b>{self.tr('date:')}</b> {escape(dateText)}"
+                text += f"<b>{_('date:')}</b> {escape(dateText)}"
                 self.cacheTooltip(index, text)
                 return text
             elif iconKeyRole:
@@ -697,10 +698,10 @@ class SidebarModel(QAbstractItemModel):
                 return node.data.rsplit("/", 1)[-1]
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
-                text += self.tr("{0} (submodule)").format(f"<b>{escape(node.data)}</b>")
-                text += "\n" + self.tr("Workdir: {0}").format(escape(self.repo.listall_submodules_dict()[node.data]))
-                url = self.repo.submodules[node.data].url or self.tr("[not set]")
-                text += "\n" + self.tr("URL: {0}").format(escape(url))
+                text += _("{0} (submodule)").format(f"<b>{escape(node.data)}</b>")
+                text += "\n" + _("Workdir: {0}").format(escape(self.repo.listall_submodules_dict()[node.data]))
+                url = self.repo.submodules[node.data].url or _("[not set]")
+                text += "\n" + _("URL: {0}").format(escape(url))
                 if node.warning:
                     text += "<br>\u26a0 " + node.warning
                 return text
@@ -721,7 +722,7 @@ class SidebarModel(QAbstractItemModel):
             elif iconKeyRole:
                 return "git-workdir"
             elif toolTipRole:
-                return appendShortcutToToolTipText(self.tr("Go to Uncommitted Changes"), QKeySequence("Ctrl+U"))
+                return appendShortcutToToolTipText(_("Go to Uncommitted Changes"), QKeySequence("Ctrl+U"))
 
         else:
             if displayRole:

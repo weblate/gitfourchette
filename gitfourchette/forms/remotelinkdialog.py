@@ -5,6 +5,7 @@
 # -----------------------------------------------------------------------------
 
 from gitfourchette.forms.ui_remotelinkdialog import Ui_RemoteLinkDialog
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.toolbox import *
@@ -14,7 +15,7 @@ class RemoteLinkDialog(QDialog):
     def __init__(self, title: str, parent: QWidget):
         super().__init__(parent)
         self.statusPrefix = ""
-        title = title or self.tr("Remote operation")
+        title = title or _("Remote operation")
 
         self.ui = Ui_RemoteLinkDialog()
         self.ui.setupUi(self)
@@ -47,7 +48,7 @@ class RemoteLinkDialog(QDialog):
         else:
             self.statusPrefix = ""
             self.ui.remoteLabel.setText(escamp(url))
-        self.setStatusText(self.tr("Connecting..."))
+        self.setStatusText(_("Connecting…"))
 
     def onRemoteLinkProgress(self, value: int, maximum: int):
         self.ui.progressBar.setMaximum(maximum)
@@ -72,6 +73,6 @@ class RemoteLinkDialog(QDialog):
 
         self.remoteLink.raiseAbortFlag()
         self.abortButton.setEnabled(False)
-        self.abortButton.setText(self.tr("Aborting"))
+        self.abortButton.setText(_("Aborting"))
 
         self.onRemoteLinkProgress(0, 0)

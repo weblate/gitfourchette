@@ -6,7 +6,6 @@
 
 import base64
 import dataclasses
-import enum
 import json
 import logging
 import os

@@ -13,6 +13,7 @@ from gitfourchette.graph import MockCommit
 from gitfourchette.graphview.commitlogdelegate import CommitLogDelegate
 from gitfourchette.graphview.commitlogfilter import CommitLogFilter
 from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -37,11 +38,11 @@ class GraphView(QListView):
 
         def __str__(self):
             if self.foundButHidden:
-                m = translate("GraphView", "This commit isn’t shown in the graph because it’s part of a hidden branch.")
+                m = _("This commit isn’t shown in the graph because it’s part of a hidden branch.")
             elif self.likelyTruncated:
-                m = translate("GraphView", "This commit isn’t shown in the graph because it isn’t part of the truncated commit history.")
+                m = _("This commit isn’t shown in the graph because it isn’t part of the truncated commit history.")
             else:
-                m = translate("GraphView", "This commit isn’t shown in the graph.")
+                m = _("This commit isn’t shown in the graph.")
             return m
 
     def __init__(self, parent):
@@ -64,7 +65,7 @@ class GraphView(QListView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onContextMenuRequested)
 
-        self.searchBar = SearchBar(self, toLengthVariants(self.tr("Find a commit by hash, message or author|Find commit")))
+        self.searchBar = SearchBar(self, toLengthVariants(_("Find a commit by hash, message or author|Find commit")))
         self.searchBar.detectHashes = True
         self.searchBar.setUpItemViewBuddy()
         self.searchBar.hide()
@@ -99,11 +100,11 @@ class GraphView(QListView):
             expandAll = makeInternalLink("expandlog", n=str(0))
             changePref = makeInternalLink("prefs", "maxCommits")
             actions = [
-                ActionDef(self.tr("Load up to {0} commits").format(QLocale().toString(repoModel.nextTruncationThreshold)),
+                ActionDef(_("Load up to {0} commits").format(QLocale().toString(repoModel.nextTruncationThreshold)),
                           lambda: self.linkActivated.emit(expandSome)),
-                ActionDef(self.tr("Load full commit history"),
+                ActionDef(_("Load full commit history"),
                           lambda: self.linkActivated.emit(expandAll)),
-                ActionDef(self.tr("Change threshold setting"),
+                ActionDef(_("Change threshold setting"),
                           lambda: self.linkActivated.emit(changePref)),
             ]
 
@@ -113,29 +114,29 @@ class GraphView(QListView):
                 with suppress(KeyError, StopIteration):
                     refsHere = repoModel.refsAt[oid]
                     target = next(ref for ref in refsHere if ref.startswith((RefPrefix.HEADS, RefPrefix.REMOTES)))
-                    mergeCaption = self.tr("&Merge into {0}...").format(lquo(repoModel.homeBranch))
+                    mergeCaption = _("&Merge into {0}…").format(lquo(repoModel.homeBranch))
                     mergeActions = [
                         TaskBook.action(self, MergeBranch, name=mergeCaption, taskArgs=(target,)),
                     ]
 
-            checkoutAction = TaskBook.action(self, CheckoutCommit, self.tr("&Check Out..."), taskArgs=oid)
+            checkoutAction = TaskBook.action(self, CheckoutCommit, _("&Check Out…"), taskArgs=oid)
             checkoutAction.shortcuts = makeMultiShortcut(QKeySequence("Return"))
 
             actions = [
                 *mergeActions,
                 ActionDef.SEPARATOR,
-                TaskBook.action(self, NewBranchFromCommit, self.tr("New &Branch Here..."), taskArgs=oid),
-                TaskBook.action(self, NewTag, self.tr("&Tag This Commit..."), taskArgs=oid),
+                TaskBook.action(self, NewBranchFromCommit, _("New &Branch Here…"), taskArgs=oid),
+                TaskBook.action(self, NewTag, _("&Tag This Commit…"), taskArgs=oid),
                 ActionDef.SEPARATOR,
                 checkoutAction,
-                TaskBook.action(self, ResetHead, self.tr("&Reset HEAD to Here..."), taskArgs=oid),
+                TaskBook.action(self, ResetHead, _("&Reset HEAD to Here…"), taskArgs=oid),
                 ActionDef.SEPARATOR,
-                TaskBook.action(self, CherrypickCommit, self.tr("Cherry &Pick..."), taskArgs=oid),
-                TaskBook.action(self, RevertCommit, self.tr("Re&vert..."), taskArgs=oid),
-                TaskBook.action(self, ExportCommitAsPatch, self.tr("E&xport As Patch..."), taskArgs=oid),
+                TaskBook.action(self, CherrypickCommit, _("Cherry &Pick…"), taskArgs=oid),
+                TaskBook.action(self, RevertCommit, _("Re&vert…"), taskArgs=oid),
+                TaskBook.action(self, ExportCommitAsPatch, _("E&xport As Patch…"), taskArgs=oid),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("Copy Commit &Hash"), self.copyCommitHashToClipboard, shortcuts=GlobalShortcuts.copy),
-                ActionDef(self.tr("Get &Info..."), self.getInfoOnCurrentCommit, "SP_MessageBoxInformation", shortcuts=QKeySequence("Space")),
+                ActionDef(_("Copy Commit &Hash"), self.copyCommitHashToClipboard, shortcuts=GlobalShortcuts.copy),
+                ActionDef(_("Get &Info…"), self.getInfoOnCurrentCommit, "SP_MessageBoxInformation", shortcuts=QKeySequence("Space")),
             ]
 
         menu = ActionDef.makeQMenu(self, actions)

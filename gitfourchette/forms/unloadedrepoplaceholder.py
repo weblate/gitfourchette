@@ -4,9 +4,9 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from gitfourchette.forms.ui_unloadedrepoplaceholder import Ui_UnloadedRepoPlaceholder
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.forms.ui_unloadedrepoplaceholder import Ui_UnloadedRepoPlaceholder
 
 
 class UnloadedRepoPlaceholder(QWidget):

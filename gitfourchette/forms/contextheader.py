@@ -7,6 +7,7 @@
 from collections.abc import Callable
 
 from gitfourchette.application import GFApplication
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.qt import *
 from gitfourchette.tasks import *
@@ -30,9 +31,9 @@ class ContextHeader(QFrame):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.mainLabel)
 
-        self.maximizeButton = self.addButton(self.tr("Maximize"), permanent=True)
+        self.maximizeButton = self.addButton(_("Maximize"), permanent=True)
         self.maximizeButton.setIcon(stockIcon("maximize"))
-        self.maximizeButton.setToolTip(self.tr("Maximize the diff area and hide the commit graph"))
+        self.maximizeButton.setToolTip(_("Maximize the diff area and hide the commit graph"))
         self.maximizeButton.setCheckable(True)
 
         self.restyle()
@@ -76,23 +77,23 @@ class ContextHeader(QFrame):
         self.locator = locator
 
         if locator.context == NavContext.COMMITTED:
-            kind = self.tr("Stash") if isStash else self.tr("Commit")
-            summary, _ = messageSummary(commitMessage)
+            kind = _p("noun", "Stash") if isStash else _p("noun", "Commit")
+            summary, _continued = messageSummary(commitMessage)
             self.mainLabel.setText(f"{kind} {shortHash(locator.commit)} – {summary}")
 
-            infoButton = self.addButton(self.tr("Info"), lambda: GetCommitInfo.invoke(self, self.locator.commit))
-            infoButton.setToolTip(self.tr("Show details about this commit") if not isStash
-                                  else self.tr("Show details about this stash"))
+            infoButton = self.addButton(_("Info"), lambda: GetCommitInfo.invoke(self, self.locator.commit))
+            infoButton.setToolTip(_("Show details about this commit") if not isStash
+                                  else _("Show details about this stash"))
 
             if isStash:
-                dropButton = self.addButton(self.tr("Drop"), lambda: DropStash.invoke(self, locator.commit))
-                dropButton.setToolTip(self.tr("Delete this stash"))
+                dropButton = self.addButton(_("Delete"), lambda: DropStash.invoke(self, locator.commit))
+                dropButton.setToolTip(_("Delete this stash"))
 
-                applyButton = self.addButton(self.tr("Apply"), lambda: ApplyStash.invoke(self, locator.commit))
-                applyButton.setToolTip(self.tr("Apply this stash"))
+                applyButton = self.addButton(_("Apply"), lambda: ApplyStash.invoke(self, locator.commit))
+                applyButton.setToolTip(_("Apply this stash"))
 
         elif locator.context.isWorkdir():
-            self.mainLabel.setText(self.tr("Uncommitted changes"))
+            self.mainLabel.setText(_("Uncommitted changes"))
         else:
             # Special context (e.g. history truncated)
             self.mainLabel.setText(" ")

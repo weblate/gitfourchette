@@ -9,6 +9,7 @@ import logging
 from gitfourchette.forms.newbranchdialog import NewBranchDialog
 from gitfourchette.forms.resetheaddialog import ResetHeadDialog
 from gitfourchette.forms.textinputdialog import TextInputDialog
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -28,18 +29,18 @@ class SwitchBranch(RepoTask):
         branchObj: Branch = self.repo.branches.local[newBranch]
 
         if branchObj.is_checked_out():
-            message = self.tr("Branch {0} is already checked out.").format(bquo(newBranch))
+            message = _("Branch {0} is already checked out.").format(bquo(newBranch))
             raise AbortTask(message, 'information')
 
         if askForConfirmation:
-            text = self.tr("Do you want to switch to branch {0}?").format(bquo(newBranch))
-            verb = self.tr("Switch")
+            text = _("Do you want to switch to branch {0}?").format(bquo(newBranch))
+            verb = _("Switch")
 
             recurseCheckbox = None
             anySubmodules = bool(self.repo.listall_submodules_fast())
             anySubmodules &= pygit2_version_at_least("1.15.1", False)  # TODO: Nuke this once we can drop support for old versions of pygit2
             if anySubmodules:
-                recurseCheckbox = QCheckBox(self.tr("Recurse into submodules"))
+                recurseCheckbox = QCheckBox(_("Update submodules recursively"))
                 recurseCheckbox.setChecked(True)
 
             yield from self.flowConfirm(text=text, verb=verb, checkbox=recurseCheckbox)
@@ -47,8 +48,8 @@ class SwitchBranch(RepoTask):
 
         if self.repoModel.dangerouslyDetachedHead() and branchObj.target != self.repoModel.headCommitId:
             text = paragraphs(
-                self.tr("You are in <b>Detached HEAD</b> mode at commit {0}."),
-                self.tr("You might lose track of this commit if you carry on switching to {1}."),
+                _("You are in <b>Detached HEAD</b> mode at commit {0}."),
+                _("You might lose track of this commit if you carry on switching to {1}."),
             ).format(btag(shortHash(self.repoModel.headCommitId)), hquo(newBranch))
             yield from self.flowConfirm(text=text, icon='warning')
 
@@ -57,7 +58,7 @@ class SwitchBranch(RepoTask):
 
         self.repo.checkout_local_branch(newBranch)
 
-        self.postStatus = self.tr("Switched to branch {0}.").format(tquo(newBranch))
+        self.postStatus = _("Switched to branch {0}.").format(tquo(newBranch))
 
         if recurseSubmodules:
             from gitfourchette.tasks import UpdateSubmodulesRecursive
@@ -72,16 +73,16 @@ class RenameBranch(RepoTask):
         forbiddenBranchNames = self.repo.listall_branches(BranchType.LOCAL)
         forbiddenBranchNames.remove(oldBranchName)
 
-        nameTaken = self.tr("This name is already taken by another local branch.")
+        nameTaken = _("This name is already taken by another local branch.")
 
         dlg = TextInputDialog(
             self.parentWidget(),
-            self.tr("Rename local branch"),
-            self.tr("Enter new name:"),
-            subtitle=self.tr("Current name: {0}").format(oldBranchName))
+            _("Rename local branch"),
+            _("Enter new name:"),
+            subtitle=_("Current name: {0}").format(oldBranchName))
         dlg.setText(oldBranchName)
         dlg.setValidator(lambda name: nameValidationMessage(name, forbiddenBranchNames, nameTaken))
-        dlg.okButton.setText(self.tr("Rename"))
+        dlg.okButton.setText(_("Rename"))
 
         yield from self.flowDialog(dlg)
         dlg.deleteLater()
@@ -96,7 +97,7 @@ class RenameBranch(RepoTask):
 
         self.repo.rename_local_branch(oldBranchName, newBranchName)
 
-        self.postStatus = self.tr("Branch {0} renamed to {1}.").format(tquo(oldBranchName), tquo(newBranchName))
+        self.postStatus = _("Branch {0} renamed to {1}.").format(tquo(oldBranchName), tquo(newBranchName))
 
 
 class RenameBranchFolder(RepoTask):
@@ -124,8 +125,7 @@ class RenameBranchFolder(RepoTask):
             for oldBranchName in folderBranches:
                 newBranchName = transformBranchName(oldBranchName, newFolderName)
                 if newBranchName in forbiddenBranches:
-                    return self.tr("This name clashes with existing branch {0}."
-                                   ).format(tquo(newBranchName))
+                    return _("This name clashes with existing branch {0}.").format(tquo(newBranchName))
             # Finally validate the folder name itself as if it were a branch,
             # but don't test against existing refs (which we just did above),
             # and allow an empty name.
@@ -133,18 +133,20 @@ class RenameBranchFolder(RepoTask):
                 return ""
             return nameValidationMessage(newFolderName, [])
 
-        subtitle = self.tr("Folder {0} contains %n branches.", "", len(folderBranches)
-                           ).format(lquoe(oldFolderName))
+        # TODO: GETTEXT?
+        subtitle = _n("Folder {name} contains {n} branch.",
+                      "Folder {name} contains {n} branches.",
+                      len(folderBranches), name=lquoe(oldFolderName))
 
         dlg = TextInputDialog(
             self.parentWidget(),
-            self.tr("Rename branch folder"),
-            self.tr("Enter new name:"),
+            _("Rename branch folder"),
+            _("Enter new name:"),
             subtitle=subtitle)
         dlg.setText(oldFolderName)
         dlg.setValidator(validate)
-        dlg.okButton.setText(self.tr("Rename"))
-        dlg.lineEdit.setPlaceholderText(self.tr("Leave blank to move the branches to the root folder."))
+        dlg.okButton.setText(_("Rename"))
+        dlg.lineEdit.setPlaceholderText(_("Leave blank to move the branches to the root folder."))
 
         yield from self.flowDialog(dlg)
         dlg.deleteLater()
@@ -163,9 +165,11 @@ class RenameBranchFolder(RepoTask):
             newBranchName = transformBranchName(oldBranchName, newFolderName)
             self.repo.rename_local_branch(oldBranchName, newBranchName)
 
-        self.postStatus = self.tr("Branch folder {0} renamed to {1}, %n branches affected.", "", len(folderBranches)
-                                  ).format(tquo(oldFolderName), tquo(newFolderName))
-
+        self.postStatus = (
+                _("Branch folder {0} renamed to {1}.").format(tquo(oldFolderName), tquo(newFolderName))
+                + " "
+                + _n("{n} branch affected.", "{n} branches affected.", len(folderBranches))
+        )
 
 class DeleteBranch(RepoTask):
     def flow(self, localBranchName: str):
@@ -173,16 +177,16 @@ class DeleteBranch(RepoTask):
 
         if localBranchName == self.repo.head_branch_shorthand:
             text = paragraphs(
-                self.tr("Cannot delete {0} because it is the current branch.").format(bquo(localBranchName)),
-                self.tr("Before you try again, switch to another branch."))
+                _("Cannot delete {0} because it is the current branch.").format(bquo(localBranchName)),
+                _("Before you try again, switch to another branch."))
             raise AbortTask(text)
 
-        text = paragraphs(self.tr("Really delete local branch {0}?").format(bquo(localBranchName)),
-                          tr("This cannot be undone!"))
+        text = paragraphs(_("Really delete local branch {0}?").format(bquo(localBranchName)),
+                          _("This cannot be undone!"))
 
         yield from self.flowConfirm(
             text=text,
-            verb=self.tr("Delete branch", "Button label"),
+            verb=_("Delete branch"),
             buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
@@ -190,8 +194,8 @@ class DeleteBranch(RepoTask):
         self.effects |= TaskEffects.Refs
         self.repo.delete_local_branch(localBranchName)
 
-        self.postStatus = self.tr("Branch {0} deleted (commit at tip was {1})."
-                                  ).format(tquo(localBranchName), tquo(shortHash(target)))
+        self.postStatus = _("Branch {0} deleted (commit at tip was {1})."
+                            ).format(tquo(localBranchName), tquo(shortHash(target)))
 
 
 class DeleteBranchFolder(RepoTask):
@@ -204,23 +208,24 @@ class DeleteBranchFolder(RepoTask):
         currentBranch = self.repo.head_branch_shorthand
         if currentBranch.startswith(folderNameSlash):
             text = paragraphs(
-                self.tr("Cannot delete folder {0} because it contains the current branch {1}."
-                        ).format(bquo(folderName), bquo(currentBranch)),
-                self.tr("Before you try again, switch to another branch."))
+                _("Cannot delete folder {0} because it contains the current branch {1}."
+                  ).format(bquo(folderName), bquo(currentBranch)),
+                _("Before you try again, switch to another branch."))
             raise AbortTask(text)
 
         folderBranches = [b for b in self.repo.listall_branches(BranchType.LOCAL)
                           if b.startswith(folderNameSlash)]
 
         text = paragraphs(
-            self.tr("Really delete local branch folder {0}?").format(bquo(folderName)),
-            self.tr("<b>%n</b> branches will be deleted.", "", len(folderBranches)) + " " + tr("This cannot be undone!"))
+            _("Really delete local branch folder {0}?").format(bquo(folderName)),
+            _n("<b>{n}</b> branch will be deleted.", "<b>{n}</b> branches will be deleted.", n=len(folderBranches)
+               ) + " " + _("This cannot be undone!"))
 
         yield from self.flowConfirm(
-            self.tr("Delete branch folder"),
+            _("Delete branch folder"),
             text,
             detailList=folderBranches,
-            verb=self.tr("Delete folder", "Button label"),
+            verb=_("Delete folder"),
             buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
@@ -229,8 +234,10 @@ class DeleteBranchFolder(RepoTask):
         for b in folderBranches:
             self.repo.delete_local_branch(b)
 
-        self.postStatus = self.tr("%n branches deleted in folder {0}.", "", len(folderBranches)
-                                  ).format(tquo(folderName))
+        # TODO: GETTEXT?
+        self.postStatus = _n("{n} branch deleted in folder {name}.",
+                             "{n} branches deleted in folder {name}.",
+                             n=len(folderBranches), name=tquo(folderName))
 
 
 class _NewBranchBaseTask(RepoTask):
@@ -263,7 +270,7 @@ class _NewBranchBaseTask(RepoTask):
                     upstreams.append(branch.upstream.shorthand)
             elif prefix == RefPrefix.REMOTES:
                 if not localName:
-                    _, localName = split_remote_branch_shorthand(shorthand)
+                    _prefix, localName = split_remote_branch_shorthand(shorthand)
                 upstreams.append(shorthand)
 
         # Start with a unique name so the branch validator doesn't shout at us
@@ -317,8 +324,8 @@ class _NewBranchBaseTask(RepoTask):
         # Create local branch
         repo.create_branch_from_commit(localName, tip)
         self.effects |= TaskEffects.Refs | TaskEffects.Head
-        self.postStatus = self.tr("Branch {0} created on commit {1}."
-                                  ).format(tquo(localName), tquo(shortHash(tip)))
+        self.postStatus = _("Branch {0} created on commit {1}."
+                            ).format(tquo(localName), tquo(shortHash(tip)))
 
         # Optionally make it track a remote branch
         if trackUpstream:
@@ -334,10 +341,10 @@ class _NewBranchBaseTask(RepoTask):
                 yield from self.flowSubtask(RefreshRepo)
 
                 text = paragraphs(
-                    self.tr("You are in <b>Detached HEAD</b> mode at commit {0}."),
-                    self.tr("You might lose track of this commit if you switch to the new branch."),
+                    _("You are in <b>Detached HEAD</b> mode at commit {0}."),
+                    _("You might lose track of this commit if you switch to the new branch."),
                 ).format(btag(shortHash(self.repoModel.headCommitId)))
-                yield from self.flowConfirm(text=text, icon='warning', verb=self.tr("Switch to {0}").format(lquoe(localName)), cancelText=self.tr("Don’t Switch"))
+                yield from self.flowConfirm(text=text, icon='warning', verb=_("Switch to {0}").format(lquoe(localName)), cancelText=_("Don’t Switch"))
 
             repo.checkout_local_branch(localName)
 
@@ -402,9 +409,9 @@ class EditUpstreamBranch(RepoTask):
         self.repo.edit_upstream_branch(localBranchName, remoteBranchName)
 
         if remoteBranchName:
-            self.postStatus = self.tr("Branch {0} now tracks {1}.").format(tquo(localBranchName), tquo(remoteBranchName))
+            self.postStatus = _("Branch {0} now tracks {1}.").format(tquo(localBranchName), tquo(remoteBranchName))
         else:
-            self.postStatus = self.tr("Branch {0} now tracks no upstream.").format(tquo(localBranchName))
+            self.postStatus = _("Branch {0} now tracks no upstream.").format(tquo(localBranchName))
 
 
 class ResetHead(RepoTask):
@@ -448,8 +455,8 @@ class FastForwardBranch(RepoTask):
         branch = self.repo.branches.local[localBranchName]
         upstream: Branch = branch.upstream
         if not upstream:
-            raise AbortTask(self.tr("Can’t fast-forward {0} because it isn’t tracking an upstream branch."
-                                    ).format(bquo(branch.shorthand)))
+            raise AbortTask(_("Can’t fast-forward {0} because it isn’t tracking an upstream branch."
+                              ).format(bquo(branch.shorthand)))
 
         remoteBranchName = upstream.shorthand
 
@@ -467,11 +474,11 @@ class FastForwardBranch(RepoTask):
         yield from self.flowEnterUiThread()
 
         if upToDate:
-            lines = [self.tr("No fast-forwarding necessary.")]
+            lines = [_("No fast-forwarding necessary.")]
             if ahead:
-                lines.append(self.tr("Your local branch {0} is ahead of {1}."))
+                lines.append(_("Your local branch {0} is ahead of {1}."))
             else:
-                lines.append(self.tr("Your local branch {0} is already up-to-date with {1}."))
+                lines.append(_("Your local branch {0} is already up-to-date with {1}."))
             message = paragraphs(lines).format(bquo(localBranchName), bquo(remoteBranchName))
             self.postStatus = stripHtml(message)
             yield from self.flowConfirm(text=message, canCancel=False, dontShowAgainKey="NoFastForwardingNecessary")
@@ -483,14 +490,14 @@ class FastForwardBranch(RepoTask):
             lb = exc.local_branch
             rb = exc.remote_branch
             text = paragraphs(
-                self.tr("Can’t fast-forward {0} to {1}."),
-                self.tr("The branches are divergent."),
+                _("Can’t fast-forward {0} to {1}."),
+                _("The branches are divergent."),
             ).format(bquo(lb.shorthand), bquo(rb.shorthand))
             qmb = showWarning(parentWidget, self.name(), text)
 
             # If it's the checked-out branch, suggest merging
             if lb.is_checked_out():
-                mergeCaption = self.tr("Merge into {0}").format(lquoe(lb.shorthand))
+                mergeCaption = _("Merge into {0}").format(lquoe(lb.shorthand))
                 mergeButton = qmb.addButton(mergeCaption, QMessageBox.ButtonRole.ActionRole)
                 mergeButton.clicked.connect(lambda: MergeBranch.invoke(parentWidget, rb.name))
         else:
@@ -503,7 +510,7 @@ class MergeBranch(RepoTask):
 
         theirBranch, theirBranchIsLocal = self.repo.get_branch_from_refname(them)
         assert isinstance(theirBranch, Branch)
-        _, theirShorthand = RefPrefix.split(them)
+        _theirPrefix, theirShorthand = RefPrefix.split(them)
 
         # Run merge analysis on background thread
         yield from self.flowEnterWorkerThread()
@@ -521,48 +528,48 @@ class MergeBranch(RepoTask):
 
         if anyConflicts:
             message = paragraphs(
-                self.tr("Merging is not possible right now because you have unresolved conflicts."),
-                self.tr("Fix the conflicts to proceed."))
+                _("Merging is not possible right now because you have unresolved conflicts."),
+                _("Fix the conflicts to proceed."))
             raise AbortTask(message)
 
         elif anyStagedFiles:
             message = paragraphs(
-                self.tr("Merging is not possible right now because you have staged changes."),
-                self.tr("Commit your changes or stash them to proceed."))
+                _("Merging is not possible right now because you have staged changes."),
+                _("Commit your changes or stash them to proceed."))
             raise AbortTask(message)
 
         elif analysis == MergeAnalysis.UP_TO_DATE:
             message = paragraphs(
-                self.tr("No merge is necessary."),
-                self.tr("Your branch {0} is already up-to-date with {1}."),
+                _("No merge is necessary."),
+                _("Your branch {0} is already up-to-date with {1}."),
             ).format(bquo(myShorthand), bquo(theirShorthand))
             raise AbortTask(message, icon="information")
 
         elif analysis == MergeAnalysis.UNBORN:
-            message = self.tr("Cannot merge into an unborn head.")
+            message = _("Cannot merge into an unborn head.")
             raise AbortTask(message)
 
         elif analysis == MergeAnalysis.FASTFORWARD | MergeAnalysis.NORMAL:
-            title = self.tr("Fast-forwarding possible")
-            message = self.tr("Your branch {0} can simply be fast-forwarded to {1}."
-                              ).format(bquo(myShorthand), bquo(theirShorthand))
+            title = _("Fast-forwarding possible")
+            message = _("Your branch {0} can simply be fast-forwarded to {1}."
+                        ).format(bquo(myShorthand), bquo(theirShorthand))
             hint = paragraphs(
-                self.tr("<b>Fast-forwarding</b> means that the tip of your branch will be moved to a more "
-                        "recent commit in a linear path, without the need to create a merge commit."),
-                self.tr("In this case, {0} will be fast-forwarded to {1}."),
+                _("<b>Fast-forwarding</b> means that the tip of your branch will be moved to a more "
+                  "recent commit in a linear path, without the need to create a merge commit."),
+                _("In this case, {0} will be fast-forwarded to {1}."),
             ).format(bquo(myShorthand), bquo(shortHash(target)))
-            yield from self.flowConfirm(title=title, text=message, verb=self.tr("Fast-Forward"),
+            yield from self.flowConfirm(title=title, text=message, verb=_("Fast-Forward"),
                                         helpText=hint, dontShowAgainKey="MergeCanFF")
             yield from self.flowEnterWorkerThread()
             self.effects |= TaskEffects.Refs
             self.repo.fast_forward_branch(myShorthand, theirBranch.name)
 
         elif analysis == MergeAnalysis.NORMAL:
-            title = self.tr("Merging may cause conflicts")
+            title = _("Merging may cause conflicts")
             message = paragraphs(
-                self.tr("Merging {0} into {1} may cause conflicts.").format(bquo(theirShorthand), bquo(myShorthand)),
-                self.tr("You will need to fix the conflicts, if any. Then, commit the result to conclude the merge."))
-            yield from self.flowConfirm(title=title, text=message, verb=self.tr("Merge"),
+                _("Merging {0} into {1} may cause conflicts.").format(bquo(theirShorthand), bquo(myShorthand)),
+                _("You will need to fix the conflicts, if any. Then, commit the result to conclude the merge."))
+            yield from self.flowConfirm(title=title, text=message, verb=_("Merge"),
                                         dontShowAgainKey="MergeMayCauseConflicts")
 
             yield from self.flowEnterWorkerThread()
@@ -579,10 +586,10 @@ class RecallCommit(RepoTask):
     def flow(self):
         dlg = TextInputDialog(
             self.parentWidget(),
-            self.tr("Recall lost commit"),
-            self.tr("If you know the hash of a commit that isn’t part of any branches anymore, "
-                    "{app} will try to recall it for you.").format(app=qAppName()))
-        dlg.okButton.setText(self.tr("Recall"))
+            _("Recall lost commit"),
+            _("If you know the hash of a commit that isn’t part of any branches anymore, "
+              "{app} will try to recall it for you.").format(app=qAppName()))
+        dlg.okButton.setText(_("Recall"))
 
         yield from self.flowDialog(dlg)
         dlg.deleteLater()

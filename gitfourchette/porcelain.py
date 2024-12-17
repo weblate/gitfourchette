@@ -441,7 +441,7 @@ def parse_submodule_patch(text: str) -> tuple[Oid, Oid, bool]:
 
     old_match = SUBPROJECT_COMMIT_MINUS_PATTERN.search(text)
     new_match = SUBPROJECT_COMMIT_PLUS_PATTERN.search(text)
-    old_id, _ = parse_subproject_line(old_match)
+    old_id, _dummy = parse_subproject_line(old_match)
     new_id, new_dirty = parse_subproject_line(new_match)
     return old_id, new_id, new_dirty
 
@@ -592,7 +592,7 @@ class GitConfigHelper:
         ]
         getters.sort(key=lambda item: item[0], reverse=True)
 
-        for _, getter in getters:
+        for _dummy, getter in getters:
             try:
                 config = getter()
             except OSError:

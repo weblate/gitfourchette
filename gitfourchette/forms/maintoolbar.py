@@ -9,6 +9,7 @@ from contextlib import suppress
 from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.repowidget import RepoWidget
 from gitfourchette.tasks import TaskBook
@@ -29,7 +30,7 @@ class MainToolBar(QToolBar):
     recentAction: QAction
 
     def __init__(self, parent: QWidget):
-        super().__init__(translate("General", "Show Toolbar"), parent)  # PYQT5 compat: Don't call self.tr here
+        super().__init__(englishTitleCase(_("Show toolbar")), parent)
 
         self.observed = None
 
@@ -50,9 +51,9 @@ class MainToolBar(QToolBar):
         self.headAction = TaskBook.toolbarAction(self, tasks.JumpToHEAD).toQAction(self)
 
         self.recentAction = ActionDef(
-            self.tr("Open..."), self.openDialog, icon="git-folder",
+            _("Open…"), self.openDialog, icon="git-folder",
             shortcuts=QKeySequence.StandardKey.Open,
-            tip=self.tr("Open a Git repo on your machine")
+            tip=_("Open a Git repo on your machine")
         ).toQAction(self)
 
         defs = [
@@ -70,14 +71,14 @@ class MainToolBar(QToolBar):
             TaskBook.toolbarAction(self, tasks.PushBranch),
             ActionDef.SPACER,
 
-            ActionDef(self.tr("Reveal"), self.reveal, icon="reveal",
+            ActionDef(_("Reveal"), self.reveal, icon="reveal",
                       shortcuts=GlobalShortcuts.openRepoFolder,
-                      tip=self.tr("Open repo folder in file manager")),
+                      tip=_("Open repo folder in file manager")),
             self.recentAction,
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Settings"), self.openPrefs, icon="git-settings",
+            ActionDef(_("Settings"), self.openPrefs, icon="git-settings",
                       shortcuts=QKeySequence.StandardKey.Preferences,
-                      tip=self.tr("Configure {app}").format(app=qAppName())),
+                      tip=_("Configure {app}").format(app=qAppName())),
         ]
         ActionDef.addToQToolBar(self, *defs)
 
@@ -126,22 +127,22 @@ class MainToolBar(QToolBar):
             ActionDef.SEPARATOR,
 
             ActionDef(
-                self.tr("Text Position"),
+                _("Text Position"),
                 submenu=[
-                    textPositionAction(self.tr("Icons Only"), Qt.ToolButtonStyle.ToolButtonIconOnly),
-                    textPositionAction(self.tr("Text Only"), Qt.ToolButtonStyle.ToolButtonTextOnly),
-                    textPositionAction(self.tr("Text Alongside Icons"), Qt.ToolButtonStyle.ToolButtonTextBesideIcon),
-                    textPositionAction(self.tr("Text Under Icons"), Qt.ToolButtonStyle.ToolButtonTextUnderIcon),
+                    textPositionAction(_("Icons Only"), Qt.ToolButtonStyle.ToolButtonIconOnly),
+                    textPositionAction(_("Text Only"), Qt.ToolButtonStyle.ToolButtonTextOnly),
+                    textPositionAction(_("Text Alongside Icons"), Qt.ToolButtonStyle.ToolButtonTextBesideIcon),
+                    textPositionAction(_("Text Under Icons"), Qt.ToolButtonStyle.ToolButtonTextUnderIcon),
                 ]
             ),
 
             ActionDef(
-                self.tr("Icon Size"),
+                _("Icon Size"),
                 submenu=[
-                    iconSizeAction(self.tr("Small"), 16),
-                    iconSizeAction(self.tr("Medium"), 20),
-                    iconSizeAction(self.tr("Large"), 24),
-                    iconSizeAction(self.tr("Huge"), 32),
+                    iconSizeAction(_("Small"), 16),
+                    iconSizeAction(_("Medium"), 20),
+                    iconSizeAction(_("Large"), 24),
+                    iconSizeAction(_("Huge"), 32),
                 ]
             ),
         ])

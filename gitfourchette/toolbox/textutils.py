@@ -10,6 +10,7 @@ import re
 from collections.abc import Iterable, Callable, Container
 from html import escape as escape
 
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 
 _elideMetrics: QFontMetrics | None = None
@@ -79,8 +80,8 @@ def paragraphs(*args: str | list[str]) -> str:
 
 
 def _quotePattern(text, htm=True):
-    q = tr("“{0}”", "Typographic quotes in your language. "
-                    "Will surround user strings throughout the app.")
+    # Typographic quotes in your language. Will surround user strings throughout the app.
+    q = _("“{0}”")
     if not htm:
         q = html.unescape(q)
     return q.format(text)
@@ -165,9 +166,9 @@ def elide(text: str, mode: Qt.TextElideMode = Qt.TextElideMode.ElideMiddle, ems:
 def clipboardStatusMessage(text: str):
     n = 1 + text.count('\n')
     if n == 1:
-        return tr("{0} copied to clipboard.").format(tquoe(text))
+        return _("{0} copied to clipboard.").format(tquoe(text))
     else:
-        return tr("%n lines copied to clipboard.", "", n)
+        return _("{n} lines copied to clipboard.").format(n=n)
 
 
 def ulify(items: Iterable[str], limit: int = 10, prefix="", suffix="", moreText=""):
@@ -185,7 +186,7 @@ def ulify(items: Iterable[str], limit: int = 10, prefix="", suffix="", moreText=
     if 0 <= limit < n:
         unlisted = n - limit
         if not moreText:
-            moreText = tr("...and {0} more")
+            moreText = _("…and {0} more")
         moreText = moreText.format(unlisted)
         text += f"\n<li>{prefix}<i>{moreText}</i>{suffix}</li>"
 

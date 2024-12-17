@@ -7,11 +7,12 @@
 from gitfourchette import settings
 from gitfourchette.filelists.filelist import FileList
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.localization import *
 from gitfourchette.nav import NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.toolbox import *
 from gitfourchette.tasks import *
+from gitfourchette.toolbox import *
 
 
 class DirtyFiles(FileList):
@@ -35,13 +36,13 @@ class DirtyFiles(FileList):
 
         if not anyConflicts and not anySubmodules:
             contextMenuActionStage = ActionDef(
-                self.tr("&Stage %n Files", "", n),
+                _n("&Stage File", "&Stage {n} Files", n),
                 self.stage,
                 icon="git-stage",
                 shortcuts=GlobalShortcuts.stageHotkeys[0])
 
             contextMenuActionDiscard = ActionDef(
-                self.tr("&Discard Changes"),
+                _n("&Discard Changes", "&Discard Changes", n),
                 self.discard,
                 icon="git-discard",
                 shortcuts=GlobalShortcuts.discardHotkeys[0])
@@ -58,17 +59,17 @@ class DirtyFiles(FileList):
         elif onlyConflicts:
             actions += [
                 ActionDef(
-                    self.tr("%n Merge Conflicts", "singular form should simply say 'Merge Conflict' without the %n", n),
+                    _n("Merge Conflict", "{n} Merge Conflicts", n),
                     kind=ActionDef.Kind.Section,
                 ),
 
                 ActionDef(
-                    self.tr("Resolve by Accepting “Theirs”"),
+                    _("Resolve by Accepting “Theirs”"),
                     self.mergeTakeTheirs,
                 ),
 
                 ActionDef(
-                    self.tr("Resolve by Keeping “Ours”"),
+                    _("Resolve by Keeping “Ours”"),
                     self.mergeKeepOurs,
                 ),
             ]
@@ -76,19 +77,19 @@ class DirtyFiles(FileList):
         elif onlySubmodules:
             actions += [
                 ActionDef(
-                    self.tr("%n Submodules", "please omit %n in singular form", n),
+                    _n("Submodule", "{n} Submodules", n),
                     kind=ActionDef.Kind.Section,
                 ),
                 ActionDef(
-                    self.tr("Stage %n Submodules", "please omit %n in singular form", n),
+                    _n("Stage Submodule", "Stage {n} Submodules", n),
                     self.stage,
                 ),
                 ActionDef(
-                    self.tr("Discard Changes in %n Submodules", "please omit %n in singular form", n),
+                    _n("Discard Changes in Submodule", "Discard Changes in {n} Submodules", n),
                     self.discard,
                 ),
                 ActionDef(
-                    self.tr("Open %n Submodules in New Tabs", "please omit %n in singular form", n),
+                    _n("Open Submodule in New Tab", "Open {n} Submodules in New Tabs", n),
                     self.openSubmoduleTabs,
                 ),
             ]
@@ -96,8 +97,7 @@ class DirtyFiles(FileList):
         else:
             # Conflicted + non-conflicted files selected
             # or Submodules + non-submodules selected
-            sorry = (translate("FileList", "Can’t stage this selection in bulk.") + "\n" +
-                     translate("FileList", "Please review the files individually."))
+            sorry = _("Can’t stage this selection in bulk.") + "\n" + _("Please review the files individually.")
             actions += [
                 ActionDef(sorry, enabled=False),
             ]

@@ -7,6 +7,7 @@
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.signatureform import SignatureForm
 from gitfourchette.forms.ui_identitydialog import Ui_IdentityDialog
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
@@ -40,9 +41,9 @@ class IdentityDialog(QDialog):
         validator.connectInput(ui.emailEdit, SignatureForm.validateInput)
         validator.run(silenceEmptyWarnings=True)
 
-        subtitle = translate("IdentityDialog", "This information will be embedded in the commits and tags that you create on this machine.")
+        subtitle = _("This information will be embedded in the commits and tags that you create on this machine.")
         if firstRun:
-            subtitle = translate("IdentityDialog", "Before editing this repository, please set up your identity for Git.") + " " + subtitle
+            subtitle = _("Before editing this repository, please set up your identity for Git.") + " " + subtitle
 
         convertToBrandedDialog(self, subtitleText=subtitle, multilineSubtitle=True)
 

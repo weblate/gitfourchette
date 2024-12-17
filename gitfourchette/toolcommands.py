@@ -9,6 +9,7 @@ import os
 import shlex
 from collections.abc import Sequence
 
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 
 
@@ -149,7 +150,7 @@ class ToolCommands:
             # Get ref token (force IndexError if there's none)
             while tokens[i].startswith("-"):  # Skip switches
                 i += 1
-            _ = tokens[i]
+            _dummy = tokens[i]
             return i
 
         except IndexError:
@@ -222,7 +223,7 @@ class ToolCommands:
                     prefix = tok.removesuffix(placeholder)
                     break
             else:
-                raise ValueError(translate("exttools", "Placeholder token {0} missing.").format(placeholder))
+                raise ValueError(_("Placeholder token {0} missing.").format(placeholder))
             if replacement:
                 tokens[i] = prefix + replacement
             else:

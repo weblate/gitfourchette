@@ -4,11 +4,11 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-from gitfourchette.forms.aboutdialog import DONATE_URL
-from gitfourchette.qt import *
-from gitfourchette.forms.ui_donateprompt import Ui_DonatePrompt
-from gitfourchette.toolbox import *
 from gitfourchette import settings
+from gitfourchette.forms.aboutdialog import DONATE_URL
+from gitfourchette.forms.ui_donateprompt import Ui_DonatePrompt
+from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 
 
 class DonatePrompt(QDialog):

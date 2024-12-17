@@ -10,6 +10,7 @@ import shutil
 from contextlib import suppress
 
 from gitfourchette import reverseunidiff
+from gitfourchette.localization import *
 from gitfourchette.mergedriver import MergeDriver
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
@@ -40,14 +41,16 @@ class _BaseStagingTask(RepoTask):
         numConflicts = len(conflicts)
 
         if numPatches == numConflicts:
-            intro = tr("You have selected %n merge conflicts that are still unsolved.", "", numConflicts)
+            intro = _n("You have selected an unresolved merge conflict.",
+                       "You have selected {n} unresolved merge conflicts.", numConflicts)
         else:
-            intro = tr("There are %n unsolved merge conflicts among your selection.", "", numConflicts)
+            intro = _n("There is an unresolved merge conflict among your selection.",
+                       "There are {n} unresolved merge conflicts among your selection.", numConflicts)
 
         if purpose == PatchPurpose.STAGE:
-            please = tr("Please fix it/them before staging:", "'it/them' refers to the selected merge conflicts", numConflicts)
+            please = _np("please fix (the merge conflicts)", "Please fix it before staging:", "Please fix them before staging:", numConflicts)
         else:
-            please = tr("Please fix it/them before discarding:", "'it/them' refers to the selected merge conflicts", numConflicts)
+            please = _np("please fix (the merge conflicts)", "Please fix it before discarding:", "Please fix them before discarding:", numConflicts)
 
         message = paragraphs(intro, please)
         message += toTightUL(p.delta.new_file.path for p in conflicts)
@@ -74,7 +77,7 @@ class StageFiles(_BaseStagingTask):
 
         yield from self.debriefPostStage(patches)
 
-        self.postStatus = self.tr("%n files staged.", "please omit %n in singular form", len(patches))
+        self.postStatus = _n("File staged.", "{n} files staged.", len(patches))
 
     def debriefPostStage(self, patches: list[Patch]):
         debrief = {}
@@ -84,15 +87,15 @@ class StageFiles(_BaseStagingTask):
             m = ""
 
             if newFile.mode == FileMode.TREE:
-                m = self.tr("You’ve added another Git repo inside your current repo. "
-                            "It is STRONGLY RECOMMENDED to absorb it as a submodule before committing.")
+                m = _("You’ve added another Git repo inside your current repo. "
+                      "It is STRONGLY RECOMMENDED to absorb it as a submodule before committing.")
             elif SubtreeCommitDiff.is_subtree_commit_patch(patch):
                 info = self.repo.analyze_subtree_commit_patch(patch, in_workdir=True)
                 if info.is_del and info.was_registered:
-                    m = self.tr("Don’t forget to remove the submodule from {0} to complete its deletion."
-                                ).format(tquo(DOT_GITMODULES))
+                    m = _("Don’t forget to remove the submodule from {0} to complete its deletion."
+                          ).format(tquo(DOT_GITMODULES))
                 elif not info.is_del and not info.is_trivially_indexable:
-                    m = self.tr("Uncommitted changes in the submodule can’t be staged from the parent repository.")
+                    m = _("Uncommitted changes in the submodule can’t be staged from the parent repository.")
 
             if m:
                 debrief[newFile.path] = m
@@ -107,7 +110,7 @@ class StageFiles(_BaseStagingTask):
             self.parentWidget(),
             'information',
             self.name(),
-            self.tr("%n items require your attention after staging:", "", len(debrief)))
+            _n("An item requires your attention after staging:", "{n} items require your attention after staging:", len(debrief)))
         addULToMessageBox(qmb, [f"{btag(path)}: {issue}" for path, issue in debrief.items()])
         qmb.show()
 
@@ -116,7 +119,7 @@ class DiscardFiles(_BaseStagingTask):
     def flow(self, patches: list[Patch]):
         textPara = []
 
-        verb = self.tr("Discard changes", "Button label")
+        verb = _("Discard changes")
 
         if not patches:  # Nothing to discard (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
@@ -133,34 +136,35 @@ class DiscardFiles(_BaseStagingTask):
             patch = patches[0]
             bpath = bquo(patch.delta.new_file.path)
             if patch.delta.status == DeltaStatus.UNTRACKED:
-                really = self.tr("Really delete {0}?", "delete an untracked file").format(bpath)
-                really += " " + self.tr("(This file is untracked – it’s never been committed yet.)")
-                verb = self.tr("Delete", "button label to delete an untracked file")
+                really = _("Really delete {0}?").format(bpath)
+                really += " " + _("(This file is untracked – it’s never been committed yet.)")
+                verb = _("Delete")
             elif patch.delta.new_file.mode == FileMode.COMMIT:
-                really = self.tr("Really discard changes in submodule {0}?").format(bpath)
+                really = _("Really discard changes in submodule {0}?").format(bpath)
             else:
-                really = self.tr("Really discard changes to {0}?", "to [a specific file]").format(bpath)
+                really = _("Really discard changes to {0}?").format(bpath)
         else:
-            nFiles = btag(self.tr("%n files", "(discard changes to) %n files", len(patches) - len(submos)))
-            nSubmos = btag(self.tr("%n submodules", "(discard changes in) %n submodules", len(submos)))
+            nFiles = len(patches) - len(submos)
+            nSubmos = len(submos)
             if allSubmos:
-                really = self.tr("Really discard changes in {0}?", "in [n submodules]").format(nSubmos)
+                really = _("Really discard changes in {n} submodules?").format(n=nSubmos)
             elif anySubmos:
-                really = self.tr("Really discard changes to {0} and in {1}?", "to [n files] and in [n submodules]").format(nFiles, nSubmos)
+                really = _("Really discard changes to {nf} files and in {ns} submodules?").format(nf=nFiles, ns=nSubmos)
             else:
-                really = self.tr("Really discard changes to {0}?", "to [n files]").format(nFiles)
+                really = _("Really discard changes to {n} files?").format(n=nFiles)
 
         textPara.append(really)
         if anySubmos:
-            submoPostamble = self.tr("Any uncommitted changes in %n submodules will be <b>cleared</b> "
-                                     "and the submodules’ HEAD will be reset.", "", len(submos))
+            submoPostamble = _n(
+                "Any uncommitted changes in the submodule will be <b>cleared</b> and the submodule’s HEAD will be reset.",
+                "Any uncommitted changes in {n} submodules will be <b>cleared</b> and the submodules’ HEAD will be reset.",
+                len(submos))
             textPara.append(submoPostamble)
 
-        textPara.append(tr("This cannot be undone!"))
+        textPara.append(_("This cannot be undone!"))
         text = paragraphs(textPara)
 
-        yield from self.flowConfirm(text=text, verb=verb,
-                                    buttonIcon="SP_DialogDiscardButton")
+        yield from self.flowConfirm(text=text, verb=verb, buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Workdir
@@ -188,7 +192,7 @@ class DiscardFiles(_BaseStagingTask):
             for patch in submos:
                 self.restoreSubmodule(patch)
 
-        self.postStatus = self.tr("%n files discarded.", "", len(patches))
+        self.postStatus = _n("File discarded.", "{n} files discarded.", len(patches))
 
     def restoreSubmodule(self, patch: Patch):
         path = patch.delta.new_file.path
@@ -197,7 +201,7 @@ class DiscardFiles(_BaseStagingTask):
         if patch.delta.status == DeltaStatus.DELETED:
             didRestore = self.repo.restore_submodule_gitlink(path)
             if not didRestore:
-                raise AbortTask(self.tr("Couldn’t restore gitlink file for submodule {0}.").format(lquo(path)))
+                raise AbortTask(_("Couldn’t restore gitlink file for submodule {0}.").format(lquo(path)))
 
         with RepoContext(self.repo.in_workdir(path), RepositoryOpenFlag.NO_SEARCH) as subRepo:
             # Reset HEAD to the target commit
@@ -218,7 +222,7 @@ class UnstageFiles(_BaseStagingTask):
 
         self.repo.unstage_files(patches)
 
-        self.postStatus = self.tr("%n files unstaged.", "", len(patches))
+        self.postStatus = _n("File unstaged.", "{n} files unstaged.", len(patches))
 
 
 class DiscardModeChanges(_BaseStagingTask):
@@ -230,15 +234,12 @@ class DiscardModeChanges(_BaseStagingTask):
             raise AbortTask()
         elif len(patches) == 1:
             path = patches[0].delta.new_file.path
-            textPara.append(self.tr("Really discard mode change in {0}?").format(bquo(path)))
+            textPara.append(_("Really discard mode change in {0}?").format(bquo(path)))
         else:
-            textPara.append(self.tr("Really discard mode changes in <b>%n files</b>?", "", len(patches)))
-        textPara.append(tr("This cannot be undone!"))
+            textPara.append(_("Really discard mode changes in <b>{n} files</b>?").format(n=len(patches)))
+        textPara.append(_("This cannot be undone!"))
 
-        yield from self.flowConfirm(
-            text=paragraphs(textPara),
-            verb=self.tr("Discard mode changes", "Button label"),
-            buttonIcon="SP_DialogDiscardButton")
+        yield from self.flowConfirm(text=paragraphs(textPara), verb=_("Discard mode changes"), buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Workdir
@@ -264,17 +265,17 @@ class ApplyPatch(RepoTask):
         if not subPatch:
             QApplication.beep()
             verb = TrTables.patchPurpose(purpose & PatchPurpose.VERB_MASK).lower()
-            message = self.tr("Can’t {verb} the selection because no red/green lines are selected.").format(verb=verb)
+            message = _("Can’t {verb} the selection because no red/green lines are selected.").format(verb=verb)
             raise AbortTask(message, asStatusMessage=True)
 
         if purpose & PatchPurpose.DISCARD:
             title = TrTables.patchPurpose(purpose)
             textPara = []
             if purpose & PatchPurpose.HUNK:
-                textPara.append(self.tr("Really discard this hunk?"))
+                textPara.append(_("Really discard this hunk?"))
             else:
-                textPara.append(self.tr("Really discard the selected lines?"))
-            textPara.append(tr("This cannot be undone!"))
+                textPara.append(_("Really discard the selected lines?"))
+            textPara.append(_("This cannot be undone!"))
             yield from self.flowConfirm(
                 title,
                 text=paragraphs(textPara),
@@ -297,12 +298,12 @@ class ApplyPatch(RepoTask):
 class RevertPatch(RepoTask):
     def flow(self, fullPatch: Patch, patchData: bytes):
         if not patchData:
-            raise AbortTask(self.tr("There’s nothing to revert in the selection."))
+            raise AbortTask(_("There’s nothing to revert in the selection."))
 
         diff = self.repo.applies_breakdown(patchData, location=ApplyLocation.WORKDIR)
         if not diff:
-            raise AbortTask(self.tr("Couldn’t revert this patch.") + "<br>" +
-                            self.tr("The code may have diverged too much from this revision."))
+            raise AbortTask(_("Couldn’t revert this patch.") + "<br>" +
+                            _("The code may have diverged too much from this revision."))
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Workdir
@@ -360,7 +361,7 @@ class HardSolveConflicts(RepoTask):
         # Write index modifications to disk
         index.write()
 
-        self.postStatus = self.tr("%n conflicts resolved.", "please omit %n in singular form", len(conflictedFiles))
+        self.postStatus = _n("Conflict resolved.", "{n} conflicts resolved.", len(conflictedFiles))
 
 
 class MarkConflictSolved(RepoTask):
@@ -397,20 +398,20 @@ class AcceptMergeConflictResolution(RepoTask):
 
         # Jump to staged file after confirming conflict resolution
         self.jumpTo = NavLocator.inStaged(path)
-        self.postStatus = self.tr("Merge conflict resolved in {0}.").format(tquo(path))
+        self.postStatus = _("Merge conflict resolved in {0}.").format(tquo(path))
 
 
 class ApplyPatchFile(RepoTask):
     def flow(self, reverse: bool = False, path: str = ""):
         if reverse:
-            title = self.tr("Revert patch file")
-            verb = self.tr("Revert")
+            title = _("Revert patch file")
+            verb = _("Revert")
         else:
-            title = self.tr("Apply patch file")
-            verb = self.tr("Apply")
+            title = _("Apply patch file")
+            verb = _("Apply")
 
-        patchFileCaption = self.tr("Patch file")
-        allFilesCaption = self.tr("All files")
+        patchFileCaption = _("Patch file")
+        allFilesCaption = _("All files")
 
         if not path:
             qfd = PersistentFileDialog.openFile(
@@ -445,8 +446,9 @@ class ApplyPatchFile(RepoTask):
         yield from self.flowEnterUiThread()
 
         text = paragraphs(
-            self.tr("Do you want to {verb} patch file {path}?"),
-            self.tr("<b>%n</b> files will be modified in your working directory:", "", len(deltas))
+            _("Do you want to {verb} patch file {path}?"),
+            _n("<b>{n}</b> file will be modified in your working directory:",
+               "<b>{n}</b> files will be modified in your working directory:", len(deltas))
         )
         text = text.format(path=bquoe(os.path.basename(path)), verb=tagify(verb.lower(), "<b>"))
         details = [f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas]
@@ -479,12 +481,13 @@ class ApplyPatchData(RepoTask):
 
         yield from self.flowEnterUiThread()
 
-        title = self.tr("Revert patch") if reverse else self.tr("Apply patch")
-        verb = self.tr("Revert") if reverse else self.tr("Apply")
+        title = _("Revert patch") if reverse else _("Apply patch")
+        verb = _("Revert") if reverse else _("Apply")
 
         text = paragraphs(
-            self.tr("Do you want to {verb} this patch?"),
-            self.tr("<b>%n</b> files will be modified in your working directory:", "", len(deltas))
+            _("Do you want to {verb} this patch?"),
+            _n("<b>{n}</b> file will be modified in your working directory:",
+               "<b>{n}</b> files will be modified in your working directory:", len(deltas))
         )
         text = text.format(verb=tagify(verb.lower(), "<b>"))
         details = [f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas]
@@ -499,11 +502,11 @@ class ApplyPatchData(RepoTask):
 class RestoreRevisionToWorkdir(RepoTask):
     def flow(self, patch: Patch, old: bool):
         if old:
-            preposition = self.tr("before", "preposition slotted into '...BEFORE this commit'")
+            preposition = _p("preposition slotted into '...BEFORE this commit'", "before")
             diffFile = patch.delta.old_file
             delete = patch.delta.status == DeltaStatus.ADDED
         else:
-            preposition = self.tr("at", "preposition slotted into '...AT this commit'")
+            preposition = _p("preposition slotted into '...AT this commit'", "at")
             diffFile = patch.delta.new_file
             delete = patch.delta.status == DeltaStatus.DELETED
 
@@ -511,22 +514,22 @@ class RestoreRevisionToWorkdir(RepoTask):
         existsNow = os.path.isfile(path)
 
         if not existsNow and delete:
-            message = self.tr("Your working copy of {path} already matches the revision {preposition} this commit.")
+            message = _("Your working copy of {path} already matches the revision {preposition} this commit.")
             message = message.format(path=bquo(diffFile.path), preposition=preposition)
             raise AbortTask(message, icon="information")
 
         if not existsNow:
-            actionVerb = self.tr("recreated")
+            actionVerb = _("recreated")
         elif delete:
-            actionVerb = self.tr("deleted")
+            actionVerb = _("deleted")
         else:
-            actionVerb = self.tr("overwritten")
+            actionVerb = _("overwritten")
         prompt = paragraphs(
-            self.tr("Do you want to restore {path} as it was {preposition} this commit?"),
-            self.tr("This file will be {processed} in your working directory.")
+            _("Do you want to restore {path} as it was {preposition} this commit?"),
+            _("This file will be {processed} in your working directory.")
         ).format(path=bquo(diffFile.path), preposition=preposition, processed=actionVerb)
 
-        yield from self.flowConfirm(text=prompt, verb=self.tr("Restore"))
+        yield from self.flowConfirm(text=prompt, verb=_("Restore"))
 
         self.effects |= TaskEffects.Workdir
 
@@ -539,7 +542,7 @@ class RestoreRevisionToWorkdir(RepoTask):
                 f.write(blob.data)
             os.chmod(path, diffFile.mode)
 
-        self.postStatus = self.tr("File {path} {processed}.").format(path=tquoe(diffFile.path), processed=actionVerb)
+        self.postStatus = _("File {path} {processed}.").format(path=tquoe(diffFile.path), processed=actionVerb)
         self.jumpTo = NavLocator.inUnstaged(diffFile.path)
 
 
@@ -553,46 +556,47 @@ class AbortMerge(RepoTask):
         anyConflicts = self.repo.index.conflicts
 
         if not (isMerging or isCherryPicking or isReverting or anyConflicts):
-            raise AbortTask(self.tr("No abortable state is in progress."), icon='information')
+            raise AbortTask(_("No abortable state is in progress."), icon='information')
 
-        verb = self.tr("Abort")
+        verb = _("Abort")
         if isCherryPicking:
-            clause = self.tr("abort the ongoing cherry-pick")
-            title = self.tr("Abort cherry-pick")
-            postStatus = self.tr("Cherry-pick aborted.")
+            clause = _("abort the ongoing cherry-pick")
+            title = _("Abort cherry-pick")
+            postStatus = _("Cherry-pick aborted.")
         elif isMerging:
-            clause = self.tr("abort the ongoing merge")
-            title = self.tr("Abort merge")
-            postStatus = self.tr("Merge aborted.")
+            clause = _("abort the ongoing merge")
+            title = _("Abort merge")
+            postStatus = _("Merge aborted.")
         elif isReverting:
-            clause = self.tr("abort the ongoing revert")
-            title = self.tr("Abort revert")
-            postStatus = self.tr("Revert aborted.")
+            clause = _("abort the ongoing revert")
+            title = _("Abort revert")
+            postStatus = _("Revert aborted.")
         else:
-            clause = self.tr("reset the index")
-            title = self.tr("Reset index")
-            verb = self.tr("Reset")
-            postStatus = self.tr("Index reset.")
+            clause = _("reset the index")
+            title = _("Reset index")
+            verb = _("Reset")
+            postStatus = _("Index reset.")
 
         try:
             abortList = self.repo.get_reset_merge_file_list()
         except MultiFileError as exc:
-            exc.message = self.tr(
-                "Cannot {0} right now, because %n files contain both staged and unstaged changes.",
-                "placeholder: cannot abort the merge / reset the index / etc.", len(exc.file_exceptions)
-            ).format(clause)
+            # TODO: GETTEXT?
+            exc.message = _n(
+                "Cannot {verb} right now, because a file contain both staged and unstaged changes.",
+                "Cannot {verb} right now, because {n} files contain both staged and unstaged changes.",
+                n=len(exc.file_exceptions), verb=clause)
             raise exc
 
-        lines = [self.tr("Do you want to {0}?").format(clause)]
+        lines = [_("Do you want to {0}?").format(clause)]
 
         if not abortList:
-            lines.append(self.tr("No files are affected."))
+            lines.append(_("No files are affected."))
         else:
             if anyConflicts:
-                lines.append(self.tr("All conflicts will be cleared and all <b>staged</b> changes will be lost."))
+                lines.append(_("All conflicts will be cleared and all <b>staged</b> changes will be lost."))
             else:
-                lines.append(self.tr("All <b>staged</b> changes will be lost."))
-            lines.append(self.tr("%n files will be reset:", "", len(abortList)))
+                lines.append(_("All <b>staged</b> changes will be lost."))
+            lines.append(_n("This file will be reset:", "{n} files will be reset:", len(abortList)))
 
         yield from self.flowConfirm(title=title, text=paragraphs(lines), verb=verb,
                                     detailList=[escape(f) for f in abortList])

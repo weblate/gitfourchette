@@ -82,7 +82,7 @@ def testOpenSubmoduleWithinApp(tempDir, mainWindow, method):
 @pytest.mark.parametrize("method", ["key", "menu", "button"])
 def testSubmoduleHeadUpdate(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
-    subWd, _ = reposcenario.submodule(wd)
+    subWd, _dummy = reposcenario.submodule(wd)
     subHead = Oid(hex='49322bb17d3acc9146f98c97d078513228bbf3c0')
     with RepoContext(subWd) as submo:
         submo.checkout_commit(subHead)
@@ -106,7 +106,7 @@ def testSubmoduleHeadUpdate(tempDir, mainWindow, method):
 @pytest.mark.parametrize("method", ["key", "menu", "button", "link"])
 def testSubmoduleDirty(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
-    subWd, _ = reposcenario.submodule(wd)
+    subWd, _dummy = reposcenario.submodule(wd)
     writeFile(f"{subWd}/dirty.txt", "coucou")
 
     rw = mainWindow.openRepo(wd)

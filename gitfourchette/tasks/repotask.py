@@ -12,6 +12,7 @@ import warnings
 from collections.abc import Generator
 from typing import Any, TYPE_CHECKING, Literal, TypeVar
 
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import ConflictError, MultiFileError, RepositoryState, Repo
 from gitfourchette.qt import *
@@ -28,28 +29,24 @@ logger = logging.getLogger(__name__)
 def showConflictErrorMessage(parent: QWidget, exc: ConflictError, opName="Operation"):
     numConflicts = len(exc.conflicts)
 
-    # lupdate doesn't pick up the plural form with translate("Context", "%n", "", numConflicts)
-    title = tr("%n conflicting files", "", numConflicts)
-    nFilesSubmessage = tr("%n files", "", numConflicts)
-    nFilesSubmessage = f"<b>{nFilesSubmessage}</b>"
+    title = _n("Conflicting file", "{n} conflicting files", numConflicts)
+    nFilesText = _np("operation conflicts with…", "a file", "{n} files", numConflicts)
+    nFilesText = f"<b>{nFilesText}</b>"
 
     if exc.description == "workdir":
-        message = translate("Conflict", "Operation {0} conflicts with {1} in the working directory:"
-                            ).format(bquo(opName), nFilesSubmessage)
+        message = _("Operation {op} conflicts with {files} in the working directory:")
     elif exc.description == "HEAD":
-        message = translate("Conflict", "Operation {0} conflicts with {1} in the commit at HEAD:"
-                            ).format(bquo(opName), nFilesSubmessage)
+        message = _("Operation {op} conflicts with {files} in the commit at HEAD:")
     else:
-        message = translate("Conflict", "Operation {0} has caused a conflict with {1} ({2}):"
-                            ).format(bquo(opName), nFilesSubmessage, exc.description)
+        message = _("Operation {op} has caused a conflict with {files} ({exc}):")
+    message = message.format(op=bquo(opName), files=nFilesText, exc=exc.description)
 
     qmb = showWarning(parent, title, message)
     addULToMessageBox(qmb, exc.conflicts)
 
     if exc.description == "workdir":
         dt = qmb.detailedText()
-        dt += translate("Conflict", "Before you try again, you should either "
-                                    "commit, stash, or discard your changes.")
+        dt += _("Before you try again, you should either commit, stash, or discard your changes.")
         qmb.setDetailedText(dt)
 
 
@@ -294,7 +291,7 @@ class RepoTask(QObject):
             if exc.message:
                 message = exc.message
             else:
-                message = tr("Operation failed: {0}.").format(escape(self.name()))
+                message = _("Operation failed: {0}.").format(escape(self.name()))
             for filePath, fileException in exc.file_exceptions.items():
                 if fileException:
                     details.append(f"<b>{escape(filePath)}</b>: {escape(str(fileException))}")
@@ -304,7 +301,7 @@ class RepoTask(QObject):
             addULToMessageBox(qmb, details)
             qmb.show()
         else:
-            message = tr("Operation failed: {0}.").format(escape(self.name()))
+            message = _("Operation failed: {0}.").format(escape(self.name()))
             excMessageBox(exc, title=self.name(), message=message, parent=self.parentWidget())
 
     def prereqs(self) -> TaskPrereqs:
@@ -505,7 +502,7 @@ class RepoTask(QObject):
         dontShowAgainCheckBox = None
         if dontShowAgainKey:
             assert not checkbox
-            dontShowAgainPrompt = tr("Don’t ask me to confirm this again") if canCancel else tr("Don’t show this again")
+            dontShowAgainPrompt = _("Don’t ask me to confirm this again") if canCancel else _("Don’t show this again")
             dontShowAgainCheckBox = QCheckBox(dontShowAgainPrompt, qmb)
             tweakWidgetFont(dontShowAgainCheckBox, 80)
             qmb.setCheckBox(dontShowAgainCheckBox)
@@ -547,27 +544,27 @@ class RepoTask(QObject):
         repo = self.repo
 
         if TaskPrereqs.NoConflicts in prereqs and repo.any_conflicts:
-            raise AbortTask(translate("RepoTask", "Fix merge conflicts before performing this action."))
+            raise AbortTask(_("Fix merge conflicts before performing this action."))
 
         if TaskPrereqs.NoUnborn in prereqs and repo.head_is_unborn:
             raise AbortTask(paragraphs(
-                translate("RepoTask", "There are no commits in this repository yet."),
-                translate("RepoTask", "Create the initial commit in this repository before performing this action.")))
+                _("There are no commits in this repository yet."),
+                _("Create the initial commit in this repository before performing this action.")))
 
         if TaskPrereqs.NoDetached in prereqs and repo.head_is_detached:
             raise AbortTask(paragraphs(
-                translate("RepoTask", "You are in “detached HEAD” state."),
-                translate("RepoTask", "Switch to a local branch before performing this action.")))
+                _("You are in “detached HEAD” state."),
+                _("Please switch to a local branch before performing this action.")))
 
         if TaskPrereqs.NoCherrypick in prereqs and repo.state() == RepositoryState.CHERRYPICK:
             raise AbortTask(paragraphs(
-                translate("RepoTask", "You are in the middle of a cherry-pick."),
-                translate("RepoTask", "Before performing this action, conclude the cherry-pick.")))
+                _("You are in the middle of a cherry-pick."),
+                _("Before performing this action, conclude the cherry-pick.")))
 
         if TaskPrereqs.NoStagedChanges in prereqs and repo.any_staged_changes:
             raise AbortTask(paragraphs(
-                translate("RepoTask", "You have staged changes."),
-                translate("RepoTask", "Before performing this action, commit your changes or stash them.")))
+                _("You have staged changes."),
+                _("Before performing this action, commit your changes or stash them.")))
 
 
 class RepoTaskRunner(QObject):
@@ -679,9 +676,9 @@ class RepoTaskRunner(QObject):
 
         else:
             logger.info(f"Task {task} cannot kill task {self._currentTask}")
-            message = self.tr("Please wait for the current operation to complete ({0})."
+            message = _("Please wait for the current operation to complete ({0})."
                               ).format(hquo(self._currentTask.name()))
-            showInformation(task.parentWidget(), self.tr("Operation in progress"), "<html>" + message)
+            showInformation(task.parentWidget(), _("Operation in progress"), "<html>" + message)
 
     def _startTask(self, task: RepoTask):
         assert self._currentTask == task
@@ -759,7 +756,7 @@ class RepoTaskRunner(QObject):
 
         elif token.flowControl == FlowControlToken.Kind.ContinueOnWorkThread:
             assert not RepoTaskRunner.ForceSerial
-            busyMessage = self.tr("Busy: {0}...").format(task.name())
+            busyMessage = _("Busy: {0}…").format(task.name())
             self.progress.emit(busyMessage, True)
 
             # Wrapper around `next(flow)`.

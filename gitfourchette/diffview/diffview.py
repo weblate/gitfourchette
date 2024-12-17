@@ -20,6 +20,7 @@ from gitfourchette.diffview.diffrubberband import DiffRubberBand
 from gitfourchette.exttools import openPrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.localization import *
 from gitfourchette.nav import NavContext, NavFlags, NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -105,7 +106,7 @@ class DiffView(QPlainTextEdit):
         self.cursorPositionChanged.connect(self.updateRubberBand)
         self.selectionChanged.connect(self.updateRubberBand)
 
-        self.searchBar = SearchBar(self, toLengthVariants(self.tr("Find text in diff|Find in diff")))
+        self.searchBar = SearchBar(self, toLengthVariants(_("Find text in diff|Find in diff")))
         self.searchBar.textChanged.connect(self.highlighter.rehighlight)
         self.searchBar.searchNext.connect(lambda: self.search(SearchBar.Op.NEXT))
         self.searchBar.searchPrevious.connect(lambda: self.search(SearchBar.Op.PREVIOUS))
@@ -132,22 +133,22 @@ class DiffView(QPlainTextEdit):
         rubberBandButtonLayout.setContentsMargins(0, 0, 0, 0)
 
         self.stageButton = QToolButton()
-        self.stageButton.setText(self.tr("Stage Selection"))
+        self.stageButton.setText(_("Stage Selection"))
         self.stageButton.setIcon(stockIcon("git-stage-lines"))
-        self.stageButton.setToolTip(appendShortcutToToolTipText(self.tr("Stage selected lines"), GlobalShortcuts.stageHotkeys[0]))
+        self.stageButton.setToolTip(appendShortcutToToolTipText(_("Stage selected lines"), GlobalShortcuts.stageHotkeys[0]))
         self.stageButton.clicked.connect(self.stageSelection)
 
         self.unstageButton = QToolButton()
-        self.unstageButton.setText(self.tr("Unstage Selection"))
+        self.unstageButton.setText(_("Unstage Selection"))
         self.unstageButton.setIcon(stockIcon("git-unstage-lines"))
         self.unstageButton.clicked.connect(self.unstageSelection)
-        self.unstageButton.setToolTip(appendShortcutToToolTipText(self.tr("Unstage selected lines"), GlobalShortcuts.discardHotkeys[0]))
+        self.unstageButton.setToolTip(appendShortcutToToolTipText(_("Unstage selected lines"), GlobalShortcuts.discardHotkeys[0]))
 
         self.discardButton = QToolButton()
-        self.discardButton.setText(self.tr("Discard"))
+        self.discardButton.setText(_("Discard"))
         self.discardButton.setIcon(stockIcon("git-discard-lines"))
         self.discardButton.clicked.connect(self.discardSelection)
-        self.discardButton.setToolTip(appendShortcutToToolTipText(self.tr("Discard selected lines"), GlobalShortcuts.discardHotkeys[0]))
+        self.discardButton.setToolTip(appendShortcutToToolTipText(_("Discard selected lines"), GlobalShortcuts.discardHotkeys[0]))
 
         for button in self.stageButton, self.discardButton, self.unstageButton:
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
@@ -486,91 +487,91 @@ class DiffView(QPlainTextEdit):
         if navContext == NavContext.COMMITTED:
             if hasSelection:
                 actions = [
-                    ActionDef(self.tr("Export Lines as Patch..."), self.exportSelection),
-                    ActionDef(self.tr("Revert Lines..."), self.revertSelection),
+                    ActionDef(_("Export Lines as Patch…"), self.exportSelection),
+                    ActionDef(_("Revert Lines…"), self.revertSelection),
                 ]
             else:
                 actions = [
-                    ActionDef(self.tr("Export Hunk {0} as Patch...").format(shortHunkHeader), lambda: self.exportHunk(clickedHunkID)),
-                    ActionDef(self.tr("Revert Hunk..."), lambda: self.revertHunk(clickedHunkID)),
+                    ActionDef(_("Export Hunk {0} as Patch…").format(shortHunkHeader), lambda: self.exportHunk(clickedHunkID)),
+                    ActionDef(_("Revert Hunk…"), lambda: self.revertHunk(clickedHunkID)),
                 ]
 
         elif navContext == NavContext.UNTRACKED:
             if hasSelection:
                 actions = [
-                    ActionDef(self.tr("Export Lines as Patch..."), self.exportSelection),
+                    ActionDef(_("Export Lines as Patch…"), self.exportSelection),
                 ]
             else:
                 actions = [
-                    ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
+                    ActionDef(_("Export Hunk as Patch…"), lambda: self.exportHunk(clickedHunkID)),
                 ]
 
         elif navContext == NavContext.UNSTAGED:
             if hasSelection:
                 actions = [
                     ActionDef(
-                        self.tr("Stage Lines"),
+                        _("Stage Lines"),
                         self.stageSelection,
                         "git-stage-lines",
                         shortcuts=GlobalShortcuts.stageHotkeys[0],
                     ),
                     ActionDef(
-                        self.tr("Discard Lines"),
+                        _("Discard Lines"),
                         self.discardSelection,
                         "git-discard-lines",
                         shortcuts=GlobalShortcuts.discardHotkeys[0],
                     ),
                     ActionDef(
-                        self.tr("Export Lines as Patch..."),
+                        _("Export Lines as Patch…"),
                         self.exportSelection
                     ),
                 ]
             else:
                 actions = [
                     ActionDef(
-                        self.tr("Stage Hunk {0}").format(shortHunkHeader),
+                        _("Stage Hunk {0}").format(shortHunkHeader),
                         lambda: self.stageHunk(clickedHunkID),
                         "git-stage-lines",
                     ),
                     ActionDef(
-                        self.tr("Discard Hunk"),
+                        _("Discard Hunk"),
                         lambda: self.discardHunk(clickedHunkID),
                         "git-discard-lines",
                     ),
-                    ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
+                    ActionDef(_("Export Hunk as Patch…"), lambda: self.exportHunk(clickedHunkID)),
                 ]
 
         elif navContext == NavContext.STAGED:
             if hasSelection:
                 actions = [
                     ActionDef(
-                        self.tr("Unstage Lines"),
+                        _("Unstage Lines"),
                         self.unstageSelection,
                         "git-unstage-lines",
                         shortcuts=GlobalShortcuts.discardHotkeys[0],
                     ),
                     ActionDef(
-                        self.tr("Export Lines as Patch..."),
+                        _("Export Lines as Patch…"),
                         self.exportSelection,
                     ),
                 ]
             else:
                 actions = [
                     ActionDef(
-                        self.tr("Unstage Hunk {0}").format(shortHunkHeader),
+                        _("Unstage Hunk {0}").format(shortHunkHeader),
                         lambda: self.unstageHunk(clickedHunkID),
                         "git-unstage-lines",
                     ),
                     ActionDef(
-                        self.tr("Export Hunk as Patch..."),
+                        _("Export Hunk as Patch…"),
                         lambda: self.exportHunk(clickedHunkID),
                     ),
                 ]
 
         actions += [
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("&Word Wrap"), self.toggleWordWrap, checkState=1 if settings.prefs.wordWrap else -1),
-            ActionDef(self.tr("Configure Appearance..."), lambda: openPrefsDialog(self, "font"), icon="configure"),
+            ActionDef(_("&Word Wrap"), self.toggleWordWrap, checkState=1 if settings.prefs.wordWrap else -1),
+            ActionDef(_("Configure Appearance…"), lambda: openPrefsDialog(self, "font"), icon="configure"),
         ]
 
         bottom: QMenu = self.createStandardContextMenu()
@@ -664,7 +665,7 @@ class DiffView(QPlainTextEdit):
                 file.write(patchData)
 
         name = os.path.basename(self.currentLocator.path) + "[partial].patch"
-        qfd = PersistentFileDialog.saveFile(self, "SaveFile", self.tr("Export selected lines"), name)
+        qfd = PersistentFileDialog.saveFile(self, "SaveFile", _("Export selected lines"), name)
         qfd.fileSelected.connect(dump)
         qfd.show()
 
@@ -915,14 +916,14 @@ class DiffView(QPlainTextEdit):
 
         if self.currentLocator.context == NavContext.UNSTAGED:
             if numLines <= 1:
-                help = self.tr("Hit {stagekey} to stage the current line, or {discardkey} to discard it.")
+                help = _("Hit {stagekey} to stage the current line, or {discardkey} to discard it.")
             else:
-                help = self.tr("Hit {stagekey} to stage the selected lines, or {discardkey} to discard them.")
+                help = _("Hit {stagekey} to stage the selected lines, or {discardkey} to discard them.")
         elif self.currentLocator.context == NavContext.STAGED:
             if numLines <= 1:
-                help = self.tr("Hit {unstagekey} to unstage the current line.")
+                help = _("Hit {unstagekey} to unstage the current line.")
             else:
-                help = self.tr("Hit {unstagekey} to unstage the selected lines.")
+                help = _("Hit {unstagekey} to unstage the selected lines.")
         else:
             return
 
@@ -970,9 +971,9 @@ class DiffView(QPlainTextEdit):
             self.search(op)
 
         prompt = [
-            self.tr("End of diff reached.") if op == SearchBar.Op.NEXT
-            else self.tr("Top of diff reached."),
-            self.tr("No more occurrences of {0} found.").format(bquo(message))
+            _("End of diff reached.") if op == SearchBar.Op.NEXT
+            else _("Top of diff reached."),
+            _("No more occurrences of {0} found.").format(bquo(message))
         ]
-        askConfirmation(self, self.tr("Find in Diff"), paragraphs(prompt), okButtonText=self.tr("Wrap Around"),
+        askConfirmation(self, _("Find in Diff"), paragraphs(prompt), okButtonText=_("Wrap Around"),
                         messageBoxIcon="information", callback=wrapAround)

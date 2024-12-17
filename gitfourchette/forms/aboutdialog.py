@@ -10,6 +10,7 @@ from textwrap import dedent
 import pygit2
 
 from gitfourchette.forms.ui_aboutdialog import Ui_AboutDialog
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
@@ -48,7 +49,7 @@ class AboutDialog(QDialog):
         buildInfoItems = [s for s in buildInfoItems if s]
         buildInfo = f"({', '.join(buildInfoItems)})" if buildInfoItems else ""
 
-        tagline = tr("The comfortable Git UI for Linux.")
+        tagline = _("The comfortable Git UI for Linux.")
 
         # ---------------------------------------------------------------------
         # Header
@@ -62,7 +63,7 @@ class AboutDialog(QDialog):
             <br>{tagline}
             <br>{simpleLink(WEBSITE_URL)}"""))
 
-        versionText = self.tr("Version {0}").format(appVersion)
+        versionText = _("Version {0}").format(appVersion)
         self.ui.versionLabel.setText(dedent(f"""\
             <span style='color:{mutedTextColorHex(self)}'><b>{versionText}</b> {buildInfo}
             <br>Copyright © 2024 Iliyas Jorio"""))
@@ -74,8 +75,8 @@ class AboutDialog(QDialog):
         self.ui.mugshot.setPixmap(QPixmap("assets:icons/mug"))
 
         self.ui.aboutBlurb.setText(paragraphs(
-            linkify(self.tr("If {app} helps you get work done, please consider [making a small donation]."), DONATE_URL),
-            self.tr("Thank you for your support!")
+            linkify(_("If {app} helps you get work done, please consider [making a small donation]."), DONATE_URL),
+            _("Thank you for your support!")
         ).format(app=appName))
 
         # ---------------------------------------------------------------------
@@ -83,7 +84,7 @@ class AboutDialog(QDialog):
 
         qtBindingSuffix = ""
 
-        poweredByTitle = self.tr("Powered by:")
+        poweredByTitle = _("Powered by:")
         self.ui.componentsBlurb.setText(dedent(f"""<html>\
             {appName} {appVersion}
             {buildInfo}
@@ -101,9 +102,9 @@ class AboutDialog(QDialog):
         # Acknowledgments page
 
         ackText = [
-            self.tr("Special thanks to Marc-Alexandre Espiaut for beta testing."),
+            _("Special thanks to Marc-Alexandre Espiaut for beta testing."),
             linkify(
-                self.tr("Portions of this software are based on [{lib}], used under [{lic} license], {copyright}."),
+                _("Portions of this software are based on [{lib}], used under [{lic} license], {copyright}."),
                 "https://github.com/z3ntu/QtWaitingSpinner", "https://github.com/z3ntu/QtWaitingSpinner/blob/055517b18/LICENSE.md"
             ).format(lib="QtWaitingSpinner", lic="MIT", copyright="© Alexander Turkin, William Hallatt, Jacob Dawid, Luca Weiss")
         ]

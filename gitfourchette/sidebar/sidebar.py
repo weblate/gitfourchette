@@ -10,6 +10,7 @@ from contextlib import suppress
 
 from gitfourchette import porcelain
 from gitfourchette import settings
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import Oid, RefPrefix
 from gitfourchette.qt import *
@@ -99,15 +100,15 @@ class Sidebar(QTreeView):
         assert isinstance(currentMode, RefSort)
 
         names = {
-            RefSort.TimeDesc: self.tr("Branch Tips (Newest First)", "sort branches by date of latest commit, descending"),
-            RefSort.TimeAsc: self.tr("Branch Tips (Oldest First)", "sort branches by date of latest commit, ascending"),
-            RefSort.AlphaAsc: self.tr("Name (A-Z)", "sort branches by name (alphabetically), ascending"),
-            RefSort.AlphaDesc: self.tr("Name (Z-A)", "sort branches by name (alphabetically), descending"),
+            RefSort.TimeDesc: _p("sort branches by date of latest commit, descending", "Branch Tips (Newest First)"),
+            RefSort.TimeAsc: _p("sort branches by date of latest commit, ascending", "Branch Tips (Oldest First)"),
+            RefSort.AlphaAsc: _p("sort branches by name (alphabetically), ascending", "Name (A-Z)"),
+            RefSort.AlphaDesc: _p("sort branches by name (alphabetically), descending", "Name (Z-A)"),
         }
 
         if prefKey == "sortTags":
-            names[RefSort.TimeDesc] = self.tr("Date (Newest First)", "sort tags by date, descending")
-            names[RefSort.TimeAsc] = self.tr("Date (Oldest First)", "sort tags by date, ascending")
+            names[RefSort.TimeDesc] = _p("sort tags by date, descending", "Date (Newest First)")
+            names[RefSort.TimeAsc] = _p("sort tags by date, ascending", "Date (Oldest First)")
 
         def setSortMode(newMode: RefSort):
             if currentMode == newMode:
@@ -156,9 +157,9 @@ class Sidebar(QTreeView):
 
         elif item == SidebarItem.LocalBranchesHeader:
             actions += [
-                TaskBook.action(self, NewBranchFromHead, self.tr("&New Branch...")),
+                TaskBook.action(self, NewBranchFromHead, _("&New Branch…")),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("Sort By"), submenu=self.refSortMenu("sortBranches")),
+                ActionDef(_("Sort By"), submenu=self.refSortMenu("sortBranches")),
             ]
 
         elif item == SidebarItem.LocalBranch:
@@ -180,7 +181,7 @@ class Sidebar(QTreeView):
                 TaskBook.action(
                     self,
                     SwitchBranch,
-                    self.tr("&Switch to {0}").format(thisBranchDisplay),
+                    _("&Switch to {0}").format(thisBranchDisplay),
                     taskArgs=branchName,
                 ).replace(enabled=not isCurrentBranch),
 
@@ -189,7 +190,7 @@ class Sidebar(QTreeView):
                 TaskBook.action(
                     self,
                     MergeBranch,
-                    self.tr("&Merge into {0}...").format(activeBranchDisplay),
+                    _("&Merge into {0}…").format(activeBranchDisplay),
                     taskArgs=refName,
                 ).replace(enabled=not isCurrentBranch and activeBranchName),
 
@@ -198,56 +199,56 @@ class Sidebar(QTreeView):
                 TaskBook.action(
                     self,
                     FetchRemoteBranch,
-                    self.tr("&Fetch {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Fetch..."),
+                    _("&Fetch {0}…").format(upstreamBranchDisplay) if hasUpstream else _("Fetch…"),
                     taskArgs=branch.upstream.shorthand if hasUpstream else None,
                 ).replace(enabled=hasUpstream),
 
                 TaskBook.action(
                     self,
                     PullBranch,
-                    self.tr("Pu&ll from {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Pull..."),
+                    _("Pu&ll from {0}…").format(upstreamBranchDisplay) if hasUpstream else _("Pull…"),
                 ).replace(enabled=hasUpstream and isCurrentBranch),
 
                 TaskBook.action(
                     self,
                     FastForwardBranch,
-                    self.tr("Fast-Forward to {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Fast-Forward..."),
+                    _("Fast-Forward to {0}…").format(upstreamBranchDisplay) if hasUpstream else _("Fast-Forward…"),
                     taskArgs=branchName,
                 ).replace(enabled=hasUpstream),
 
                 TaskBook.action(
                     self,
                     PushBranch,
-                    self.tr("&Push to {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Push..."),
+                    _("&Push to {0}…").format(upstreamBranchDisplay) if hasUpstream else _("Push…"),
                     taskArgs=branchName,
                 ),
 
                 ActionDef(
-                    self.tr("&Upstream Branch"),
+                    _("&Upstream Branch"),
                     submenu=self.makeUpstreamSubmenu(repo, branchName, upstreamBranchName)),
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self, RenameBranch, self.tr("Re&name..."), taskArgs=branchName),
+                TaskBook.action(self, RenameBranch, _("Re&name…"), taskArgs=branchName),
 
-                TaskBook.action(self, DeleteBranch, self.tr("&Delete..."), taskArgs=branchName),
+                TaskBook.action(self, DeleteBranch, _("&Delete…"), taskArgs=branchName),
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self, NewBranchFromRef, self.tr("New &Branch Here..."), taskArgs=refName),
+                TaskBook.action(self, NewBranchFromRef, _("New &Branch Here…"), taskArgs=refName),
 
                 ActionDef.SEPARATOR,
 
                 ActionDef(
-                    self.tr("&Hide in Graph"),
+                    _("&Hide in Graph"),
                     lambda: self.wantHideNode(node),
                     checkState=[-1, 1][isHidden],
-                    tip=self.tr("Hide this branch from the graph (effective if no other branches/tags point here)"),
+                    tip=_("Hide this branch from the graph (effective if no other branches/tags point here)"),
                 ),
             ]
 
         elif item == SidebarItem.DetachedHead:
-            actions += [TaskBook.action(self, NewBranchFromHead, self.tr("New &Branch Here...")), ]
+            actions += [TaskBook.action(self, NewBranchFromHead, _("New &Branch Here…")), ]
 
         elif item == SidebarItem.RemoteBranch:
             activeBranchName = repo.head_branch_shorthand
@@ -265,7 +266,7 @@ class Sidebar(QTreeView):
             if webUrl:
                 webActions = [
                     ActionDef(
-                        self.tr("Visit Web Page on {0}...").format(escamp(webHost)),
+                        _("Visit Web Page on {0}…").format(escamp(webHost)),
                         lambda: QDesktopServices.openUrl(QUrl(webUrl)),
                         icon="internet-web-browser",
                         tip=f"<p style='white-space: pre'>{escape(webUrl)}</p>",
@@ -277,33 +278,33 @@ class Sidebar(QTreeView):
                 TaskBook.action(
                     self,
                     NewBranchFromRef,
-                    self.tr("New Local &Branch Here..."),
+                    _("New Local &Branch Here…"),
                     taskArgs=refName,
                 ),
 
-                TaskBook.action(self, FetchRemoteBranch, self.tr("&Fetch New Commits..."), taskArgs=shorthand),
+                TaskBook.action(self, FetchRemoteBranch, _("&Fetch New Commits…"), taskArgs=shorthand),
 
                 ActionDef.SEPARATOR,
 
                 TaskBook.action(
                     self,
                     MergeBranch,
-                    self.tr("&Merge into {0}...").format(activeBranchDisplay),
+                    _("&Merge into {0}…").format(activeBranchDisplay),
                     taskArgs=refName,
                 ),
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self, RenameRemoteBranch, self.tr("Rename branch on remote..."), taskArgs=shorthand),
+                TaskBook.action(self, RenameRemoteBranch, _("Rename branch on remote…"), taskArgs=shorthand),
 
-                TaskBook.action(self, DeleteRemoteBranch, self.tr("Delete branch on remote..."), taskArgs=shorthand),
+                TaskBook.action(self, DeleteRemoteBranch, _("Delete branch on remote…"), taskArgs=shorthand),
 
                 ActionDef.SEPARATOR,
 
                 *webActions,
 
                 ActionDef(
-                    self.tr("&Hide in Graph"),
+                    _("&Hide in Graph"),
                     lambda: self.wantHideNode(node),
                     checkState=[-1, 1][isHidden]
                 ),
@@ -317,11 +318,11 @@ class Sidebar(QTreeView):
             if any(n.kind == SidebarItem.RefFolder for n in node.children):
                 collapseActions = [
                     ActionDef(
-                        self.tr("Collapse All Folders"),
+                        _("Collapse All Folders"),
                         lambda: self.collapseChildFolders(node),
                     ),
                     ActionDef(
-                        self.tr("Expand All Folders"),
+                        _("Expand All Folders"),
                         lambda: self.expandChildFolders(node),
                     ),
                 ]
@@ -330,7 +331,7 @@ class Sidebar(QTreeView):
             if webUrl:
                 webActions = [
                     ActionDef(
-                        self.tr("Visit Web Page on {0}...").format(escamp(webHost)),
+                        _("Visit Web Page on {0}…").format(escamp(webHost)),
                         lambda: QDesktopServices.openUrl(QUrl(webUrl)),
                         icon="internet-web-browser",
                         tip=f"<p style='white-space: pre'>{escape(webUrl)}</p>",
@@ -338,26 +339,26 @@ class Sidebar(QTreeView):
                 ]
 
             actions += [
-                TaskBook.action(self, EditRemote, self.tr("&Edit Remote..."), taskArgs=data),
+                TaskBook.action(self, EditRemote, _("&Edit Remote…"), taskArgs=data),
 
-                TaskBook.action(self, FetchRemotes, self.tr("&Fetch Remote Branches..."), taskArgs=data),
+                TaskBook.action(self, FetchRemotes, _("&Fetch Remote Branches…"), taskArgs=data),
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self, DeleteRemote, self.tr("&Remove Remote..."), taskArgs=data),
+                TaskBook.action(self, DeleteRemote, _("&Remove Remote…"), taskArgs=data),
 
                 ActionDef.SEPARATOR,
 
                 *webActions,
 
-                ActionDef(self.tr("Copy Remote &URL"),
+                ActionDef(_("Copy Remote &URL"),
                           lambda: self.copyToClipboard(remoteUrl)),
 
                 ActionDef.SEPARATOR,
 
                 *collapseActions,
 
-                ActionDef(self.tr("&Hide Remote in Graph"),
+                ActionDef(_("&Hide Remote in Graph"),
                           lambda: self.wantHideNode(node),
                           checkState=[-1, 1][isHidden]),
             ]
@@ -367,19 +368,19 @@ class Sidebar(QTreeView):
                 TaskBook.action(self, NewRemote, accel="A"),
                 TaskBook.action(self, FetchRemotes, accel="F"),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("Sort Remote Branches By"), submenu=self.refSortMenu("sortRemoteBranches")),
+                ActionDef(_("Sort Remote Branches By"), submenu=self.refSortMenu("sortRemoteBranches")),
             ]
 
         elif item == SidebarItem.RefFolder:
             if node.data.startswith(RefPrefix.HEADS):
                 actions += [
-                    ActionDef(self.tr("Re&name Folder..."), lambda: self.wantRenameNode(node)),
-                    ActionDef(self.tr("&Delete Folder..."), lambda: self.wantDeleteNode(node)),
+                    ActionDef(_("Re&name Folder…"), lambda: self.wantRenameNode(node)),
+                    ActionDef(_("&Delete Folder…"), lambda: self.wantDeleteNode(node)),
                     ActionDef.SEPARATOR,
                 ]
 
             actions += [
-                ActionDef(self.tr("&Hide Folder Contents in Graph"),
+                ActionDef(_("&Hide Folder Contents in Graph"),
                           lambda: self.wantHideNode(node),
                           checkState=[-1, 1][isHidden]),
             ]
@@ -393,17 +394,17 @@ class Sidebar(QTreeView):
             oid = Oid(hex=data)
 
             actions += [
-                TaskBook.action(self, ApplyStash, self.tr("&Apply", "apply stash"), taskArgs=oid),
+                TaskBook.action(self, ApplyStash, _p("apply stash", "&Apply"), taskArgs=oid),
 
-                TaskBook.action(self, ExportStashAsPatch, self.tr("E&xport As Patch..."), taskArgs=oid),
-
-                ActionDef.SEPARATOR,
-
-                TaskBook.action(self, DropStash, self.tr("&Drop", "drop stash"), taskArgs=oid),
+                TaskBook.action(self, ExportStashAsPatch, _("E&xport As Patch…"), taskArgs=oid),
 
                 ActionDef.SEPARATOR,
 
-                ActionDef(self.tr("Reveal &Parent Commit"), lambda: self.revealStashParent(oid)),
+                TaskBook.action(self, DropStash, _("&Delete"), taskArgs=oid),
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(_("Reveal &Parent Commit"), lambda: self.revealStashParent(oid)),
             ]
 
         elif item == SidebarItem.TagsHeader:
@@ -411,10 +412,10 @@ class Sidebar(QTreeView):
                         if ref.startswith(RefPrefix.TAGS)]
 
             actions += [
-                TaskBook.action(self, NewTag, self.tr("&New Tag on HEAD Commit...")),
-                ActionDef(self.tr("&Push All Tags To"), submenu=self.pushRefspecMenu(refspecs), enabled=bool(refspecs)),
+                TaskBook.action(self, NewTag, _("&New Tag on HEAD Commit…")),
+                ActionDef(_("&Push All Tags To"), submenu=self.pushRefspecMenu(refspecs), enabled=bool(refspecs)),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("Sort By"), submenu=self.refSortMenu("sortTags")),
+                ActionDef(_("Sort By"), submenu=self.refSortMenu("sortTags")),
             ]
 
         elif item == SidebarItem.Tag:
@@ -425,10 +426,10 @@ class Sidebar(QTreeView):
             target = self.sidebarModel.repoModel.refs[data]
 
             actions += [
-                TaskBook.action(self, CheckoutCommit, self.tr("&Check Out Tagged Commit..."), taskArgs=target),
-                TaskBook.action(self, DeleteTag, self.tr("&Delete Tag"), taskArgs=shorthand),
+                TaskBook.action(self, CheckoutCommit, _("&Check Out Tagged Commit…"), taskArgs=target),
+                TaskBook.action(self, DeleteTag, _("&Delete Tag"), taskArgs=shorthand),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("Push To"), submenu=self.pushRefspecMenu(refspecs)),
+                ActionDef(_("Push To"), submenu=self.pushRefspecMenu(refspecs)),
             ]
 
         elif item == SidebarItem.SubmodulesHeader:
@@ -443,13 +444,13 @@ class Sidebar(QTreeView):
             repo = model.repo
 
             actions += [
-                ActionDef(self.tr("&Open Submodule in New Tab"),
+                ActionDef(_("&Open Submodule in New Tab"),
                           lambda: self.openSubmoduleRepo.emit(data)),
 
-                ActionDef(self.tr("Open Submodule &Folder"),
+                ActionDef(_("Open Submodule &Folder"),
                           lambda: self.openSubmoduleFolder.emit(data)),
 
-                ActionDef(self.tr("Copy &Path"),
+                ActionDef(_("Copy &Path"),
                           lambda: self.copyToClipboard(repo.in_workdir(data))),
 
                 ActionDef.SEPARATOR,
@@ -922,7 +923,7 @@ class Sidebar(QTreeView):
 
         menu = [
             ActionDef(
-                self.tr("Stop tracking upstream branch") if ubName else self.tr("Not tracking any upstream branch"),
+                _("Stop tracking upstream branch") if ubName else _("Not tracking any upstream branch"),
                 lambda: EditUpstreamBranch.invoke(self, lbName, ""),
                 checkState=1 if not ubName else -1,
                 radioGroup=RADIO_GROUP),
@@ -941,9 +942,9 @@ class Sidebar(QTreeView):
 
         if len(menu) <= 1:
             if not repo.remotes:
-                explainer = self.tr("No remotes.")
+                explainer = _("No remotes.")
             else:
-                explainer = self.tr("No remote branches found. Try fetching the remotes.")
+                explainer = _("No remote branches found. Try fetching the remotes.")
             menu.append(ActionDef.SEPARATOR)
             menu.append(ActionDef(explainer, enabled=False))
 
@@ -954,11 +955,11 @@ class Sidebar(QTreeView):
         menu = []
 
         if remotes:
-            menu.append(TaskBook.action(self, PushRefspecs, self.tr("&All Remotes"), taskArgs=("*", refspecs)))
+            menu.append(TaskBook.action(self, PushRefspecs, _("&All Remotes"), taskArgs=("*", refspecs)))
             menu.append(ActionDef.SEPARATOR)
             for remote in remotes:
                 menu.append(TaskBook.action(self, PushRefspecs, escamp(remote), taskArgs=(remote, refspecs)))
         else:
-            menu.append(ActionDef(self.tr("No Remotes"), enabled=False))
+            menu.append(ActionDef(_("No Remotes"), enabled=False))
 
         return menu

@@ -4,11 +4,11 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from gitfourchette.forms.ui_signatureform import Ui_SignatureForm
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
-from gitfourchette.forms.ui_signatureform import Ui_SignatureForm
 
 
 class SignatureOverride(enum.IntEnum):

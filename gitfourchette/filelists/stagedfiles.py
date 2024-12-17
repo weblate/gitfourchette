@@ -7,11 +7,12 @@
 from gitfourchette import settings
 from gitfourchette.filelists.filelist import FileList
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.localization import *
 from gitfourchette.nav import NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.toolbox import *
 from gitfourchette.tasks import *
+from gitfourchette.toolbox import *
 
 
 class StagedFiles(FileList):
@@ -30,7 +31,7 @@ class StagedFiles(FileList):
 
         if not anySubmodules:
             contextMenuActionUnstage = ActionDef(
-                self.tr("&Unstage %n Files", "please omit %n in singular form", n),
+                _n("&Unstage File", "&Unstage {n} Files", n),
                 self.unstage,
                 icon="git-unstage",
                 shortcuts=GlobalShortcuts.discardHotkeys[0])
@@ -48,24 +49,23 @@ class StagedFiles(FileList):
         elif onlySubmodules:
             actions += [
                 ActionDef(
-                    self.tr("%n Submodules", "please omit %n in singular form", n),
+                    _n("Submodule", "{n} Submodules", n),
                     kind=ActionDef.Kind.Section,
                 ),
 
                 ActionDef(
-                    self.tr("Unstage %n Submodules", "please omit %n in singular form", n),
+                    _n("Unstage Submodule", "Unstage {n} Submodules", n),
                     self.unstage,
                 ),
 
                 ActionDef(
-                    self.tr("Open %n Submodules in New Tabs", "please omit %n in singular form", n),
+                    _n("Open Submodule in New Tab", "Open {n} Submodules in New Tabs", n),
                     self.openSubmoduleTabs,
                 ),
             ]
 
         else:
-            sorry = (translate("FileList", "Can’t unstage this selection in bulk.") + "\n" +
-                     translate("FileList", "Please review the files individually."))
+            sorry = _("Can’t unstage this selection in bulk.") + "\n" + _("Please review the files individually.")
             actions += [
                 ActionDef(sorry, enabled=False),
             ]

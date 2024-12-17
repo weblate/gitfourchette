@@ -297,7 +297,7 @@
              <string>Select another external merge tool in the Settings.</string>
             </property>
             <property name="text">
-             <string>Change merge tool...</string>
+             <string>Change merge tool…</string>
             </property>
             <property name="autoRaise">
              <bool>true</bool>

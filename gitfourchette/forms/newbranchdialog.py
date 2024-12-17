@@ -6,6 +6,7 @@
 
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_newbranchdialog import Ui_NewBranchDialog
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
@@ -27,7 +28,7 @@ class NewBranchDialog(QDialog):
         self.ui.setupUi(self)
 
         self.ui.nameEdit.setText(initialName)
-        self.acceptButton.setText(self.tr("&Create"))
+        self.acceptButton.setText(_("&Create"))
 
         self.ui.upstreamComboBox.addItems(upstreams)
 
@@ -44,17 +45,17 @@ class NewBranchDialog(QDialog):
             switchCheckBox = self.ui.switchToBranchCheckBox
             switchCheckBox.setEnabled(False)
             switchCheckBox.setChecked(False)
-            switchCheckBox.setText(switchCheckBox.text() + "\n" + self.tr("(blocked by conflicts)"))
+            switchCheckBox.setText(switchCheckBox.text() + "\n" + _("(blocked by conflicts)"))
             self.ui.recurseSubmodulesCheckBox.setChecked(False)
 
-        nameTaken = self.tr("This name is already taken by another local branch.")
+        nameTaken = _("This name is already taken by another local branch.")
         validator = ValidatorMultiplexer(self)
         validator.setGatedWidgets(self.acceptButton)
         validator.connectInput(self.ui.nameEdit, lambda name: nameValidationMessage(name, reservedNames, nameTaken))
         validator.run()
 
-        convertToBrandedDialog(self, self.tr("New branch"),
-                               self.tr("Commit at tip:") + " " + target + "\n" + tquo(targetSubtitle))
+        convertToBrandedDialog(self, _("New branch"),
+                               _("Commit at tip:") + " " + target + "\n" + tquo(targetSubtitle))
 
         self.ui.nameEdit.setFocus()
         self.ui.nameEdit.selectAll()

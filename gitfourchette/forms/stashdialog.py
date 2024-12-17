@@ -5,12 +5,12 @@
 # -----------------------------------------------------------------------------
 
 from gitfourchette import settings
+from gitfourchette.forms.brandeddialog import convertToBrandedDialog
+from gitfourchette.forms.ui_stashdialog import Ui_StashDialog
+from gitfourchette.localization import *
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.forms.brandeddialog import convertToBrandedDialog
-from gitfourchette.forms.ui_stashdialog import Ui_StashDialog
-
 
 # In a stash, changes from the index and the worktree are combined.
 # Use the order of the keys in this dictionary to find out which status
@@ -55,10 +55,10 @@ class StashDialog(QDialog):
 
         okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
 
-        buttonCaptions = [self.tr("Stash && Reset Changes"), self.tr("Stash && Keep Changes")]
+        buttonCaptions = [_("Stash && Reset Changes"), _("Stash && Keep Changes")]
         helpCaptions = [
-            self.tr("&Include these files in the stash, then reset them to their unmodified state:"),
-            self.tr("&Include these files in the stash:")]
+            _("&Include these files in the stash, then reset them to their unmodified state:"),
+            _("&Include these files in the stash:")]
         self.ui.keepCheckBox.clicked.connect(lambda keep: okButton.setText(buttonCaptions[keep]))
         self.ui.keepCheckBox.clicked.connect(lambda keep: self.ui.willStashLabel.setText(helpCaptions[keep]))
 

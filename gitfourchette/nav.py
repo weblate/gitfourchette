@@ -11,6 +11,7 @@ import enum
 import time
 from typing import ClassVar
 
+from gitfourchette.localization import *
 from gitfourchette.porcelain import NULL_OID, Oid
 from gitfourchette.qt import *
 from gitfourchette.settings import DEVDEBUG
@@ -66,13 +67,13 @@ class NavContext(enum.IntEnum):
 
     def translateName(self):
         names = {
-            NavContext.EMPTY: translate("NavContext", "Empty"),
-            NavContext.UNTRACKED: translate("NavContext", "Untracked"),
-            NavContext.UNSTAGED: translate("NavContext", "Unstaged"),
-            NavContext.STAGED: translate("NavContext", "Staged"),
-            NavContext.COMMITTED: translate("NavContext", "Committed"),
+            NavContext.EMPTY: _p("NavContext", "Empty"),
+            NavContext.UNTRACKED: _p("NavContext", "Untracked"),
+            NavContext.UNSTAGED: _p("NavContext", "Unstaged"),
+            NavContext.STAGED: _p("NavContext", "Staged"),
+            NavContext.COMMITTED: _p("NavContext", "Committed"),
         }
-        return names.get(self, translate("NavContext", "Unknown"))
+        return names.get(self, _p("NavContext", "Unknown"))
 
 
 @dataclasses.dataclass(frozen=True)

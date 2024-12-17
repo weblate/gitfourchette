@@ -6,6 +6,7 @@
 
 from gitfourchette.forms.signatureform import SignatureOverride
 from gitfourchette.forms.ui_commitdialog import Ui_CommitDialog
+from gitfourchette.localization import *
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -45,28 +46,28 @@ class CommitDialog(QDialog):
         tweakWidgetFont(self.ui.summaryEditor, 130)
 
         if amendingCommitHash:
-            prompt = self.tr("Amend commit message")
-            buttonCaption = self.tr("A&mend")
-            self.setWindowTitle(self.tr("Amend Commit {0}").format(amendingCommitHash))
+            prompt = _("Amend commit message")
+            buttonCaption = _("A&mend")
+            self.setWindowTitle(_("Amend Commit {0}").format(amendingCommitHash))
         else:
-            prompt = self.tr("Enter commit summary")
-            buttonCaption = self.tr("Co&mmit")
-            self.setWindowTitle(self.tr("Commit"))
+            prompt = _("Enter commit summary")
+            buttonCaption = _("Co&mmit")
+            self.setWindowTitle(_p("verb", "Commit"))
 
         warning = ""
         if repositoryState == RepositoryState.MERGE:
-            warning = self.tr("This commit will conclude the merge.")
+            warning = _("This commit will conclude the merge.")
         elif repositoryState == RepositoryState.CHERRYPICK:
-            warning = self.tr("This commit will conclude the cherry-pick.")
+            warning = _("This commit will conclude the cherry-pick.")
         elif repositoryState == RepositoryState.REVERT:
-            warning = self.tr("This commit will conclude the revert.")
+            warning = _("This commit will conclude the revert.")
         elif amendingCommitHash:
-            warning = self.tr("You are amending commit {0}.").format(lquo(amendingCommitHash))
+            warning = _("You are amending commit {0}.").format(lquo(amendingCommitHash))
         elif detachedHead:
-            warning = self.tr("<b>Detached HEAD</b> – You are not in any branch! "
+            warning = _("<b>Detached HEAD</b> – You are not in any branch! "
                               "You should create a branch to keep track of your commit.")
         elif emptyCommit:
-            warning = self.tr("You are creating an empty commit (no staged changes).")
+            warning = _("You are creating an empty commit (no staged changes).")
 
         self.ui.infoBox.setVisible(bool(warning))
         self.ui.infoText.setText(warning)
@@ -113,7 +114,7 @@ class CommitDialog(QDialog):
         if bool(text.strip()):
             return ""
         else:
-            return self.tr("Cannot be empty.")
+            return _("Cannot be empty.")
 
     def getFullMessage(self):
         summary = self.ui.summaryEditor.text()
@@ -156,15 +157,15 @@ class CommitDialog(QDialog):
         muted = mutedToolTipColorHex()
 
         tt = "<p style='white-space: pre'>"
-        tt += f"<span style='color: {muted}'>" + self.tr("Authored by:") + "</span> "
+        tt += f"<span style='color: {muted}'>" + _("Authored by:") + "</span> "
         tt += formatSignatureForToolTip(author)
         if not signatures_equalish(author, self.originalAuthorSignature):
-            tt += "\n<span style='font-weight: bold'>" + self.tr("(overridden manually)") + "</span>"
+            tt += "\n<span style='font-weight: bold'>" + _("(overridden manually)") + "</span>"
 
-        tt += f"\n\n<span style='color: {muted}'>" + self.tr("Committed by:") + "</span> "
+        tt += f"\n\n<span style='color: {muted}'>" + _("Committed by:") + "</span> "
         tt += formatSignatureForToolTip(committer)
         if not signatures_equalish(committer, self.originalCommitterSignature):
-            tt += "\n<span style='font-weight: bold'>" + self.tr("(overridden manually)") + "</span>"
+            tt += "\n<span style='font-weight: bold'>" + _("(overridden manually)") + "</span>"
 
         self.ui.signatureButton.setToolTip(tt)
         self.ui.revealSignature.setToolTip(tt)

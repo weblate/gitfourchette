@@ -5,18 +5,19 @@
 # -----------------------------------------------------------------------------
 
 import math
+import traceback
+from contextlib import suppress
+from dataclasses import dataclass
 
 from gitfourchette import settings
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow, CommitToolTipZone
 from gitfourchette.graphview.graphpaint import paintGraphFrame
+from gitfourchette.localization import *
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repomodel import RepoModel, UC_FAKEID
 from gitfourchette.toolbox import *
-from dataclasses import dataclass
-from contextlib import suppress
-import traceback
 
 
 @dataclass
@@ -198,7 +199,7 @@ class CommitLogDelegate(QStyledItemDelegate):
 
             if specialRowKind == SpecialRow.UncommittedChanges:
                 oid = UC_FAKEID
-                summaryText = self.tr("Uncommitted changes")
+                summaryText = _("Uncommitted changes")
                 # Append change count if available
                 numChanges = self.repoModel.numUncommittedChanges
                 if numChanges > 0:
@@ -207,18 +208,18 @@ class CommitLogDelegate(QStyledItemDelegate):
                 draftMessage = self.repoModel.prefs.draftCommitMessage
                 if draftMessage:
                     draftMessage = messageSummary(draftMessage)[0].strip()
-                    draftIntro = self.tr("Commit draft:")
+                    draftIntro = _("Commit draft:")
                     summaryText += f" – {draftIntro} {tquo(draftMessage)}"
 
             elif specialRowKind == SpecialRow.TruncatedHistory:
                 if self.repoModel.prefs.hiddenRefPatterns:
-                    summaryText = self.tr("History truncated to {0} commits (including hidden branches)")
+                    summaryText = _("History truncated to {0} commits (including hidden branches)")
                 else:
-                    summaryText = self.tr("History truncated to {0} commits")
+                    summaryText = _("History truncated to {0} commits")
                 summaryText = summaryText.format(option.widget.locale().toString(self.repoModel.numRealCommits))
 
             elif specialRowKind == SpecialRow.EndOfShallowHistory:
-                summaryText = self.tr("Shallow clone – End of commit history")
+                summaryText = _("Shallow clone – End of commit history")
 
             else:  # pragma: no cover
                 summaryText = f"*** Unsupported special row {specialRowKind}"
@@ -362,7 +363,7 @@ class CommitLogDelegate(QStyledItemDelegate):
             font = self.homeRefboxFont
             iconName = "git-head"
         elif refName == 'HEAD' and self.repoModel.headIsDetached:
-            text = self.tr("Detached HEAD")
+            text = _("Detached HEAD")
             font = self.homeRefboxFont
         else:
             font = self.refboxFont

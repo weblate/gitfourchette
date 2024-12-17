@@ -81,15 +81,15 @@ class GFApplication(QApplication):
 
         # Process command line
         parser = QCommandLineParser()
-        parser.setApplicationDescription(qAppName() + " - " + tr("The comfortable Git UI for Linux."))
+        parser.setApplicationDescription(qAppName() + " - " + _("The comfortable Git UI for Linux."))
         parser.addHelpOption()
         parser.addVersionOption()
         parser.addOptions([
-            QCommandLineOption(["no-threads", "n"], self.tr("Turn off multithreading (run all tasks on UI thread).")),
-            QCommandLineOption(["debug", "d"], self.tr("Enable expensive assertions and development features.")),
-            QCommandLineOption(["test-mode"], self.tr("Prevent loading/saving user settings. (implies --no-threads)")),
+            QCommandLineOption(["no-threads", "n"], _("Turn off multithreading (run all tasks on UI thread).")),
+            QCommandLineOption(["debug", "d"], _("Enable expensive assertions and development features.")),
+            QCommandLineOption(["test-mode"], _("Prevent loading/saving user settings. (implies --no-threads)")),
         ])
-        parser.addPositionalArgument("repos", self.tr("Repository paths to open on launch."), "[repos...]")
+        parser.addPositionalArgument("repos", _("Repository paths to open on launch."), "[repos...]")
         parser.process(argv)
 
         # Schedule cleanup on quit
@@ -224,14 +224,13 @@ class GFApplication(QApplication):
         if QT_BINDING_BOOTPREF and QT_BINDING_BOOTPREF.lower() != QT_BINDING.lower():  # pragma: no cover
             try:
                 QtApiNames(QT_BINDING_BOOTPREF.lower())  # raises ValueError if not recognized
-                text = translate("Prefs", "Your preferred Qt binding {0} is not available on this machine.")
+                text = _("Your preferred Qt binding {0} is not available on this machine. Using {1} instead.")
             except ValueError:
-                text = translate("Prefs", "Your preferred Qt binding {0} is not recognized by {app}. (Supported values: {known})")
-            text += "<p>" + translate("Prefs", "Using {1} instead.", "user's choice of Qt binding isn't available, falling back to default")
+                text = _("Your preferred Qt binding {0} is not recognized by {app}. Using {1} instead. (Supported values: {known})")
             text = text.format(bquo(QT_BINDING_BOOTPREF), bquo(QT_BINDING.lower()), app=qAppName(),
                                known=", ".join(e for e in QtApiNames if e))
 
-            QMessageBox.information(self.mainWindow, translate("Prefs", "Qt binding unavailable"), text)
+            QMessageBox.information(self.mainWindow, _("Qt binding unavailable"), text)
 
         DonatePrompt.onBoot(self.mainWindow)
 
@@ -269,7 +268,7 @@ class GFApplication(QApplication):
             repoWidget = candidate.currentRepoWidget()
             if repoWidget is None:
                 showInformation(candidate, taskType.name(),
-                                self.tr("Please open a repository before performing this action."))
+                                _("Please open a repository before performing this action."))
                 return
         else:
             repoWidget = None

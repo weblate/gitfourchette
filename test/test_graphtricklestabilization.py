@@ -127,9 +127,9 @@ SCENARIOS = [
 @pytest.mark.parametrize('reverse', ["", "reverse"])
 @pytest.mark.parametrize('scenario', SCENARIOS)
 def testGraphTrickleStabilization(scenario, reverse):
-    sequence, _ = GraphDiagram.parseDefinition(scenario.oldSequence)
+    sequence, _dummy = GraphDiagram.parseDefinition(scenario.oldSequence)
     if scenario.newSequence:
-        newSequence, _ = GraphDiagram.parseDefinition(scenario.newSequence)
+        newSequence, _dummy = GraphDiagram.parseDefinition(scenario.newSequence)
     else:
         newSequence = sequence
     oldHeads = scenario.oldHeads.split()

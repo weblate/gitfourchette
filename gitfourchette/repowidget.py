@@ -21,6 +21,7 @@ from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.graphview.graphview import GraphView
+from gitfourchette.localization import *
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -551,7 +552,7 @@ class RepoWidget(QStackedWidget):
                 placeholder.ui.icon.setText("")
                 placeholder.ui.icon.setPixmap(stockIcon("image-missing").pixmap(96))
                 placeholder.ui.icon.setVisible(True)
-                placeholder.ui.loadButton.setText(self.tr("Try to reload"))
+                placeholder.ui.loadButton.setText(_("Try to reload"))
 
             # Clean up status bar if there were repo-specific warnings in it
             if self.isVisible():
@@ -561,8 +562,8 @@ class RepoWidget(QStackedWidget):
         try:
             diffDocument = DiffDocument.fromPatch(patch, locator)
         except Exception as exc:
-            excMessageBox(exc, self.tr("Open diff in new window"),
-                          self.tr("Only text diffs may be opened in a separate window."),
+            excMessageBox(exc, _("Open diff in new window"),
+                          _("Only text diffs may be opened in a separate window."),
                           showExcSummary=not isinstance(exc, ShouldDisplayPatchAsImageDiff),
                           icon='information')
             return
@@ -600,7 +601,7 @@ class RepoWidget(QStackedWidget):
         if superproject:
             self.openRepo.emit(superproject, NavLocator())
         else:
-            showInformation(self, self.tr("Open Superproject"), self.tr("This repository does not have a superproject."))
+            showInformation(self, _("Open Superproject"), _("This repository does not have a superproject."))
 
     def copyRepoPath(self):
         text = self.workdir
@@ -625,11 +626,11 @@ class RepoWidget(QStackedWidget):
             basename = os.path.basename(fullPath)
             askConfirmation(
                 self,
-                self.tr("Open {0}").format(tquo(basename)),
+                _("Open {0}").format(tquo(basename)),
                 paragraphs(
-                    self.tr("File {0} does not exist.").format(bquo(fullPath)),
-                    self.tr("Do you want to create it?")),
-                okButtonText=self.tr("Create {0}").format(lquo(basename)),
+                    _("File {0} does not exist.").format(bquo(fullPath)),
+                    _("Do you want to create it?")),
+                okButtonText=_("Create {0}").format(lquo(basename)),
                 callback=createAndOpen)
         else:
             openInTextEditor(self, fullPath)
@@ -664,18 +665,20 @@ class RepoWidget(QStackedWidget):
 
     def commitNotFoundMessage(self, searchTerm: str) -> str:
         if self.repoModel.hiddenCommits:
-            message = self.tr("{0} not found among the branches that aren’t hidden.")
+            message = _("{0} not found among the branches that aren’t hidden.")
         else:
-            message = self.tr("{0} not found.")
+            message = _("{0} not found.")
         message = message.format(bquo(searchTerm))
 
         if self.repoModel.truncatedHistory:
-            note = self.tr("Note: The search was limited to the top %n commits because "
-                           "the commit history is truncated.", "", self.repoModel.numRealCommits)
+            note = _n("Note: The search was limited to the top commit because the commit history is truncated.",
+                      "Note: The search was limited to the top {n} commits because the commit history is truncated.",
+                      self.repoModel.numRealCommits)
             message += f"<p>{note}</p>"
         elif self.repoModel.repo.is_shallow:
-            note = self.tr("Note: The search was limited to the %n commits available in this shallow clone.",
-                           "", self.repoModel.numRealCommits)
+            note = _n("Note: The search was limited to the single commit available in this shallow clone.",
+                      "Note: The search was limited to the {n} commits available in this shallow clone.",
+                      self.repoModel.numRealCommits)
             message += f"<p>{note}</p>"
 
         return message
@@ -749,10 +752,10 @@ class RepoWidget(QStackedWidget):
         if not repo:
             pass
         elif repo.head_is_unborn:
-            inBrackets = self.tr("unborn HEAD")
+            inBrackets = _("Unborn HEAD")
         elif repo.head_is_detached:
             oid = repo.head_commit_id
-            inBrackets = self.tr("detached HEAD @ {0}").format(shortHash(oid))
+            inBrackets = _("Detached HEAD") + " @ " + shortHash(oid)
         else:
             with suppress(GitError):
                 inBrackets = repo.head_branch_shorthand
@@ -800,49 +803,49 @@ class RepoWidget(QStackedWidget):
                 mergehead = self.repoModel.mergeheads[0]
                 name = self.repoModel.refsAt[mergehead][0]
                 name = RefPrefix.split(name)[1]
-                bannerTitle = self.tr("Merging {0}").format(bquo(name))
+                bannerTitle = _("Merging {0}").format(bquo(name))
             except (IndexError, KeyError):
                 pass
 
             if not repo.any_conflicts:
-                bannerText += self.tr("All conflicts fixed. Commit to conclude.")
+                bannerText += _("All conflicts fixed. Commit to conclude.")
                 bannerHeeded = True
             else:
-                bannerText += self.tr("Conflicts need fixing.")
+                bannerText += _("Conflicts need fixing.")
 
-            bannerAction = self.tr("Abort Merge")
+            bannerAction = englishTitleCase(_("Abort merge"))
             bannerCallback = abortMerge
 
         elif rstate == RepositoryState.CHERRYPICK:
             if not repo.any_conflicts:
-                bannerText += self.tr("Commit to conclude the cherry-pick.")
+                bannerText += _("Commit to conclude the cherry-pick.")
                 bannerHeeded = True
             else:
-                bannerText += self.tr("Conflicts need fixing.")
+                bannerText += _("Conflicts need fixing.")
 
-            bannerAction = self.tr("Abort Cherry-Pick")
+            bannerAction = englishTitleCase(_("Abort cherry-pick"))
             bannerCallback = abortMerge
 
         elif rstate == RepositoryState.REVERT:
             if not repo.any_conflicts:
-                bannerText += self.tr("Commit to conclude the revert.")
+                bannerText += _("Commit to conclude the revert.")
                 bannerHeeded = True
             else:
-                bannerText += self.tr("Conflicts need fixing.")
+                bannerText += _("Conflicts need fixing.")
 
-            bannerAction = self.tr("Abort Revert")
+            bannerAction = englishTitleCase(_("Abort revert"))
             bannerCallback = abortMerge
 
         elif rstate == RepositoryState.NONE:
             if repo.any_conflicts:
-                bannerTitle = self.tr("Conflicts")
-                bannerText = self.tr("Fix the conflicts among the uncommitted changes.")
-                bannerAction = self.tr("Reset Index")
+                bannerTitle = _("Conflicts")
+                bannerText = _("Fix the conflicts among the uncommitted changes.")
+                bannerAction = englishTitleCase(_("Reset index"))
                 bannerCallback = abortMerge
 
         else:
-            bannerTitle = self.tr("Warning")
-            bannerText = self.tr(
+            bannerTitle = _("Warning")
+            bannerText = _(
                 "The repo is currently in state {state}, which {app} doesn’t support yet. "
                 "Use <code>git</code> on the command line to continue."
             ).format(app=qAppName(), state=bquo(TrTables.repositoryState(rstate)))
@@ -882,7 +885,7 @@ class RepoWidget(QStackedWidget):
             self.busyCursorDelayer.start()
 
     def onRepoGone(self):
-        message = self.tr("Repository folder went missing:") + "\n" + escamp(self.pendingPath)
+        message = _("Repository folder went missing:") + "\n" + escamp(self.pendingPath)
 
         # Unload the repo
         self.cleanup(message=message, allowAutoReload=False)
@@ -990,7 +993,7 @@ class RepoWidget(QStackedWidget):
             TaskBook.action(invoker, tasks.EditRepoSettings),
 
             ActionDef(
-                translate("RepoWidget", "&Local Config Files"),
+                _("&Local Config Files"),
                 submenu=[
                     ActionDef(".gitignore", lambda: proxy().openGitignore()),
                     ActionDef("config", lambda: proxy().openLocalConfig()),
@@ -1000,7 +1003,7 @@ class RepoWidget(QStackedWidget):
 
     @classmethod
     def pathsMenuItemsByProxy(cls, invoker, proxy):
-        superprojectLabel = translate("RepoWidget", "Open Superproject")
+        superprojectLabel = _("Open Superproject")
         superprojectEnabled = True
 
         if isinstance(invoker, cls):
@@ -1008,20 +1011,20 @@ class RepoWidget(QStackedWidget):
             superprojectEnabled = bool(superproject)
             if superprojectEnabled:
                 superprojectName = settings.history.getRepoTabName(superproject)
-                superprojectLabel = translate("RepoWidget", "Open Superproject {0}").format(lquo(superprojectName))
+                superprojectLabel = _("Open Superproject {0}").format(lquo(superprojectName))
 
         return [
             ActionDef(
-                translate("RepoWidget", "&Open Repo Folder"),
+                _("&Open Repo Folder"),
                 lambda: proxy().openRepoFolder(),
                 shortcuts=GlobalShortcuts.openRepoFolder,
-                tip=translate("RepoWidget", "Open this repo’s working directory in the system’s file manager"),
+                tip=_("Open this repo’s working directory in the system’s file manager"),
             ),
 
             ActionDef(
-                translate("RepoWidget", "Cop&y Repo Path"),
+                _("Cop&y Repo Path"),
                 lambda: proxy().copyRepoPath(),
-                tip=translate("RepoWidget", "Copy the absolute path to this repo’s working directory to the clipboard"),
+                tip=_("Copy the absolute path to this repo’s working directory to the clipboard"),
             ),
 
             ActionDef(

@@ -18,6 +18,7 @@ from gitfourchette.forms.banner import Banner
 from gitfourchette.forms.conflictview import ConflictView
 from gitfourchette.forms.contextheader import ContextHeader
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.localization import *
 from gitfourchette.nav import NavContext, NavLocator, NavFlags
 from gitfourchette.qt import *
 from gitfourchette.tasks import TaskBook, AmendCommit, NewCommit, NewStash
@@ -109,7 +110,7 @@ class DiffArea(QWidget):
     def _makeDirtyContainer(self):
         header = QElidedLabel(" ")
         header.setObjectName("dirtyHeader")
-        header.setToolTip(self.tr("Unstaged files: will not be included in the commit unless you stage them."))
+        header.setToolTip(_("Unstaged files: will not be included in the commit unless you stage them."))
         header.setMinimumHeight(FILEHEADER_HEIGHT)
         header.setEnabled(False)
 
@@ -117,16 +118,16 @@ class DiffArea(QWidget):
 
         stageButton = QToolButton()
         stageButton.setObjectName("stageButton")
-        stageButton.setText(self.tr("Stage"))
+        stageButton.setText(_("Stage"))
         stageButton.setIcon(stockIcon("git-stage"))
-        stageButton.setToolTip(self.tr("Stage selected files"))
+        stageButton.setToolTip(_("Stage selected files"))
         appendShortcutToToolTip(stageButton, GlobalShortcuts.stageHotkeys[0])
 
         discardButton = QToolButton()
         discardButton.setObjectName("discardButton")
-        discardButton.setText(self.tr("Discard"))
+        discardButton.setText(_("Discard"))
         discardButton.setIcon(stockIcon("git-discard"))
-        discardButton.setToolTip(self.tr("Discard changes in selected files"))
+        discardButton.setToolTip(_("Discard changes in selected files"))
         appendShortcutToToolTip(discardButton, GlobalShortcuts.discardHotkeys[0])
 
         container = QWidget()
@@ -161,7 +162,7 @@ class DiffArea(QWidget):
     def _makeStageContainer(self):
         header = QElidedLabel(" ")
         header.setObjectName("stagedHeader")
-        header.setToolTip(self.tr("Staged files: will be included in the commit."))
+        header.setToolTip(_("Staged files: will be included in the commit."))
         header.setMinimumHeight(FILEHEADER_HEIGHT)
         header.setEnabled(False)
 
@@ -169,13 +170,13 @@ class DiffArea(QWidget):
 
         unstageButton = QToolButton()
         unstageButton.setObjectName("unstageButton")
-        unstageButton.setText(self.tr("Unstage"))
+        unstageButton.setText(_("Unstage"))
         unstageButton.setIcon(stockIcon("git-unstage"))
-        unstageButton.setToolTip(self.tr("Unstage selected files"))
+        unstageButton.setToolTip(_("Unstage selected files"))
         appendShortcutToToolTip(unstageButton, GlobalShortcuts.discardHotkeys[0])
 
         commitButton = QToolButton()
-        commitButton.setText(self.tr("Commit"))
+        commitButton.setText(_p("verb", "Commit"))
         commitButton.setIcon(stockIcon("git-commit", "gray=#599E5E"))
         commitButton.setToolTip(appendShortcutToToolTipText(TaskBook.tips[NewCommit], TaskBook.shortcuts[NewCommit][0]))
         commitButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)

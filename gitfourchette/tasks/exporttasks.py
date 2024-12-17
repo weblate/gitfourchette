@@ -9,9 +9,10 @@ import re
 from collections.abc import Iterable
 from pathlib import Path
 
+from gitfourchette import settings
+from gitfourchette.localization import *
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette import settings
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 
@@ -53,14 +54,15 @@ class ComposePatch(RepoTask):
         yield from self.flowEnterUiThread()
 
         if skippedBinaryFiles:
-            sorry = translate("ComposePatch", "{app} cannot export binary patches from a hand-picked selection of files.").format(app=qAppName())
+            sorry = _("{app} cannot export binary patches from a hand-picked selection of files.").format(app=qAppName())
             if not composed:
                 raise AbortTask(sorry)
-            sorry += " " + translate("ComposePatch", "%n binary files will be omitted from the patch file:", "", len(skippedBinaryFiles))
-            yield from self.flowConfirm(self.name(), sorry, detailList=skippedBinaryFiles, verb=translate("ComposePatch", "Proceed"))
+            sorry += " "
+            sorry += _n("Binary file will be omitted from patch file:", "{n} binary files will be omitted from patch file:", len(skippedBinaryFiles))
+            yield from self.flowConfirm(self.name(), sorry, detailList=skippedBinaryFiles, verb=_("Proceed"))
 
         if not composed:
-            raise AbortTask(translate("ComposePatch", "Nothing to export. The patch is empty."), icon="information")
+            raise AbortTask(_("Nothing to export. The patch is empty."), icon="information")
 
         # Fallback filename
         if not fileName:
@@ -86,11 +88,11 @@ class ExportCommitAsPatch(ComposePatch):
     def flow(self, oid: Oid):
         yield from self.flowEnterWorkerThread()
 
-        diffs, _ = self.repo.commit_diffs(oid, show_binary=True, context_lines=contextLines())
+        diffs, _dummy = self.repo.commit_diffs(oid, show_binary=True, context_lines=contextLines())
         patches = itertools.chain.from_iterable((p for p in d) for d in diffs)
 
         commit = self.repo.peel_commit(oid)
-        summary, _ = messageSummary(commit.message, elision="")
+        summary, _dummy = messageSummary(commit.message, elision="")
         summary = summary.strip()[:50].strip()
         initialName = f"{self.repo.repo_name()} - {shortHash(oid)} - {summary}.patch"
 
@@ -101,7 +103,7 @@ class ExportStashAsPatch(ExportCommitAsPatch):
     def flow(self, oid: Oid):
         yield from self.flowEnterWorkerThread()
 
-        diffs, _ = self.repo.commit_diffs(oid, show_binary=True, context_lines=contextLines())
+        diffs, _dummy = self.repo.commit_diffs(oid, show_binary=True, context_lines=contextLines())
         patches = itertools.chain.from_iterable((p for p in d) for d in diffs)
 
         commit = self.repo.peel_commit(oid)

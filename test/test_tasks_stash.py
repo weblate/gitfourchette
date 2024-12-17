@@ -285,13 +285,13 @@ def testDropStash(tempDir, mainWindow, method):
 
     if method == "sidebarmenu":
         menu = rw.sidebar.makeNodeMenu(node)
-        triggerMenuAction(menu, "drop")
+        triggerMenuAction(menu, "delete")
     elif method == "sidebarkey":
         rw.sidebar.selectNode(node)
         QTest.keyPress(rw.sidebar, Qt.Key.Key_Delete)
     elif method == "contextheader":
         rw.sidebar.selectNode(node)
-        button = next(b for b in rw.diffArea.contextHeader.buttons if "drop" in b.text().lower())
+        button = next(b for b in rw.diffArea.contextHeader.buttons if "delete" in b.text().lower())
         button.click()
     else:
         raise NotImplementedError(f"unknown method {method}")

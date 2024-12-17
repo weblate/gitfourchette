@@ -5,11 +5,11 @@
 # -----------------------------------------------------------------------------
 
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
+from gitfourchette.forms.ui_resetheaddialog import Ui_ResetHeadDialog
+from gitfourchette.localization import *
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.forms.ui_resetheaddialog import Ui_ResetHeadDialog
-
 
 DEFAULT_MODE = ResetMode.MIXED
 
@@ -24,7 +24,7 @@ class ResetHeadDialog(QDialog):
         okButton.setToolTip("")
         if mode == ResetMode.HARD:
             okButton.setIcon(stockIcon("achtung"))
-            okButton.setToolTip(self.tr("Hard reset: Destructive action!"))
+            okButton.setToolTip(_("Hard reset: Destructive action!"))
             self.ui.recurseCheckBox.setEnabled(True)
         else:
             self.ui.recurseCheckBox.setEnabled(False)
@@ -74,9 +74,9 @@ class ResetHeadDialog(QDialog):
         self.activeMode = DEFAULT_MODE
         self.modeButtons[DEFAULT_MODE].setChecked(True)
 
-        title = self.tr("Reset {0} to {1}").format(lquoe(branchName), lquo(shortHash(oid)))
+        title = _("Reset {0} to {1}").format(lquoe(branchName), lquo(shortHash(oid)))
         self.setWindowTitle(title)
 
-        summary, _ = messageSummary(commitText)
-        commitText = self.tr("Commit {0}:").format(shortHash(oid)) + " " + tquo(summary)
+        summary, _dummy = messageSummary(commitText)
+        commitText = _("Commit {0}:").format(shortHash(oid)) + " " + tquo(summary)
         convertToBrandedDialog(self, subtitleText=commitText)

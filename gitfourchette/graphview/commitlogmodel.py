@@ -4,10 +4,10 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-import enum
 from dataclasses import dataclass
 from typing import Literal
 
+from gitfourchette.localization import *
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repomodel import UC_FAKEID
@@ -189,12 +189,12 @@ def commitAuthorTooltip(commit: Commit) -> str:
     if author == committer:
         markup += f"<small><br>{formatTime(author)}"
     elif author.name == committer.name and author.email == committer.email:
-        suffixA = translate("CommitTooltip", "(authored)")
-        suffixC = translate("CommitTooltip", "(committed)")
+        suffixA = _p("CommitTooltip", "(authored)")
+        suffixC = _p("CommitTooltip", "(committed)")
         markup += (f"<small><br>{formatTime(author)} {suffixA}"
                    f"<br>{formatTime(committer)} *{suffixC}")
     else:
-        committedBy = translate("CommitTooltip", "Committed by {0}")
+        committedBy = _p("CommitTooltip", "Committed by {0}")
         markup += (f"<small><br>{formatTime(author)}<br><br>"
                    + "*" + committedBy.format(formatPerson(committer)) +
                    f"<br><small>{formatTime(committer)}")

@@ -54,7 +54,7 @@ class PrefsDialog(QDialog):
         super().__init__(parent)
 
         self.setObjectName("PrefsDialog")
-        self.setWindowTitle(translate("Prefs", "{app} Settings").format(app=qAppName()))
+        self.setWindowTitle(_("{app} Settings").format(app=qAppName()))
 
         self.prefDiff = {}
 
@@ -165,7 +165,7 @@ class PrefsDialog(QDialog):
                 form.addRow(formField)
             else:
                 # There's a leading caption, so add it as the label in the row
-                caption += tr(":", "generic caption suffix")
+                caption += _(":")
                 captionLabel = QLabel(caption)
                 captionLabel.setBuddy(control)
                 if toolTip:
@@ -251,7 +251,7 @@ class PrefsDialog(QDialog):
             control.setSpecialValueText("\u221E")  # infinity
             return control
         elif key == "renderSvg":
-            return self.boolComboBoxControl(key, value, falseName=self.tr("Text"), trueName=self.tr("Image"))
+            return self.boolComboBoxControl(key, value, falseName=_("Text"), trueName=_("Image"))
         elif key == "externalEditor":
             return self.strControlWithPresets(key, value, ToolCommands.EditorPresets, leaveBlankHint=True)
         elif key == "externalDiff":
@@ -284,7 +284,7 @@ class PrefsDialog(QDialog):
             raise NotImplementedError(f"Write pref widget for {key}")
 
     def languageControl(self, prefKey: str, prefValue: str):
-        defaultCaption = translate("Prefs", "System default", "system default language setting")
+        defaultCaption = _p("system default language setting", "System default")
         control = QComboBox(self)
         control.addItem(defaultCaption, userData="")
         if not prefValue:
@@ -335,7 +335,7 @@ class PrefsDialog(QDialog):
             qfd.setModal(True)
             qfd.show()
 
-        fontButton = QPushButton(translate("Prefs", "Font"))
+        fontButton = QPushButton(_("Font"))
         fontButton.setObjectName("PickFontButton")
         fontButton.clicked.connect(lambda e: pickFont())
         fontButton.setMinimumWidth(256)
@@ -344,14 +344,14 @@ class PrefsDialog(QDialog):
 
         resetButton = QToolButton(self)
         resetButton.setObjectName("ResetFontButton")
-        resetButton.setText(translate("Prefs", "Reset", "reset font"))
+        resetButton.setText(_p("reset font to default", "Reset"))
         resetButton.clicked.connect(lambda: resetFont())
 
         def refreshFontButton():
             font = currentFont()
             if not self.getMostRecentValue(prefKey):
                 resetButton.setVisible(False)
-                caption = translate("Prefs", "Default", "as in Default Font")
+                caption = _p("default font", "Default")
                 caption += f" ({font.family()} {font.pointSize()})"
                 fontButton.setText(caption)
             else:
@@ -370,13 +370,13 @@ class PrefsDialog(QDialog):
         for k in presets:
             preview = presets[k]
             if not preview and leaveBlankHint:
-                preview = "- " + translate("Prefs", "leave blank", "hint user to leave the field blank") + " -"
+                preview = "- " + _p("hint user to leave the field blank", "leave blank") + " -"
             control.addItemWithPreview(k, presets[k], preview)
             if prefValue == presets[k]:
                 control.setCurrentIndex(control.count()-1)
 
         if leaveBlankHint:
-            control.lineEdit().setPlaceholderText(translate("Prefs", "Leave blank for system default."))
+            control.lineEdit().setPlaceholderText(_("Leave blank for system default."))
 
         control.setEditText(prefValue)
         control.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred))
@@ -441,7 +441,7 @@ class PrefsDialog(QDialog):
         return control
 
     def qtStyleControl(self, prefKey, prefValue):
-        defaultCaption = translate("Prefs", "System default", "default Qt style setting")
+        defaultCaption = _p("system default theme setting", "System default")
         control = QComboBox(self)
         control.addItem(defaultCaption, userData="")
         if not prefValue:

@@ -27,6 +27,7 @@ from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.welcomewidget import WelcomeWidget
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -182,11 +183,11 @@ class MainWindow(QMainWindow):
         menubar = self.globalMenuBar
         menubar.clear()
 
-        fileMenu = menubar.addMenu(self.tr("&File"))
-        editMenu = menubar.addMenu(self.tr("&Edit"))
-        viewMenu = menubar.addMenu(self.tr("&View"))
-        repoMenu = menubar.addMenu(self.tr("&Repo"))
-        helpMenu = menubar.addMenu(self.tr("&Help"))
+        fileMenu = menubar.addMenu(_("&File"))
+        editMenu = menubar.addMenu(_("&Edit"))
+        viewMenu = menubar.addMenu(_("&View"))
+        repoMenu = menubar.addMenu(_("&Repo"))
+        helpMenu = menubar.addMenu(_("&Help"))
 
         fileMenu.setObjectName("MWFileMenu")
         editMenu.setObjectName("MWEditMenu")
@@ -204,23 +205,23 @@ class MainWindow(QMainWindow):
         ActionDef.addToQMenu(
             fileMenu,
 
-            ActionDef(self.tr("&New Repository..."), self.newRepo,
+            ActionDef(_("&New Repository…"), self.newRepo,
                       shortcuts=QKeySequence.StandardKey.New, icon="folder-new",
-                      tip=self.tr("Create an empty Git repo")),
+                      tip=_("Create an empty Git repo")),
 
-            ActionDef(self.tr("C&lone Repository..."), self.cloneDialog,
+            ActionDef(_("C&lone Repository…"), self.cloneDialog,
                       shortcuts="Ctrl+Shift+N", icon="folder-download",
-                      tip=self.tr("Download a Git repo and open it")),
+                      tip=_("Download a Git repo and open it")),
 
             ActionDef.SEPARATOR,
 
-            ActionDef(self.tr("&Open Repository..."), self.openDialog,
+            ActionDef(_("&Open Repository…"), self.openDialog,
                       shortcuts=QKeySequence.StandardKey.Open, icon="folder-open",
-                      tip=self.tr("Open a Git repo on your machine")),
+                      tip=_("Open a Git repo on your machine")),
 
-            ActionDef(self.tr("Open &Recent"),
+            ActionDef(_("Open &Recent"),
                       icon="folder-open-recent",
-                      tip=self.tr("List of recently opened Git repos"),
+                      tip=_("List of recently opened Git repos"),
                       objectName="RecentMenuPlaceholder"),
 
             ActionDef.SEPARATOR,
@@ -230,23 +231,23 @@ class MainWindow(QMainWindow):
 
             ActionDef.SEPARATOR,
 
-            ActionDef(self.tr("&Settings..."), self.openPrefsDialog,
+            ActionDef(_("&Settings…"), self.openPrefsDialog,
                       shortcuts=QKeySequence.StandardKey.Preferences, icon="configure",
                       menuRole=QAction.MenuRole.PreferencesRole,
-                      tip=self.tr("Configure {app}").format(app=qAppName())),
+                      tip=_("Configure {app}").format(app=qAppName())),
 
             TaskBook.action(self, tasks.SetUpGitIdentity, taskArgs=('', False)
                             ).replace(menuRole=QAction.MenuRole.ApplicationSpecificRole),
 
             ActionDef.SEPARATOR,
 
-            ActionDef(self.tr("&Close Tab"), self.dispatchCloseCommand,
+            ActionDef(_("&Close Tab"), self.dispatchCloseCommand,
                       shortcuts=QKeySequence.StandardKey.Close, icon="document-close",
-                      tip=self.tr("Close current repository tab")),
+                      tip=_("Close current repository tab")),
 
-            ActionDef(self.tr("&Quit"), self.close,
+            ActionDef(_("&Quit"), self.close,
                       shortcuts=QKeySequence.StandardKey.Quit, icon="application-exit",
-                      tip=self.tr("Quit {app}").format(app=qAppName()),
+                      tip=_("Quit {app}").format(app=qAppName()),
                       menuRole=QAction.MenuRole.QuitRole),
         )
 
@@ -255,17 +256,17 @@ class MainWindow(QMainWindow):
         ActionDef.addToQMenu(
             editMenu,
 
-            ActionDef(self.tr("&Find..."), lambda: self.dispatchSearchCommand(),
+            ActionDef(_("&Find…"), lambda: self.dispatchSearchCommand(),
                       shortcuts=GlobalShortcuts.find, icon="edit-find",
-                      tip=self.tr("Search for a piece of text in commit messages, the current diff, or the name of a file")),
+                      tip=_("Search for a piece of text in commit messages, the current diff, or the name of a file")),
 
-            ActionDef(self.tr("Find Next"), lambda: self.dispatchSearchCommand(SearchBar.Op.NEXT),
+            ActionDef(_("Find Next"), lambda: self.dispatchSearchCommand(SearchBar.Op.NEXT),
                       shortcuts=QKeySequence.StandardKey.FindNext,
-                      tip=self.tr("Find next occurrence")),
+                      tip=_("Find next occurrence")),
 
-            ActionDef(self.tr("Find Previous"), lambda: self.dispatchSearchCommand(SearchBar.Op.PREVIOUS),
+            ActionDef(_("Find Previous"), lambda: self.dispatchSearchCommand(SearchBar.Op.PREVIOUS),
                       shortcuts=QKeySequence.StandardKey.FindPrevious,
-                      tip=self.tr("Find previous occurrence"))
+                      tip=_("Find previous occurrence"))
         )
 
         # -------------------------------------------------------------
@@ -280,29 +281,29 @@ class MainWindow(QMainWindow):
         ActionDef.addToQMenu(
             viewMenu,
             self.mainToolBar.toggleViewAction(),
-            ActionDef(self.tr("Show Status Bar"), self.toggleStatusBar, objectName="ShowStatusBarAction"),
-            ActionDef(self.tr("Show Menu Bar"), self.toggleMenuBar, objectName="ShowMenuBarAction"),
+            ActionDef(englishTitleCase(_("Show status bar")), self.toggleStatusBar, objectName="ShowStatusBarAction"),
+            ActionDef(englishTitleCase(_("Show menu bar")), self.toggleMenuBar, objectName="ShowMenuBarAction"),
             ActionDef.SEPARATOR,
             TaskBook.action(self, tasks.JumpToUncommittedChanges, accel="U"),
             TaskBook.action(self, tasks.JumpToHEAD, accel="H"),
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Focus on Sidebar"), self.focusSidebar, shortcuts="Alt+1"),
-            ActionDef(self.tr("Focus on Commit Log"), self.focusGraph, shortcuts="Alt+2"),
-            ActionDef(self.tr("Focus on File List"), self.focusFiles, shortcuts="Alt+3"),
-            ActionDef(self.tr("Focus on Code View"), self.focusDiff, shortcuts="Alt+4"),
+            ActionDef(_("Focus on Sidebar"), self.focusSidebar, shortcuts="Alt+1"),
+            ActionDef(_("Focus on Commit Log"), self.focusGraph, shortcuts="Alt+2"),
+            ActionDef(_("Focus on File List"), self.focusFiles, shortcuts="Alt+3"),
+            ActionDef(_("Focus on Code View"), self.focusDiff, shortcuts="Alt+4"),
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Next File"), self.nextFile, shortcuts="Ctrl+]"),
-            ActionDef(self.tr("Previous File"), self.previousFile, shortcuts="Ctrl+["),
+            ActionDef(_("Next File"), self.nextFile, shortcuts="Ctrl+]"),
+            ActionDef(_("Previous File"), self.previousFile, shortcuts="Ctrl+["),
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("&Next Tab"), self.nextTab, shortcuts="Ctrl+Shift+]" if MACOS else "Ctrl+Tab"),
-            ActionDef(self.tr("&Previous Tab"), self.previousTab, shortcuts="Ctrl+Shift+[" if MACOS else "Ctrl+Shift+Tab"),
+            ActionDef(_("&Next Tab"), self.nextTab, shortcuts="Ctrl+Shift+]" if MACOS else "Ctrl+Tab"),
+            ActionDef(_("&Previous Tab"), self.previousTab, shortcuts="Ctrl+Shift+[" if MACOS else "Ctrl+Shift+Tab"),
             ActionDef.SEPARATOR,
             TaskBook.action(self, tasks.JumpBack),
             TaskBook.action(self, tasks.JumpForward),
         )
 
         if settings.DEVDEBUG:
-            a = viewMenu.addAction(self.tr("Navigation Log"), lambda: logger.info(self.currentRepoWidget().navHistory.getTextLog()))
+            a = viewMenu.addAction(_("Navigation Log"), lambda: logger.info(self.currentRepoWidget().navHistory.getTextLog()))
             a.setShortcut("Alt+Down")
 
         ActionDef.addToQMenu(
@@ -311,18 +312,18 @@ class MainWindow(QMainWindow):
             ActionDef.SEPARATOR,
 
             ActionDef(
-                self.tr("&Refresh"),
+                _("&Refresh"),
                 lambda: self.currentRepoWidget().refreshRepo(),
                 shortcuts=GlobalShortcuts.refresh,
                 icon="SP_BrowserReload",
-                tip=self.tr("Check for changes in the repo (on the local filesystem only – will not fetch remotes)"),
+                tip=_("Check for changes in the repo (on the local filesystem only – will not fetch remotes)"),
             ),
 
             ActionDef(
-                self.tr("Reloa&d"),
+                _("Reloa&d"),
                 lambda: self.currentRepoWidget().primeRepo(force=True),
                 shortcuts="Ctrl+F5",
-                tip=self.tr("Reopen the repo from scratch"),
+                tip=_("Reopen the repo from scratch"),
             ),
         )
 
@@ -332,22 +333,22 @@ class MainWindow(QMainWindow):
 
         # -------------------------------------------------------------
 
-        a = helpMenu.addAction(self.tr("&About {0}").format(qAppName()), lambda: AboutDialog.popUp(self))
+        a = helpMenu.addAction(_("&About {0}").format(qAppName()), lambda: AboutDialog.popUp(self))
         a.setIcon(stockIcon("gitfourchette"))
         a.setMenuRole(QAction.MenuRole.AboutRole)
 
-        a = helpMenu.addAction(self.tr("{0} User’s Guide").format(qAppName()),
+        a = helpMenu.addAction(_("{0} User’s Guide").format(qAppName()),
                                lambda: QDesktopServices.openUrl(QUrl(USERS_GUIDE_URL)))
         a.setIcon(stockIcon("help-contents"))
 
         helpMenu.addSeparator()
 
-        a = helpMenu.addAction(self.tr("Open Trash..."), self.openRescueFolder)
+        a = helpMenu.addAction(_("Open Trash…"), self.openRescueFolder)
         a.setIcon(stockIcon("SP_TrashIcon"))
-        a.setToolTip(self.tr("Explore changes that you may have discarded by mistake"))
+        a.setToolTip(_("Explore changes that you may have discarded by mistake"))
 
-        a = helpMenu.addAction(self.tr("Empty Trash..."), self.clearRescueFolder)
-        a.setToolTip(self.tr("Delete all discarded changes from the trash folder"))
+        a = helpMenu.addAction(_("Empty Trash…"), self.clearRescueFolder)
+        a.setToolTip(_("Delete all discarded changes from the trash folder"))
 
         # -------------------------------------------------------------
 
@@ -377,8 +378,8 @@ class MainWindow(QMainWindow):
             action.setToolTip(path)
         self.recentMenu.addSeparator()
 
-        clearAction = self.recentMenu.addAction(self.tr("Clear List", "clear list of recently opened repositories"), onClearRecents)
-        clearAction.setToolTip(self.tr("Clear the list of recently opened repositories"))
+        clearAction = self.recentMenu.addAction(_("Clear List"), onClearRecents)
+        clearAction.setToolTip(_("Clear the list of recently opened repositories"))
         clearAction.setIcon(stockIcon("edit-clear-history"))
 
         self.welcomeWidget.ui.recentReposButton.setMenu(self.recentMenu)
@@ -387,8 +388,8 @@ class MainWindow(QMainWindow):
 
     def showMenuBarHiddenWarning(self):
         return showInformation(
-            self, self.tr("Menu bar hidden"),
-            self.tr("The menu bar is now hidden. Press the Alt key to toggle it."))
+            self, _("Menu bar hidden"),
+            _("The menu bar is now hidden. Press the Alt key to toggle it."))
 
     # -------------------------------------------------------------------------
     # Tabs
@@ -448,13 +449,13 @@ class MainWindow(QMainWindow):
 
         ActionDef.addToQMenu(
             menu,
-            ActionDef(self.tr("Close Tab"), lambda: self.closeTab(i), shortcuts=QKeySequence.StandardKey.Close),
-            ActionDef(self.tr("Close Other Tabs"), lambda: self.closeOtherTabs(i), enabled=self.tabs.count() > 1),
-            ActionDef(self.tr("Unload Other Tabs"), lambda: self.unloadOtherTabs(i), enabled=self.tabs.count() > 1 and anyOtherLoadedTabs),
+            ActionDef(_("Close Tab"), lambda: self.closeTab(i), shortcuts=QKeySequence.StandardKey.Close),
+            ActionDef(_("Close Other Tabs"), lambda: self.closeOtherTabs(i), enabled=self.tabs.count() > 1),
+            ActionDef(_("Unload Other Tabs"), lambda: self.unloadOtherTabs(i), enabled=self.tabs.count() > 1 and anyOtherLoadedTabs),
             ActionDef.SEPARATOR,
             *rw.pathsMenuItems(),
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Configure Tabs..."), lambda: openPrefsDialog(self, "tabCloseButton")),
+            ActionDef(_("Configure Tabs…"), lambda: openPrefsDialog(self, "tabCloseButton")),
         )
 
         return menu
@@ -483,8 +484,8 @@ class MainWindow(QMainWindow):
         except BaseException as exc:
             excMessageBox(
                 exc,
-                self.tr("Open repository"),
-                self.tr("Couldn’t open the repository at {0}.").format(bquo(path)),
+                _("Open repository"),
+                _("Couldn’t open the repository at {0}.").format(bquo(path)),
                 parent=self,
                 icon='warning')
             return None
@@ -495,7 +496,7 @@ class MainWindow(QMainWindow):
     def _openRepo(self, path: str, foreground=True, tabIndex=-1, exactMatch=True, locator=NavLocator.Empty) -> RepoWidget:
         # Make sure the path exists
         if not os.path.exists(path):
-            raise FileNotFoundError(self.tr("There’s nothing at this path."))
+            raise FileNotFoundError(_("There’s nothing at this path."))
 
         # Get the workdir
         if exactMatch:
@@ -503,7 +504,7 @@ class MainWindow(QMainWindow):
         else:
             with RepoContext(path) as repo:
                 if repo.is_bare:
-                    raise NotImplementedError(self.tr("Sorry, {app} doesn’t support bare repositories.").format(app=qAppName()))
+                    raise NotImplementedError(_("Sorry, {app} doesn’t support bare repositories.").format(app=qAppName()))
                 workdir = repo.workdir
 
         # First check that we don't have a tab for this repo already
@@ -634,8 +635,8 @@ class MainWindow(QMainWindow):
         else:
             showInformation(
                 self,
-                self.tr("Open trash folder"),
-                self.tr("There’s no trash folder. Perhaps you haven’t discarded a change with {0} yet.").format(qAppName()))
+                _("Open trash folder"),
+                _("There’s no trash folder. Perhaps you haven’t discarded a change with {0} yet.").format(qAppName()))
 
     def clearRescueFolder(self):
         trash = Trash.instance()
@@ -644,23 +645,25 @@ class MainWindow(QMainWindow):
         if patchCount <= 0:
             showInformation(
                 self,
-                self.tr("Clear trash folder"),
-                self.tr("There are no discarded changes to delete."))
+                _("Clear trash folder"),
+                _("There are no discarded changes to delete."))
             return
 
         humanSize = self.locale().formattedDataSize(sizeOnDisk)
 
-        askPrompt = (
-                self.tr("Do you want to permanently delete <b>%n</b> discarded patches?", "", patchCount) + "<br>" +
-                self.tr("This will free up {0} on disk.").format(escape(humanSize)) + "<br>" +
-                tr("This cannot be undone!"))
+        askPrompt = paragraphs(
+            _n("Do you want to permanently delete <b>{n}</b> discarded patch?",
+               "Do you want to permanently delete <b>{n}</b> discarded patches?", patchCount),
+            _("This will free up {0} on disk.").format(escape(humanSize)),
+            _("This cannot be undone!")
+        )
 
         askConfirmation(
             parent=self,
-            title=self.tr("Clear trash folder"),
+            title=_("Clear trash folder"),
             text=askPrompt,
             callback=lambda: trash.clear(),
-            okButtonText=self.tr("Delete permanently"),
+            okButtonText=_("Delete permanently"),
             okButtonIcon=stockIcon("SP_DialogDiscardButton"))
 
     # -------------------------------------------------------------------------
@@ -668,9 +671,9 @@ class MainWindow(QMainWindow):
 
     def newRepo(self, path="", detectParentRepo=True, allowNonEmptyDirectory=False):
         if not path:
-            qfd = PersistentFileDialog.saveFile(self, "NewRepo", self.tr("New repository"))
+            qfd = PersistentFileDialog.saveFile(self, "NewRepo", _("New repository"))
             qfd.setFileMode(QFileDialog.FileMode.Directory)
-            qfd.setLabelText(QFileDialog.DialogLabel.Accept, self.tr("&Create repo here"))
+            qfd.setLabelText(QFileDialog.DialogLabel.Accept, _("&Create repo here"))
             qfd.fileSelected.connect(self.newRepo)
             qfd.show()
             return
@@ -688,9 +691,9 @@ class MainWindow(QMainWindow):
 
         if not detectParentRepo or not parentRepo:
             if not allowNonEmptyDirectory and os.path.exists(path) and os.listdir(path):
-                message = self.tr("Are you sure you want to initialize a Git repository in {0}? "
+                message = _("Are you sure you want to initialize a Git repository in {0}? "
                                   "This directory isn’t empty.").format(bquo(path))
-                askConfirmation(self, self.tr("Directory isn’t empty"), message, messageBoxIcon='warning',
+                askConfirmation(self, _("Directory isn’t empty"), message, messageBoxIcon='warning',
                                 callback=lambda: self.newRepo(path, detectParentRepo, allowNonEmptyDirectory=True))
                 return
 
@@ -698,8 +701,8 @@ class MainWindow(QMainWindow):
                 pygit2.init_repository(path)
                 return self.openRepo(path, exactMatch=True)
             except Exception as exc:
-                message = self.tr("Couldn’t create an empty repository in {0}.").format(bquo(path))
-                excMessageBox(exc, self.tr("New repository"), message, parent=self, icon='warning')
+                message = _("Couldn’t create an empty repository in {0}.").format(bquo(path))
+                excMessageBox(exc, _("New repository"), message, parent=self, icon='warning')
 
         if parentRepo:
             myBasename = os.path.basename(path)
@@ -710,12 +713,12 @@ class MainWindow(QMainWindow):
 
             if parentRepo == path or parentWorkdir == path:
                 message = paragraphs(
-                    self.tr("A repository already exists here:"),
+                    _("A repository already exists here:"),
                     escape(compactPath(parentWorkdir)))
                 qmb = asyncMessageBox(
-                    self, 'information', self.tr("Repository already exists"), message,
+                    self, 'information', _("Repository already exists"), message,
                     QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Cancel)
-                qmb.button(QMessageBox.StandardButton.Open).setText(self.tr("&Open existing repo"))
+                qmb.button(QMessageBox.StandardButton.Open).setText(_("&Open existing repo"))
                 qmb.accepted.connect(lambda: self.openRepo(parentWorkdir, exactMatch=True))
                 qmb.show()
             else:
@@ -733,21 +736,21 @@ class MainWindow(QMainWindow):
                               f"<span style='color: {muted};'>{dp3}</span></div>")
 
                 message = paragraphs(
-                    self.tr("An existing repository, {0}, was found in a parent folder of this location:"),
+                    _("An existing repository, {0}, was found in a parent folder of this location:"),
                     prettyPath,
-                    self.tr("Are you sure you want to create {1} within the existing repo?"),
+                    _("Are you sure you want to create {1} within the existing repo?"),
                 ).format(bquoe(parentBasename), hquoe(myBasename))
 
                 qmb = asyncMessageBox(
-                    self, 'information', self.tr("Repository found in parent folder"), message,
+                    self, 'information', _("Repository found in parent folder"), message,
                     QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
 
                 openButton = qmb.button(QMessageBox.StandardButton.Open)
-                openButton.setText(self.tr("&Open {0}").format(lquoe(parentBasename)))
+                openButton.setText(_("&Open {0}").format(lquoe(parentBasename)))
                 openButton.clicked.connect(lambda: self.openRepo(parentWorkdir, exactMatch=True))
 
                 createButton = qmb.button(QMessageBox.StandardButton.Ok)
-                createButton.setText(self.tr("&Create {0}").format(lquoe(myBasename)))
+                createButton.setText(_("&Create {0}").format(lquoe(myBasename)))
                 createButton.clicked.connect(lambda: self.newRepo(path, detectParentRepo=False))
 
                 qmb.show()
@@ -762,7 +765,7 @@ class MainWindow(QMainWindow):
         dlg.show()
 
     def openDialog(self):
-        qfd = PersistentFileDialog.openDirectory(self, "NewRepo", self.tr("Open repository"))
+        qfd = PersistentFileDialog.openDirectory(self, "NewRepo", _("Open repository"))
         qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         qfd.fileSelected.connect(lambda path: self.openRepo(path, exactMatch=False))
         qfd.show()
@@ -825,7 +828,7 @@ class MainWindow(QMainWindow):
                 numUnloaded += 1
             rw.cleanup()
 
-        self.statusBar2.showMessage(self.tr("%n background tabs unloaded.", "", numUnloaded))
+        self.statusBar2.showMessage(_n("{n} background tab unloaded.", "{n} background tabs unloaded.", numUnloaded))
         gc.collect()
         self.statusBar2.update()
 
@@ -926,8 +929,9 @@ class MainWindow(QMainWindow):
 
     def _reportSessionErrors(self, errors: Sequence[tuple[str, BaseException]]):
         numErrors = len(errors)
-        text = self.tr("The session couldn’t be restored fully because %n repositories failed to load:", "", numErrors)
-        qmb = asyncMessageBox(self, 'warning', self.tr("Restore session"), text)
+        text = _n("The session couldn’t be restored fully because a repository failed to load:",
+                  "The session couldn’t be restored fully because {n} repositories failed to load:", numErrors)
+        qmb = asyncMessageBox(self, 'warning', _("Restore session"), text)
         addULToMessageBox(qmb, [f"<b>{compactPath(path)}</b><br>{exc}" for path, exc in errors])
         qmb.show()
 
@@ -1085,19 +1089,19 @@ class MainWindow(QMainWindow):
 
         if any(k in warnIfNeedRestart for k in prefDiff):
             showInformation(
-                self, self.tr("Apply Settings"),
-                self.tr("You may need to restart {app} for the new settings to take effect fully.").format(app=qAppName()))
+                self, _("Apply Settings"),
+                _("You may need to restart {app} for the new settings to take effect fully.").format(app=qAppName()))
         elif any(k in warnIfChanged for k in prefDiff) and self.tabs.count():
             qmb = asyncMessageBox(
-                self, "question", self.tr("Apply Settings"),
-                self.tr("The new settings won’t take effect fully until you reload the current repositories."),
+                self, "question", _("Apply Settings"),
+                _("The new settings won’t take effect fully until you reload the current repositories."),
                 buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
             reloadButton = qmb.button(QMessageBox.StandardButton.Ok)
-            reloadButton.setText(self.tr("&Reload"))
+            reloadButton.setText(_("&Reload"))
             reloadButton.clicked.connect(lambda: self.unloadOtherTabs(self.tabs.currentIndex()))
             reloadButton.clicked.connect(lambda: self.currentRepoWidget().primeRepo(force=True))
             cancelButton = qmb.button(QMessageBox.StandardButton.Cancel)
-            cancelButton.setText(self.tr("&Not Now"))
+            cancelButton.setText(_("&Not Now"))
             qmb.show()
 
         # If any changed setting matches autoReload, schedule a "forced" refresh of all loaded RepoWidgets

@@ -5,6 +5,7 @@
 # -----------------------------------------------------------------------------
 
 from gitfourchette.forms.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
+from gitfourchette.localization import *
 from gitfourchette.porcelain import Oid
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -24,14 +25,14 @@ class CheckoutCommitDialog(QDialog):
         self.ui = ui
         self.ui.setupUi(self)
 
-        self.setWindowTitle(self.tr("Check out commit {0}").format(shortHash(oid)))
+        self.setWindowTitle(_("Check out commit {0}").format(shortHash(oid)))
 
         ok = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
-        ui.detachedHeadRadioButton.clicked.connect(lambda: ok.setText(self.tr("Detach HEAD")))
+        ui.detachedHeadRadioButton.clicked.connect(lambda: ok.setText(_("Detach HEAD")))
         ui.detachedHeadRadioButton.clicked.connect(lambda: ok.setIcon(stockIcon("git-head-detached")))
-        ui.switchToLocalBranchRadioButton.clicked.connect(lambda: ok.setText(self.tr("Switch Branch")))
+        ui.switchToLocalBranchRadioButton.clicked.connect(lambda: ok.setText(_("Switch Branch")))
         ui.switchToLocalBranchRadioButton.clicked.connect(lambda: ok.setIcon(stockIcon("git-branch")))
-        ui.createBranchRadioButton.clicked.connect(lambda: ok.setText(self.tr("Create Branch...")))
+        ui.createBranchRadioButton.clicked.connect(lambda: ok.setText(_("Create Branch…")))
         ui.createBranchRadioButton.clicked.connect(lambda: ok.setIcon(stockIcon("vcs-branch-new")))
         if refs:
             ui.switchToLocalBranchComboBox.addItems(refs)

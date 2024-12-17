@@ -7,11 +7,12 @@
 import logging
 import shlex
 
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.settings import prefs, TEST_MODE
 from gitfourchette.toolbox import *
-from gitfourchette.trtables import TrTables
 from gitfourchette.toolcommands import ToolCommands
+from gitfourchette.trtables import TrTables
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +45,10 @@ def onExternalToolProcessError(parent: QWidget, prefKey: str):
 
     translatedPrefKey = TrTables.prefKey(prefKey)
 
-    title = translate("exttools", "Failed to start {0}").format(translatedPrefKey)
+    title = _("Failed to start {tool}").format(tool=translatedPrefKey)
 
-    message = translate("exttools",
-                        "Couldn’t start {command} ({what}). It might not be installed on your machine."
-                        ).format(what=translatedPrefKey, command=bquo(programName))
+    message = _("Couldn’t start {command} ({tool}). It might not be installed on your machine."
+                ).format(tool=translatedPrefKey, command=bquo(programName))
 
     configureButtonID = QMessageBox.StandardButton.Ok
     browseButtonID = QMessageBox.StandardButton.Open
@@ -57,17 +57,17 @@ def onExternalToolProcessError(parent: QWidget, prefKey: str):
                           configureButtonID | browseButtonID | QMessageBox.StandardButton.Cancel)
 
     configureButton = qmb.button(configureButtonID)
-    configureButton.setText(translate("exttools", "Change tools..."))
+    configureButton.setText(_("Change tool…"))
     configureButton.setIcon(stockIcon("configure"))
 
     browseButton = qmb.button(browseButtonID)
-    browseButton.setText(translate("exttools", "Locate {0}...").format(lquo(programName)))
+    browseButton.setText(_("Locate {tool}…").format(tool=lquo(programName)))
 
     def onQMBFinished(result):
         if result == configureButtonID:
             openPrefsDialog(parent, prefKey)
         elif result == browseButtonID:
-            qfd = QFileDialog(parent, translate("exttools", "Where is {0}?").format(lquo(programName)))
+            qfd = QFileDialog(parent, _("Where is {tool}?").format(tool=lquo(programName)))
             qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
             qfd.setFileMode(QFileDialog.FileMode.AnyFile)
             qfd.setWindowModality(Qt.WindowModality.WindowModal)
@@ -85,15 +85,13 @@ def setUpToolCommand(parent: QWidget, prefKey: str):
 
     title = translatedPrefKey
 
-    message = translate("exttools", "{0} isn’t configured in your settings yet."
-                        ).format(bquo(translatedPrefKey))
+    message = _("{tool} isn’t configured in your settings yet.").format(tool=bquo(translatedPrefKey))
 
     qmb = asyncMessageBox(parent, 'warning', title, message,
                           QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
 
     configureButton = qmb.button(QMessageBox.StandardButton.Ok)
-    configureButton.setText(translate("exttools", "Set up {0}"
-                                      ).format(lquo(translatedPrefKey)))
+    configureButton.setText(_("Set up {tool}").format(tool=lquo(translatedPrefKey)))
 
     qmb.accepted.connect(lambda: openPrefsDialog(parent, prefKey))
     qmb.show()

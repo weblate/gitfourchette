@@ -6,9 +6,9 @@
 
 from collections.abc import Callable
 
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-
 
 HORIZONTAL_CONTENT_HEIGHT = 20
 FONT_POINT_PERCENT = 90
@@ -47,7 +47,7 @@ class Banner(QFrame):
         self.orientation = orientation
         self.buttons = []
 
-        self.dismissButton = self.addButton(self.tr("Dismiss"), self.dismiss, permanent=True)
+        self.dismissButton = self.addButton(_("Dismiss"), self.dismiss, permanent=True)
 
     def addButton(self, text: str, callback: Callable | None = None, permanent=False) -> QToolButton:
         button = QToolButton(self)

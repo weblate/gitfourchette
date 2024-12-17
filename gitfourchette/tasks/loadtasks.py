@@ -13,6 +13,7 @@ from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import (ShouldDisplayPatchAsImageDiff, SpecialDiffError, DiffImagePair)
 from gitfourchette.graph import GraphBuildLoop
 from gitfourchette.graphview.commitlogmodel import SpecialRow
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator, NavFlags, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -64,7 +65,7 @@ class PrimeRepo(RepoTask):
         repo = Repo(path, RepositoryOpenFlag.NO_SEARCH)
 
         if repo.is_bare:
-            raise NotImplementedError(self.tr("Sorry, {app} doesn’t support bare repositories.").format(app=qAppName()))
+            raise NotImplementedError(_("Sorry, {app} doesn’t support bare repositories.").format(app=qAppName()))
 
         # Bind to sessionwide git config file
         sessionwideConfigPath = GFApplication.instance().sessionwideGitConfigPath
@@ -120,7 +121,7 @@ class PrimeRepo(RepoTask):
 
             # Report progress, not too often
             if i % progressInterval == 0:
-                message = self.tr("{0} commits...").format(locale.toString(i))
+                message = _("{0} commits…").format(locale.toString(i))
                 self.progressMessage.emit(message)
                 if numCommitsBallpark > 0 and i <= numCommitsBallpark:
                     self.progressValue.emit(i)
@@ -131,9 +132,9 @@ class PrimeRepo(RepoTask):
         numCommits = len(commitSequence) - 1
         logger.info(f"{repoModel.shortName}: loaded {numCommits} commits")
         if truncatedHistory:
-            message = self.tr("{0} commits (truncated log).").format(locale.toString(numCommits))
+            message = _("{0} commits (truncated log).").format(locale.toString(numCommits))
         else:
-            message = self.tr("{0} commits total.").format(locale.toString(numCommits))
+            message = _("{0} commits total.").format(locale.toString(numCommits))
         self.progressMessage.emit(message)
 
         if numCommitsBallpark != 0:
@@ -281,23 +282,23 @@ class LoadPatch(RepoTask):
                       ) -> DiffDocument | SpecialDiffError | DiffConflict | DiffImagePair:
         if not patch:
             locator = locator.withExtraFlags(NavFlags.ForceDiff)
-            longformItems = [linkify(self.tr("Try to reload the file."), locator.url())]
+            longformItems = [linkify(_("Try to reload the file."), locator.url())]
 
             if locator.context.isWorkdir() and not settings.prefs.autoRefresh:
                 prefKey = "autoRefresh"
-                tip = self.tr("Consider re-enabling [{0}] to prevent this issue."
+                tip = _("Consider re-enabling [{0}] to prevent this issue."
                               ).format(hquo(TrTables.prefKey(prefKey)))
                 tip = linkify(tip, makeInternalLink("prefs", prefKey))
                 longformItems.append(tip)
 
-            return SpecialDiffError(self.tr("Outdated diff."),
-                                    self.tr("The file appears to have changed on disk."),
+            return SpecialDiffError(_("Outdated diff."),
+                                    _("The file appears to have changed on disk."),
                                     icon="SP_MessageBoxWarning",
                                     longform=toRoomyUL(longformItems))
 
         if not patch.delta:
             # Rare libgit2 bug, should be fixed in 1.6.0
-            return SpecialDiffError(self.tr("Patch has no delta!"), icon="SP_MessageBoxWarning")
+            return SpecialDiffError(_("Patch has no delta!"), icon="SP_MessageBoxWarning")
 
         if patch.delta.status == DeltaStatus.CONFLICTED:
             path = patch.delta.new_file.path
@@ -335,7 +336,7 @@ class LoadPatch(RepoTask):
 
         locationText = ""
         if locator.context == NavContext.COMMITTED:
-            locationText = self.tr("at {0}", "at <specific commit>").format(shortHash(locator.commit))
+            locationText = _p("at (specific commit)", "at {0}").format(shortHash(locator.commit))
         elif locator.context.isWorkdir():
             locationText = locator.context.translateName().lower()
         if locationText:

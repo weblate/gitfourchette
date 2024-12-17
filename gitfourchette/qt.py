@@ -15,11 +15,11 @@
 # If you're running unit tests, use the PYTEST_QT_API environment variable instead.
 # If you're packaging the app, you may prefer to force a binding via appconsts.py.
 
-from contextlib import suppress as _suppress
-import logging as _logging
 import json as _json
+import logging as _logging
 import os as _os
 import sys as _sys
+from contextlib import suppress as _suppress
 
 from gitfourchette.appconsts import *
 
@@ -191,14 +191,6 @@ if QT5:
 
 # -----------------------------------------------------------------------------
 # Utility functions
-
-def tr(s, *args, **kwargs):
-    return QCoreApplication.translate("", s, *args, **kwargs)
-
-
-def translate(context, s, *args, **kwargs):
-    return QCoreApplication.translate(context, s, *args, **kwargs)
-
 
 def qAppName():
     """ User-facing application name. Shorthand for QApplication.applicationDisplayName(). """

@@ -64,6 +64,6 @@ class MemoryIndicator(QPushButton):
         numQObjects = sum(1 + len(tlw.findChildren(QObject))  # "+1" to account for tlw itself
                           for tlw in QApplication.topLevelWidgets())
 
-        cacheMem, _ = pygit2.settings.cached_memory
+        cacheMem, _dummy = pygit2.settings.cached_memory
         fds = QLocale().formattedDataSize(cacheMem, 0, QLocale.DataSizeFormat.DataSizeSIFormat)
         self.setText(f"git: {fds}    qto: {numQObjects}    pyo: {len(gc.get_objects())}")

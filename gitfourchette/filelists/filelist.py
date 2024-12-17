@@ -13,6 +13,7 @@ from gitfourchette.exttools import openInTextEditor, openInDiffTool
 from gitfourchette.filelists.filelistmodel import FileListModel
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -140,7 +141,7 @@ class FileList(QListView):
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # prevent editing text after double-clicking
         self.setUniformItemSizes(True)  # potential perf boost with many files
 
-        searchBarPlaceholder = toLengthVariants(tr("Find a file by path|Find file"))
+        searchBarPlaceholder = toLengthVariants(_("Find a file by path|Find file"))
         self.searchBar = SearchBar(self, searchBarPlaceholder)
         self.searchBar.setUpItemViewBuddy()
         self.searchBar.ui.forwardButton.hide()
@@ -231,13 +232,13 @@ class FileList(QListView):
             ActionDef.SEPARATOR,
 
             ActionDef(
-                tr("Open &Folder", "please omit %n in singular form", n),
+                _n("Open &Folder", "Open {n} &Folders", n),
                 self.showInFolder,
                 "SP_DirIcon",
             ),
 
             ActionDef(
-                tr("&Copy Path", "please omit %n in singular form", n),
+                _n("&Copy Path", "&Copy {n} Paths", n),
                 self.copyPaths,
                 shortcuts=GlobalShortcuts.copy,
             ),
@@ -250,14 +251,14 @@ class FileList(QListView):
 
     def contextMenuActionStash(self):
         return ActionDef(
-            self.tr("Stas&h Changes..."),
+            _("Stas&h Changes…"),
             self.wantPartialStash,
             icon="git-stash-black",
             shortcuts=TaskBook.shortcuts.get(NewStash, []))
 
     def contextMenuActionRevertMode(self, patches, callback: Callable):
         n = len(patches)
-        action = ActionDef(tr("Revert Mode Change", "", n), callback, enabled=False)
+        action = ActionDef(_n("Revert Mode Changes", "Revert Mode Change", n), callback, enabled=False)
 
         for patch in patches:
             if not patch:  # stale diff
@@ -270,9 +271,9 @@ class FileList(QListView):
                 action.enabled = True
                 if n == 1:
                     if nm == FileMode.BLOB_EXECUTABLE:
-                        action.caption = tr("Revert Mode to Non-Executable")
+                        action.caption = _("Revert Mode to Non-Executable")
                     elif nm == FileMode.BLOB:
-                        action.caption = tr("Revert Mode to Executable")
+                        action.caption = _("Revert Mode to Executable")
 
         return action
 
@@ -281,12 +282,12 @@ class FileList(QListView):
 
         return [
             ActionDef(
-                self.tr("Open Diff in {0}").format(settings.getDiffToolName()),
+                _("Open Diff in {0}").format(settings.getDiffToolName()),
                 self.wantOpenInDiffTool,
                 icon="vcs-diff"),
 
             ActionDef(
-                self.tr("E&xport Diffs As Patch...", "", n),
+                _n("E&xport Diff As Patch…", "E&xport Diffs As Patch…", n),
                 self.savePatchAs),
         ]
 
@@ -295,12 +296,12 @@ class FileList(QListView):
 
         return [
             ActionDef(
-                self.tr("&Edit in {0}").format(settings.getExternalEditorName()),
+                _("&Edit in {tool}").format(tool=settings.getExternalEditorName()),
                 self.openWorkdirFile,
                 icon="SP_FileIcon"),
 
             ActionDef(
-                self.tr("Edit &HEAD Versions in {0}", "", n).format(settings.getExternalEditorName()),
+                _n("Edit &HEAD Version in {tool}", "Edit &HEAD Versions in {tool}", n=n, tool=settings.getExternalEditorName()),
                 self.openHeadRevision),
         ]
 
@@ -329,7 +330,7 @@ class FileList(QListView):
             qmb = askConfirmation(
                 self,
                 title,
-                prompt.format(numFiles),
+                prompt.format(n=numFiles),
                 runBatch,
                 QMessageBox.StandardButton.YesAll | QMessageBox.StandardButton.Cancel,
                 show=False)
@@ -344,21 +345,21 @@ class FileList(QListView):
             entryPath = self.repo.in_workdir(patch.delta.new_file.path)
             openInTextEditor(self, entryPath)
 
-        self.confirmBatch(run, tr("Open in external editor"),
-                          tr("Really open <b>{0} files</b> in external editor?"))
+        self.confirmBatch(run, _("Open in external editor"),
+                          _("Really open <b>{n} files</b> in external editor?"))
 
     def wantOpenInDiffTool(self):
-        self.confirmBatch(self._openInDiffTool, tr("Open in external diff tool"),
-                          tr("Really open <b>{0} files</b> in external diff tool?"))
+        self.confirmBatch(self._openInDiffTool, _("Open in external diff tool"),
+                          _("Really open <b>{n} files</b> in external diff tool?"))
 
     def _openInDiffTool(self, patch: Patch):
         if patch.delta.new_file.id == NULL_OID:
             raise SelectedFileBatchError(
-                tr("{0}: Can’t open external diff tool on a deleted file.").format(patch.delta.new_file.path))
+                _("{0}: Can’t open external diff tool on a deleted file.").format(patch.delta.new_file.path))
 
         if patch.delta.old_file.id == NULL_OID:
             raise SelectedFileBatchError(
-                tr("{0}: Can’t open external diff tool on a new file.").format(patch.delta.new_file.path))
+                _("{0}: Can’t open external diff tool on a new file.").format(patch.delta.new_file.path))
 
         oldDiffFile = patch.delta.old_file
         newDiffFile = patch.delta.new_file
@@ -385,11 +386,11 @@ class FileList(QListView):
             path = self.repo.in_workdir(entry.delta.new_file.path)
             path = os.path.normpath(path)  # get rid of any trailing slashes (submodules)
             if not os.path.exists(path):  # check exists, not isfile, for submodules
-                raise SelectedFileBatchError(tr("{0}: This file doesn’t exist at this path anymore.").format(entry.delta.new_file.path))
+                raise SelectedFileBatchError(_("{0}: This file doesn’t exist at this path anymore.").format(entry.delta.new_file.path))
             showInFolder(path)
 
-        self.confirmBatch(run, tr("Open paths"),
-                          tr("Really open <b>{0} folders</b>?"))
+        self.confirmBatch(run, _("Open paths"),
+                          _("Really open <b>{n} folders</b>?"))
 
     def keyPressEvent(self, event: QKeyEvent):
         # The default keyPressEvent copies the displayed label of the selected items.
@@ -514,7 +515,7 @@ class FileList(QListView):
         for index in self.selectedIndexes():
             patch: Patch = index.data(FileListModel.Role.PatchObject)
             if not patch or not patch.delta:
-                raise ValueError(tr("This file appears to have changed since we last read it. Try refreshing the window."))
+                raise ValueError(_("This file appears to have been modified by another application. Try refreshing the window."))
             assert isinstance(patch, Patch)
             yield patch
 
@@ -588,8 +589,8 @@ class FileList(QListView):
             tempPath = dumpTempBlob(self.repo, qTempDir(), patch.delta.old_file, "HEAD")
             openInTextEditor(self, tempPath)
 
-        self.confirmBatch(run, tr("Open HEAD version of file"),
-                          tr("Really open <b>{0} files</b> in external editor?"))
+        self.confirmBatch(run, _("Open HEAD version of file"),
+                          _("Really open <b>{n} files</b> in external editor?"))
 
     def wantPartialStash(self):
         paths = set()

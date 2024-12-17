@@ -4,6 +4,7 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import stockIcon
 
@@ -13,7 +14,7 @@ class QHintButton(QToolButton):
         super().__init__(parent)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setAutoRaise(True)
-        self.setText(self.tr("Help"))
+        self.setText(_("Help"))
         self.setIcon(stockIcon(iconKey))
         self.setToolTip(toolTip)
         self.setCursor(Qt.CursorShape.WhatsThisCursor)

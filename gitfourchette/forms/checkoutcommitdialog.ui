@@ -69,7 +69,7 @@
       <item>
        <widget class="QRadioButton" name="createBranchRadioButton">
         <property name="text">
-         <string>Start &amp;new branch here...</string>
+         <string>Start &amp;new branch here…</string>
         </property>
        </widget>
       </item>
@@ -125,7 +125,7 @@
       <item>
        <widget class="QCheckBox" name="recurseSubmodulesCheckBox">
         <property name="text">
-         <string>Recurse into submodules</string>
+         <string>Update submodules recursively</string>
         </property>
         <property name="checked">
          <bool>true</bool>

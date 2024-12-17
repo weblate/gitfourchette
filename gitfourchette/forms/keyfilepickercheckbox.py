@@ -6,6 +6,7 @@
 
 from pathlib import Path
 
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import QFilePickerCheckBox, PersistentFileDialog, paragraphs
 
@@ -16,8 +17,8 @@ class KeyFilePickerCheckBox(QFilePickerCheckBox):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         filePickerTip = paragraphs(
-            self.tr("{app} normally uses public/private keys in {path} to authenticate you with remote servers."),
-            self.tr("Tick this box if you want to access this remote with a custom key.")
+            _("{app} normally uses public/private keys in {path} to authenticate you with remote servers."),
+            _("Tick this box if you want to access this remote with a custom key.")
         ).format(app=qAppName(), path=KeyFilePickerCheckBox.DefaultSshDir)
         self.checkBox.setToolTip(filePickerTip)
 
@@ -25,8 +26,8 @@ class KeyFilePickerCheckBox(QFilePickerCheckBox):
         sshDir = Path(KeyFilePickerCheckBox.DefaultSshDir).expanduser()
         fallbackPath = str(sshDir) if sshDir.exists() else ""
 
-        prompt = self.tr("Select public key file for this remote")
-        publicKeyFilter = self.tr("Public key file") + " (*.pub)"
+        prompt = _("Select public key file for this remote")
+        publicKeyFilter = _("Public key file") + " (*.pub)"
         return PersistentFileDialog.openFile(self, "KeyFile", prompt, filter=publicKeyFilter, fallbackPath=fallbackPath)
 
     def validatePath(self, path: str):
@@ -36,16 +37,16 @@ class KeyFilePickerCheckBox(QFilePickerCheckBox):
         p = Path(path)
 
         if not p.is_file():
-            return self.tr("File not found.")
+            return _("File not found.")
 
         if path.endswith(".pub"):
             privateKey = p.with_suffix("")
             if not privateKey.is_file():
-                return self.tr("Accompanying private key not found.")
+                return _("Accompanying private key not found.")
         else:
             privateKey = p
             if not privateKey.with_suffix(".pub").is_file():
-                return self.tr("Accompanying public key not found.")
+                return _("Accompanying public key not found.")
 
         return ""
 

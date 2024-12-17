@@ -16,6 +16,7 @@ from pygit2.enums import RepositoryOpenFlag
 from gitfourchette import settings
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_clonedialog import Ui_CloneDialog
+from gitfourchette.localization import *
 from gitfourchette.porcelain import Repo, pygit2_version_at_least
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
@@ -60,7 +61,7 @@ class CloneDialog(QDialog):
 
         self.setDefaultCloneLocationAction = QAction("(SET)")
         self.setDefaultCloneLocationAction.triggered.connect(lambda: self.setDefaultCloneLocationPref(self.pathParentDir))
-        self.clearDefaultCloneLocationAction = QAction(stockIcon("edit-clear-history"), self.tr("Reset default clone location"))
+        self.clearDefaultCloneLocationAction = QAction(stockIcon("edit-clear-history"), _("Reset default clone location"))
         self.clearDefaultCloneLocationAction.triggered.connect(lambda: self.setDefaultCloneLocationPref(""))
         self.ui.browseButton.setMenu(ActionDef.makeQMenu(
             self.ui.browseButton, [self.setDefaultCloneLocationAction, self.clearDefaultCloneLocationAction]))
@@ -68,14 +69,14 @@ class CloneDialog(QDialog):
         self.ui.pathEdit.textChanged.connect(self.updateDefaultCloneLocationAction)
 
         self.cloneButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
-        self.cloneButton.setText(self.tr("C&lone"))
+        self.cloneButton.setText(_("C&lone"))
         self.cloneButton.setIcon(QIcon.fromTheme("download"))
         self.cloneButton.clicked.connect(self.onCloneClicked)
 
         self.cancelButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel)
         self.cancelButton.setAutoDefault(False)
 
-        self.ui.statusForm.setBlurb(self.tr("Hit {0} when ready.").format(tquo(self.cloneButton.text().replace("&", ""))))
+        self.ui.statusForm.setBlurb(_("Hit {0} when ready.").format(tquo(self.cloneButton.text().replace("&", ""))))
 
         self.ui.shallowCloneDepthSpinBox.valueChanged.connect(self.onShallowCloneDepthChanged)
         self.ui.shallowCloneCheckBox.stateChanged.connect(self.onShallowCloneCheckBoxStateChanged)
@@ -105,20 +106,20 @@ class CloneDialog(QDialog):
 
     def validateUrl(self, url):
         if not url:
-            return translate("NameValidationError", "Please fill in this field.")
+            return _("Please fill in this field.")
         return ""
 
     def validatePath(self, _ignored: str) -> str:
         path = self.path
         path = Path(path)
         if not path.is_absolute():
-            return translate("NameValidationError", "Please enter an absolute path.")
+            return _("Please enter an absolute path.")
         if path.is_file():
-            return translate("NameValidationError", "There’s already a file at this path.")
+            return _("There’s already a file at this path.")
         if path.is_dir():
             with suppress(StopIteration):
                 next(path.iterdir())  # raises StopIteration if directory is not empty
-                return translate("NameValidationError", "This directory isn’t empty.")
+                return _("This directory isn’t empty.")
         return ""
 
     def autoFillDownloadPath(self, url):
@@ -152,17 +153,17 @@ class CloneDialog(QDialog):
         action = self.setDefaultCloneLocationAction
 
         if self.validatePath(self.path):  # truthy if validation error
-            action.setText(self.tr("Set current location as default clone location"))
+            action.setText(_("Set current location as default clone location"))
             action.setEnabled(False)
             return
 
         display = lquoe(compactPath(location))
         if location == settings.prefs.resolveDefaultCloneLocation():
             action.setEnabled(False)
-            action.setText(self.tr("{0} is the default clone location").format(display))
+            action.setText(_("{0} is the default clone location").format(display))
         else:
             action.setEnabled(True)
-            action.setText(self.tr("Set {0} as default clone location").format(display))
+            action.setText(_("Set {0} as default clone location").format(display))
 
     def setDefaultCloneLocationPref(self, location: str):
         settings.prefs.defaultCloneLocation = location
@@ -178,7 +179,7 @@ class CloneDialog(QDialog):
                 urlEdit.addItem(url)
             urlEdit.insertSeparator(urlEdit.count())
 
-        urlEdit.addItem(stockIcon("edit-clear-history"), self.tr("Clear history"), CloneDialog.urlEditUserDataClearHistory)
+        urlEdit.addItem(stockIcon("edit-clear-history"), _("Clear history"), CloneDialog.urlEditUserDataClearHistory)
 
         # "Clear history" is added even if the history is empty, so that the
         # QComboBox's arrow button - which cannot be hidden - still pops up
@@ -202,13 +203,14 @@ class CloneDialog(QDialog):
         if isChecked:
             self.onShallowCloneDepthChanged(self.ui.shallowCloneDepthSpinBox.value())
         else:
-            self.ui.shallowCloneCheckBox.setText(self.tr("&Shallow clone"))
+            self.ui.shallowCloneCheckBox.setText(_("&Shallow clone"))
         self.ui.shallowCloneDepthSpinBox.setVisible(isChecked)
         self.ui.shallowCloneSuffix.setVisible(isChecked)
 
     def onShallowCloneDepthChanged(self, depth: int):
         # Re-translate text for correct plural form
-        text = self.tr("&Shallow clone: Fetch up to %n commits per branch", "", depth)
+        text = _n("&Shallow clone: Fetch up to {n} commit per branch",
+                  "&Shallow clone: Fetch up to {n} commits per branch", depth)
         parts = re.split(r"\b\d(?:.*\d)?\b", text, maxsplit=1)
         assert len(parts) >= 2
         self.ui.shallowCloneCheckBox.setText(parts[0].strip())
@@ -245,7 +247,7 @@ class CloneDialog(QDialog):
         else:
             initialName = _projectNameFromUrl(self.url)
 
-        qfd = PersistentFileDialog.saveFile(self, "NewRepo", self.tr("Clone repository into"), initialName)
+        qfd = PersistentFileDialog.saveFile(self, "NewRepo", _("Clone repository into"), initialName)
 
         # Rationale for omitting directory-related options that appear to make sense at first glance:
         # - FileMode.Directory: forces user to hit "new folder" to enter the name of the repo
@@ -254,7 +256,7 @@ class CloneDialog(QDialog):
         qfd.setOption(QFileDialog.Option.HideNameFilterDetails, True)  # not sure Qt honors this...
 
         qfd.setLabelText(QFileDialog.DialogLabel.FileName, self.ui.pathLabel.text())  # "Clone into:"
-        qfd.setLabelText(QFileDialog.DialogLabel.Accept, self.tr("Clone here"))
+        qfd.setLabelText(QFileDialog.DialogLabel.Accept, _("Clone here"))
 
         if existingPath:
             qfd.setDirectory(str(existingPath.parent))
@@ -288,7 +290,7 @@ class CloneDialog(QDialog):
         if self.ui.shallowCloneCheckBox.isChecked():
             depth = self.ui.shallowCloneDepthSpinBox.value()
 
-        self.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
+        self.ui.statusForm.initProgress(_("Contacting remote host…"))
         self.taskRunner.put(CloneTask(self), url=self.url, path=self.path, depth=depth, privKeyPath=privKeyPath, recursive=recursive)
 
     def onUrlProtocolChanged(self, newUrl: str):
@@ -329,7 +331,7 @@ class CloneTask(RepoTask):
             self.remoteLink.forceCustomKeyFile(privKeyPath)
 
         # Clone the repo
-        self.stickyStatus.emit(self.tr("Cloning..."))
+        self.stickyStatus.emit(_("Cloning…"))
         with self.remoteLink.remoteContext(url):
             repo = pygit2.clone_repository(url, path, callbacks=self.remoteLink, depth=depth)
 
@@ -353,7 +355,7 @@ class CloneTask(RepoTask):
 
     def recurseIntoSubmodules(self, repo: Repo, depth: int):
         for i, submodule in enumerate(repo.recurse_submodules(), 1):
-            stickyStatus = self.tr("Initializing submodule {0}: {1}...").format(i, lquoe(submodule.name))
+            stickyStatus = _("Initializing submodule {0}: {1}…").format(i, lquoe(submodule.name))
             self.stickyStatus.emit(stickyStatus)
 
             with self.remoteLink.remoteContext(submodule.url or ""):

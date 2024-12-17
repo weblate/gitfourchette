@@ -13,10 +13,11 @@ import os
 import shutil
 
 from gitfourchette import settings
+from gitfourchette.exttools import openInExternalTool, PREFKEY_MERGETOOL
+from gitfourchette.localization import *
 from gitfourchette.porcelain import Repo, DiffConflict
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.exttools import openInExternalTool, PREFKEY_MERGETOOL
 
 logger = logging.getLogger(__name__)
 
@@ -119,9 +120,9 @@ class MergeDriver(QObject):
         self.state = MergeDriver.State.Fail
 
         if error == QProcess.ProcessError.FailedToStart:
-            self.debrief = self.tr("{0} failed to start.").format(tquo(self.processName))
+            self.debrief = _("{0} failed to start.").format(tquo(self.processName))
         else:
-            self.debrief = self.tr("{0} ran into error {1}.").format(tquo(self.processName), error.name)
+            self.debrief = _("{0} ran into error {1}.").format(tquo(self.processName), error.name)
 
         self.flush()
 
@@ -131,8 +132,8 @@ class MergeDriver(QObject):
                 or filecmp.cmp(self.scratchPath, self.targetPath)):
             logger.warning(f"Merge tool PID {self.process.processId()} finished with code {exitCode}, {exitStatus}")
             self.state = MergeDriver.State.Fail
-            self.debrief = self.tr("{0} didn’t complete the merge.").format(tquo(self.processName))
-            self.debrief += "\n" + self.tr("Exit code: {0}.").format(exitCode)
+            self.debrief = _("{0} didn’t complete the merge.").format(tquo(self.processName))
+            self.debrief += "\n" + _("Exit code: {0}.").format(exitCode)
         else:
             self.state = MergeDriver.State.Ready
             self.debrief = ""

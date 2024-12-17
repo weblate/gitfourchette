@@ -5,6 +5,7 @@
 # -----------------------------------------------------------------------------
 
 from gitfourchette import settings
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import stockIcon
 from gitfourchette.toolbox.qtutils import CallbackAccumulator
@@ -158,7 +159,7 @@ class QTabWidget2(QWidget):
         self.overflowButton = QToolButton(self)
         self.overflowButton.setArrowType(Qt.ArrowType.DownArrow)
         self.overflowButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.overflowButton.setToolTip(self.tr("List all tabs"))
+        self.overflowButton.setToolTip(_("List all tabs"))
         self.overflowButton.clicked.connect(self.onOverflowButtonClicked)
         self.overflowButton.setCheckable(True)
         self.overflowButton.setAutoRaise(True)
@@ -338,7 +339,7 @@ class QTabWidget2(QWidget):
             action = QAction(self.overflowMenu)
             action.setText(self.tabs.tabText(i))
             action.setToolTip(self.tabs.tabToolTip(i))
-            action.triggered[bool].connect(lambda _, j=i: self.setCurrentIndex(j))  # [bool] for PySide6 <6.7.0 (PYSIDE-2524)
+            action.triggered[bool].connect(lambda _dummy, j=i: self.setCurrentIndex(j))  # [bool] for PySide6 <6.7.0 (PYSIDE-2524)
             self.overflowMenu.addAction(action)
 
         pos = self.mapToGlobal(self.overflowButton.pos() + self.overflowButton.rect().bottomLeft())

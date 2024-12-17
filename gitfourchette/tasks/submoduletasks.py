@@ -13,8 +13,8 @@ from pathlib import Path
 
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.registersubmoduledialog import RegisterSubmoduleDialog
+from gitfourchette.localization import *
 from gitfourchette.porcelain import *
-from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskPrereqs, TaskEffects
 from gitfourchette.toolbox import *
 
@@ -45,9 +45,8 @@ class RegisterSubmodule(RepoTask):
 
         if not subRemotes:
             message = paragraphs(
-                translate("RegisterSubmoduleDialog", "{0} has no remotes."),
-                translate("RegisterSubmoduleDialog", "Please open {0} and add a remote to it "
-                                                     "before absorbing it as a submodule.")
+                _("{0} has no remotes."),
+                _("Please open {0} and add a remote to it before absorbing it as a submodule.")
             ).format(bquo(subName))
             raise AbortTask(message)
 
@@ -65,7 +64,7 @@ class RegisterSubmodule(RepoTask):
             if i >= 0:
                 dlg.ui.remoteComboBox.setCurrentIndex(i)
 
-        subtitle = translate("RegisterSubmoduleDialog", "Settings will be saved in {0}").format(tquo(".gitmodules"))
+        subtitle = _("Settings will be saved in {0}").format(tquo(".gitmodules"))
         convertToBrandedDialog(dlg, subtitleText=subtitle)
         yield from self.flowDialog(dlg)
 
@@ -92,10 +91,10 @@ class RemoveSubmodule(RepoTask):
     def flow(self, submoduleName: str):
         yield from self.flowConfirm(
             text=paragraphs(
-                self.tr("Really remove submodule {0}?"),
-                self.tr("The submodule will be removed from {1} and its working copy will be deleted."),
-                self.tr("Any changes in the submodule that haven’t been pushed will be lost."),
-                tr("This cannot be undone!"),
+                _("Really remove submodule {0}?"),
+                _("The submodule will be removed from {1} and its working copy will be deleted."),
+                _("Any changes in the submodule that haven’t been pushed will be lost."),
+                _("This cannot be undone!"),
             ).format(bquo(submoduleName), hquo(".gitmodules")),
             buttonIcon="SP_DialogDiscardButton",
             verb="Remove")

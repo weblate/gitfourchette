@@ -8,6 +8,7 @@ from gitfourchette import settings
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.signatureform import SignatureForm
 from gitfourchette.forms.ui_reposettingsdialog import Ui_RepoSettingsDialog
+from gitfourchette.localization import *
 from gitfourchette.porcelain import Repo, GitConfigHelper
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -39,9 +40,9 @@ class RepoSettingsDialog(QDialog):
         globalName, globalEmail, globalIdentityLevel = GitConfigHelper.global_identity()
         for text, edit in [(globalName, ui.nameEdit), (globalEmail, ui.emailEdit)]:
             if text:
-                text += " <" + translate("RepoSettingsDialog", "from global config") + ">"
+                text += " <" + _p("RepoSettingsDialog", "from global config") + ">"
             else:
-                text = "<" + translate("RepoSettingsDialog", "global git identity not configured") + ">"
+                text = "<" + _p("RepoSettingsDialog", "global git identity not configured") + ">"
             edit.setPlaceholderText(text)
 
         self.localNameBackup = localName

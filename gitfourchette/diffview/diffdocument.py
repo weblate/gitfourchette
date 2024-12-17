@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from gitfourchette import colors
 from gitfourchette import settings
 from gitfourchette.diffview.specialdiff import SpecialDiffError
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -171,9 +172,9 @@ class DiffDocument:
 
                 if len(content) > MAX_LINE_LENGTH and not locator.hasFlags(NavFlags.AllowLongLines):
                     loadAnywayLoc = locator.withExtraFlags(NavFlags.AllowLongLines)
-                    loadAnywayText = translate("Diff", "[Load diff anyway] (this may take a moment)")
+                    loadAnywayText = _("[Load diff anyway] (this may take a moment)")
                     raise SpecialDiffError(
-                        translate("Diff", "This file contains very long lines."),
+                        _("This file contains very long lines."),
                         linkify(loadAnywayText, loadAnywayLoc.url()),
                         "SP_MessageBoxWarning")
 
@@ -251,7 +252,7 @@ class DiffDocument:
                 if showStrayCRs:
                     trailer = "<CR>"
             else:
-                trailer = translate("Diff", "<no newline at end of file>")
+                trailer = _("<no newline at end of file>")
                 trimBack = None  # yes, None. This will cancel slicing.
 
             if not document.isEmpty():

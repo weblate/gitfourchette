@@ -4,6 +4,7 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
@@ -15,7 +16,7 @@ class ProtocolButton(QToolButton):
         super().__init__(parent)
         self.setFixedWidth(self.fontMetrics().horizontalAdvance("---https---"))
         self.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.setToolTip(self.tr("Change URL protocol"))
+        self.setToolTip(_("Change URL protocol"))
 
     def connectTo(self, lineEdit: QLineEdit):
         def onUrlProtocolChanged(newUrl: str):

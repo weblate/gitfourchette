@@ -8,6 +8,7 @@ import logging
 
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_pushdialog import Ui_PushDialog
+from gitfourchette.localization import *
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
@@ -34,9 +35,9 @@ class PushDialog(QDialog):
         localBranch = self.currentLocalBranch
 
         if localBranch.upstream:
-            self.ui.trackingLabel.setText(self.tr("tracking {0}").format(lquo(localBranch.upstream.shorthand)))
+            self.ui.trackingLabel.setText(_("tracking {0}").format(lquo(localBranch.upstream.shorthand)))
         else:
-            self.ui.trackingLabel.setText(self.tr("non-tracking"))
+            self.ui.trackingLabel.setText(_("non-tracking"))
 
         remoteIndex = self.trackedBranchIndex
         if self.trackedBranchIndex < 0:
@@ -87,15 +88,15 @@ class PushDialog(QDialog):
             willTrack = self.willPushToNewBranch or isTrackingHomeBranch
 
         if not hasUpstream and willTrack:
-            text = self.tr("{0} will track {1}.").format(lbName, rbName)
+            text = _("{0} will track {1}.").format(lbName, rbName)
         elif not hasUpstream and not willTrack:
-            text = self.tr("{0} currently does not track any remote branch.").format(lbName)
+            text = _("{0} currently does not track any remote branch.").format(lbName)
         elif isTrackingHomeBranch:
-            text = self.tr("{0} already tracks remote branch {1}.").format(lbName, lbUpstream)
+            text = _("{0} already tracks remote branch {1}.").format(lbName, lbUpstream)
         elif willTrack:
-            text = self.tr("{0} will track {1} instead of {2}.").format(lbName, rbName, lbUpstream)
+            text = _("{0} will track {1} instead of {2}.").format(lbName, rbName, lbUpstream)
         else:
-            text = self.tr("{0} currently tracks {1}.").format(lbName, lbUpstream)
+            text = _("{0} currently tracks {1}.").format(lbName, lbUpstream)
 
         self.ui.trackingLabel.setWordWrap(True)
         self.ui.trackingLabel.setText("<small>" + text + "</small>")
@@ -122,7 +123,7 @@ class PushDialog(QDialog):
 
     @property
     def willPushToNewBranch(self) -> bool:
-        remoteItem, _ = self.ui.remoteBranchEdit.currentData()
+        remoteItem, _dummy = self.ui.remoteBranchEdit.currentData()
         return remoteItem == ERemoteItem.NewRef
 
     @property
@@ -193,7 +194,7 @@ class PushDialog(QDialog):
                     font = None
 
                     if br == self.currentLocalBranch.upstream:
-                        caption = F"{identifier} " + self.tr("[tracked]")
+                        caption = F"{identifier} " + _("[tracked]")
                         self.trackedBranchIndex = comboBox.count()
                         icon = stockIcon("vcs-branch")
                         font = QFont()
@@ -214,7 +215,7 @@ class PushDialog(QDialog):
                     self.fallbackAutoNewIndex = comboBox.count()
                 comboBox.addItem(
                     stockIcon("SP_FileDialogNewFolder"),
-                    self.tr("New remote branch on {0}").format(lquo(remoteName)),
+                    _("New remote branch on {0}").format(lquo(remoteName)),
                     (ERemoteItem.NewRef, remoteName))
                 comboBox.setItemData(comboBox.count()-1, remoteUrl, Qt.ItemDataRole.ToolTipRole)
 
@@ -235,7 +236,7 @@ class PushDialog(QDialog):
         self.ui.trackingLabel.setMaximumHeight(self.ui.trackingLabel.height())
 
         self.startOperationButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
-        self.startOperationButton.setText(self.tr("&Push"))
+        self.startOperationButton.setText(_("&Push"))
         self.startOperationButton.setIcon(stockIcon("git-push"))
 
         pickBranchIndex = 0
@@ -272,13 +273,13 @@ class PushDialog(QDialog):
         tip = ""
 
         if self.willForcePush:
-            text = self.tr("Force &push")
+            text = _("Force &push")
             icon = "achtung"
-            tip = self.tr("Force push: Destructive action!")
+            tip = _("Force push: Destructive action!")
         elif self.willPushToNewBranch:
-            text = self.tr("&Push new branch")
+            text = _("&Push new branch")
         else:
-            text = self.tr("&Push")
+            text = _("&Push")
 
         okButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
         okButton.setText(text)
@@ -292,7 +293,7 @@ class PushDialog(QDialog):
         reservedNames = self.reservedRemoteBranchNames.get(self.currentRemoteName, [])
 
         return nameValidationMessage(name, reservedNames,
-                                     self.tr("This name is already taken by another branch on this remote."))
+                                     _("This name is already taken by another branch on this remote."))
 
     def enableInputs(self, on: bool):
         widgets = [self.ui.remoteBranchEdit,

@@ -173,7 +173,7 @@ def paintGraphFrame(
 
     # draw arcs CLOSED BY commit (from above)
     for arc in reversed(arcsClosedByCommit):
-        columnA, _ = laneColumnsAB[arc.lane]  # column above, column below
+        columnA, _dummy = laneColumnsAB[arc.lane]  # column above, column below
         ax = x + columnA * LANE_WIDTH
         # Path from above does elbow shape to merge into commit bullet point
         path.moveTo(ax, top)
@@ -182,7 +182,7 @@ def paintGraphFrame(
 
     # draw arcs OPENED BY commit (downwards)
     for arc in reversed(arcsOpenedByCommit):
-        _, columnB = laneColumnsAB[arc.lane]  # column above, column below
+        _dummy, columnB = laneColumnsAB[arc.lane]  # column above, column below
         bx = x + columnB * LANE_WIDTH
         # Path forks downward from commit bullet point
         path.moveTo(mx, middle)

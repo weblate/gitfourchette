@@ -14,6 +14,7 @@ from gitfourchette.forms.deletetagdialog import DeleteTagDialog
 from gitfourchette.forms.identitydialog import IdentityDialog
 from gitfourchette.forms.newtagdialog import NewTagDialog
 from gitfourchette.forms.signatureform import SignatureOverride
+from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -39,13 +40,13 @@ class NewCommit(RepoTask):
         emptyCommit = not self.repo.any_staged_changes
         if emptyCommit:
             yield from self.flowConfirm(
-                title=self.tr("Create empty commit"),
-                verb=self.tr("Empty commit"),
+                title=_("Create empty commit"),
+                verb=_("Empty commit"),
                 text=paragraphs(
-                    self.tr("No files are staged for commit."),
-                    self.tr("Do you want to create an empty commit anyway?")))
+                    _("No files are staged for commit."),
+                    _("Do you want to create an empty commit anyway?")))
 
-        yield from self.flowSubtask(SetUpGitIdentity, self.tr("Proceed to Commit"))
+        yield from self.flowSubtask(SetUpGitIdentity, _("Proceed to Commit"))
 
         fallbackSignature = self.repo.default_signature
         initialMessage = uiPrefs.draftCommitMessage
@@ -100,7 +101,7 @@ class NewCommit(RepoTask):
         yield from self.flowEnterUiThread()
         uiPrefs.clearDraftCommit()
 
-        self.postStatus = self.tr("Commit {0} created.").format(tquo(shortHash(newOid)))
+        self.postStatus = _("Commit {0} created.").format(tquo(shortHash(newOid)))
 
 
 class AmendCommit(RepoTask):
@@ -120,7 +121,7 @@ class AmendCommit(RepoTask):
         # Jump to workdir
         yield from self.flowSubtask(Jump, NavLocator.inWorkdir())
 
-        yield from self.flowSubtask(SetUpGitIdentity, self.tr("Proceed to Amend Commit"))
+        yield from self.flowSubtask(SetUpGitIdentity, _("Proceed to Amend Commit"))
 
         headCommit = self.repo.head_commit
         fallbackSignature = self.repo.default_signature
@@ -161,7 +162,7 @@ class AmendCommit(RepoTask):
         yield from self.flowEnterUiThread()
         self.repoModel.prefs.clearDraftAmend()
 
-        self.postStatus = self.tr("Commit {0} amended. New hash: {1}."
+        self.postStatus = _("Commit {0} amended. New hash: {1}."
                                   ).format(tquo(shortHash(headCommit.id)), tquo(shortHash(newOid)))
 
 
@@ -170,7 +171,7 @@ class SetUpGitIdentity(RepoTask):
         if firstRun:
             # Getting the default signature will fail if the user's identity is missing or incorrectly set
             try:
-                _ = self.repo.default_signature
+                _dummy = self.repo.default_signature
                 return
             except (KeyError, ValueError):
                 pass
@@ -243,15 +244,15 @@ class CheckoutCommit(RepoTask):
         if dlg.ui.detachedHeadRadioButton.isChecked():
             if self.repoModel.dangerouslyDetachedHead() and oid != self.repoModel.headCommitId:
                 text = paragraphs(
-                    self.tr("You are in <b>Detached HEAD</b> mode at commit {0}."),
-                    self.tr("You might lose track of this commit if you carry on checking out another commit ({1})."),
+                    _("You are in <b>Detached HEAD</b> mode at commit {0}."),
+                    _("You might lose track of this commit if you carry on checking out another commit ({1})."),
                 ).format(btag(shortHash(self.repoModel.headCommitId)), shortHash(oid))
                 yield from self.flowConfirm(text=text, icon='warning')
 
             yield from self.flowEnterWorkerThread()
             self.repo.checkout_commit(oid)
 
-            self.postStatus = self.tr("Entered detached HEAD on {0}.").format(lquo(shortHash(oid)))
+            self.postStatus = _("Entered detached HEAD on {0}.").format(lquo(shortHash(oid)))
 
             # Force sidebar to select detached HEAD
             self.jumpTo = NavLocator.inRef("HEAD")
@@ -280,7 +281,7 @@ class NewTag(RepoTask):
 
     def flow(self, oid: Oid = NULL_OID, signIt: bool = False):
         if signIt:
-            yield from self.flowSubtask(SetUpGitIdentity, self.tr("Proceed to New Tag"))
+            yield from self.flowSubtask(SetUpGitIdentity, _("Proceed to New Tag"))
 
         repo = self.repo
         if oid is None or oid == NULL_OID:
@@ -288,7 +289,7 @@ class NewTag(RepoTask):
 
         reservedNames = repo.listall_tags()
         commitMessage = repo.get_commit_message(oid)
-        commitMessage, _ = messageSummary(commitMessage)
+        commitMessage, _dummy = messageSummary(commitMessage)
 
         dlg = NewTagDialog(shortHash(oid), commitMessage, reservedNames,
                            remotes=self.repoModel.remotes,
@@ -312,7 +313,7 @@ class NewTag(RepoTask):
         else:
             repo.create_reference(refName, oid)
 
-        self.postStatus = self.tr("Tag {0} created on commit {1}.").format(tquo(tagName), tquo(shortHash(oid)))
+        self.postStatus = _("Tag {0} created on commit {1}.").format(tquo(tagName), tquo(shortHash(oid)))
 
         if pushIt:
             from gitfourchette.tasks import PushRefspecs
@@ -326,7 +327,7 @@ class DeleteTag(RepoTask):
 
         tagTarget = self.repo.commit_id_from_tag_name(tagName)
         commitMessage = self.repo.get_commit_message(tagTarget)
-        commitMessage, _ = messageSummary(commitMessage)
+        commitMessage, _dummy = messageSummary(commitMessage)
 
         dlg = DeleteTagDialog(
             tagName,
@@ -367,8 +368,8 @@ class RevertCommit(RepoTask):
         pygit2_version_at_least("1.15.1")
 
         text = paragraphs(
-            self.tr("Do you want to revert commit {0}?"),
-            self.tr("You will have an opportunity to review the affected files in your working directory."),
+            _("Do you want to revert commit {0}?"),
+            _("You will have an opportunity to review the affected files in your working directory."),
         ).format(btag(shortHash(oid)))
         yield from self.flowConfirm(text=text)
 
@@ -390,7 +391,7 @@ class RevertCommit(RepoTask):
         yield from self.flowEnterUiThread()
 
         if dud:
-            info = self.tr("There’s nothing to revert from {0} that the current branch hasn’t already undone."
+            info = _("There’s nothing to revert from {0} that the current branch hasn’t already undone."
                            ).format(bquo(shortHash(oid)))
             raise AbortTask(info, "information")
 
@@ -403,9 +404,9 @@ class RevertCommit(RepoTask):
 
         if not anyConflicts:
             yield from self.flowSubtask(RefreshRepo, TaskEffects.Workdir, NavLocator.inStaged(""))
-            text = self.tr("Reverting {0} was successful. Do you want to commit the result now?")
+            text = _("Reverting {0} was successful. Do you want to commit the result now?")
             text = text.format(bquo(shortHash(oid)))
-            yield from self.flowConfirm(text=text, verb=self.tr("Commit"), cancelText=self.tr("Review changes"))
+            yield from self.flowConfirm(text=text, verb=_p("verb", "Commit"), cancelText=_("Review changes"))
             yield from self.flowSubtask(NewCommit)
 
 
@@ -434,8 +435,8 @@ class CherrypickCommit(RepoTask):
         yield from self.flowEnterUiThread()
 
         if dud:
-            info = self.tr("There’s nothing to cherry-pick from {0} that the current branch doesn’t already have."
-                           ).format(bquo(shortHash(oid)))
+            info = _("There’s nothing to cherry-pick from {0} that the current branch doesn’t already have."
+                     ).format(bquo(shortHash(oid)))
             raise AbortTask(info, "information")
 
         self.repoModel.prefs.draftCommitMessage = self.repo.message
@@ -448,8 +449,8 @@ class CherrypickCommit(RepoTask):
         if not anyConflicts:
             yield from self.flowSubtask(RefreshRepo, TaskEffects.Workdir, NavLocator.inStaged(""))
             yield from self.flowConfirm(
-                text=self.tr("Cherry-picking {0} was successful. "
-                             "Do you want to commit the result now?").format(bquo(shortHash(oid))),
-                verb=self.tr("Commit"),
-                cancelText=self.tr("Review changes"))
+                text=_("Cherry-picking {0} was successful. "
+                       "Do you want to commit the result now?").format(bquo(shortHash(oid))),
+                verb=_p("verb", "Commit"),
+                cancelText=_("Review changes"))
             yield from self.flowSubtask(NewCommit)

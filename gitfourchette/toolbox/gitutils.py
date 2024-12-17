@@ -9,8 +9,8 @@ import re
 from contextlib import suppress
 
 from gitfourchette.porcelain import *
-from gitfourchette.trtables import TrTables
 from gitfourchette.qt import *
+from gitfourchette.trtables import TrTables
 
 INITIALS_PATTERN = re.compile(r"(?:^|[\s\-.'‘’\"“”])+([^\s\-.'‘’\"“”])[^\s\-.]*")
 FIRST_NAME_PATTERN = re.compile(r"(\S(\.?-|\.\s?|\s))*\S+")

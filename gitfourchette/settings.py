@@ -4,19 +4,21 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-from contextlib import suppress
 import dataclasses
 import enum
 import logging
 import os
 import sys
+from contextlib import suppress
 
 from gitfourchette import pycompat  # noqa: F401 - StrEnum for Python 3.10
+from gitfourchette.localization import *
 from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
 from gitfourchette.toolbox.benchmark import BENCHMARK_LOGGING_LEVEL
 from gitfourchette.toolbox.gitutils import AuthorDisplayStyle
 from gitfourchette.toolbox.pathutils import PathDisplayStyle
+from gitfourchette.toolbox.textutils import englishTitleCase
 from gitfourchette.toolcommands import ToolCommands
 
 logger = logging.getLogger(__name__)
@@ -309,12 +311,15 @@ def qtIsNativeMacosStyle():  # pragma: no cover
 
 
 def getExternalEditorName():
-    return ToolCommands.getCommandName(prefs.externalEditor, tr("External Editor"), ToolCommands.EditorPresets)
+    genericName = englishTitleCase(_("External editor"))
+    return ToolCommands.getCommandName(prefs.externalEditor, genericName, ToolCommands.EditorPresets)
 
 
 def getDiffToolName():
-    return ToolCommands.getCommandName(prefs.externalDiff, tr("Diff Tool"), ToolCommands.DiffPresets)
+    genericName = englishTitleCase(_("Diff tool"))
+    return ToolCommands.getCommandName(prefs.externalDiff, genericName, ToolCommands.DiffPresets)
 
 
 def getMergeToolName():
-    return ToolCommands.getCommandName(prefs.externalMerge, tr("Merge Tool"), ToolCommands.MergePresets)
+    genericName = englishTitleCase(_("Merge tool"))
+    return ToolCommands.getCommandName(prefs.externalMerge, genericName, ToolCommands.MergePresets)

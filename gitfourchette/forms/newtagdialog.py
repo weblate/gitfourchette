@@ -6,6 +6,7 @@
 
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_newtagdialog import Ui_NewTagDialog
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
@@ -13,9 +14,9 @@ from gitfourchette.toolbox import *
 def populateRemoteComboBox(comboBox: QComboBox, remotes: list[str]):
     assert 0 == comboBox.count()
     if not remotes:
-        comboBox.addItem(tr("No Remotes"))
+        comboBox.addItem(_("No Remotes"))
     else:
-        comboBox.addItem(tr("All Remotes"), userData="*")
+        comboBox.addItem(_("All Remotes"), userData="*")
         comboBox.insertSeparator(1)
         for remote in remotes:
             comboBox.addItem(remote, userData=remote)
@@ -37,12 +38,12 @@ class NewTagDialog(QDialog):
 
         okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
         okButton.setIcon(stockIcon("git-tag"))
-        okCaptions = [self.tr("&Create"), self.tr("&Create && Push")]
+        okCaptions = [_("&Create"), _("&Create && Push")]
         self.ui.pushCheckBox.toggled.connect(lambda push: okButton.setText(okCaptions[push]))
 
         populateRemoteComboBox(self.ui.remoteComboBox, remotes)
 
-        nameTaken = self.tr("This name is already taken by another tag.")
+        nameTaken = _("This name is already taken by another tag.")
         validator = ValidatorMultiplexer(self)
         validator.setGatedWidgets(okButton)
         validator.connectInput(self.ui.nameEdit, lambda name: nameValidationMessage(name, reservedNames, nameTaken))
@@ -57,7 +58,7 @@ class NewTagDialog(QDialog):
 
         convertToBrandedDialog(
             self,
-            self.tr("New tag on commit {0}").format(tquo(target)),
+            _("New tag on commit {0}").format(tquo(target)),
             tquo(targetSubtitle))
 
         self.resize(max(512, self.width()), self.height())
