@@ -73,7 +73,7 @@ class GetCommitInfo(RepoTask):
         # Parent commits
         parentHashes = [commitLink(p) for p in commit.parent_ids]
         numParents = len(parentHashes)
-        parentTitle = self.tr("%n Parents", "singular form can just say 'Parent'", numParents)
+        parentTitle = self.tr("%n Parents", "please omit %n in singular form", numParents)
         if numParents > 0:
             parentMarkup = ', '.join(parentHashes)
         elif not repo.is_shallow:

@@ -45,14 +45,8 @@
     <message numerus="yes">
         <source>%n conflicting files</source>
         <translation>
-            <numerusform variants="yes">
-                <lengthvariant>%n fichier en conflit</lengthvariant>
-                <lengthvariant>%n fich. en conflit</lengthvariant>
-            </numerusform>
-            <numerusform variants="yes">
-                <lengthvariant>%n fichiers en conflit</lengthvariant>
-                <lengthvariant>%n fich. en conflit</lengthvariant>
-            </numerusform>
+            <numerusform>%n fichier en conflit</numerusform>
+            <numerusform>%n fichiers en conflit</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -115,28 +109,6 @@
         <translation>...et {0} de plus</translation>
     </message>
     <message>
-        <source>Find a file by pathFind file</source>
-        <translation variants="yes">
-            <lengthvariant>Rechercher un fichier par son chemin</lengthvariant>
-            <lengthvariant>Rechercher un fichier</lengthvariant>
-            <lengthvariant>Rech. un fichier</lengthvariant>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>Open &amp;Folder</source>
-        <translation>
-            <numerusform>Ouvrir le &amp;dossier</numerusform>
-            <numerusform>Ouvrir %n &amp;dossiers</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>&amp;Copy Path</source>
-        <translation>
-            <numerusform>&amp;Copier le chemin</numerusform>
-            <numerusform>&amp;Copier %n chemins</numerusform>
-        </translation>
-    </message>
-    <message>
         <source>Open in external editor</source>
         <translation>Ouvrir dans un éditeur externe</translation>
     </message>
@@ -185,6 +157,26 @@
         <translation>
             <numerusform>Rétablir le mode</numerusform>
             <numerusform>Rétablir les modes</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Find a file by path|Find file</source>
+        <translation>Rechercher un fichier par son chemin|Rechercher un fichier|Rech. un fichier|Rech. fichier</translation>
+    </message>
+    <message numerus="yes">
+        <source>Open &amp;Folder</source>
+        <comment>please omit %n in singular form</comment>
+        <translation>
+            <numerusform>Ouvrir le &amp;dossier</numerusform>
+            <numerusform>Ouvrir %n &amp;dossiers</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>&amp;Copy Path</source>
+        <comment>please omit %n in singular form</comment>
+        <translation>
+            <numerusform>&amp;Copier le chemin</numerusform>
+            <numerusform>&amp;Copier %n chemins</numerusform>
         </translation>
     </message>
     <message>
@@ -369,12 +361,16 @@
         <translation>Composants</translation>
     </message>
     <message>
+        <source>Version {0}</source>
+        <translation>Version {0}</translation>
+    </message>
+    <message>
         <source>If {app} helps you get work done, please consider [making a small donation].</source>
-        <translation>Si {app} vous facilite votre travail, veuillez envisager de faire [une petit don].</translation>
+        <translation>Si {app} vous facilite votre travail, veuillez envisager de faire [un petit don].</translation>
     </message>
     <message>
         <source>Thank you for your support!</source>
-        <translation>Merci beaucoup pour votre soutien.</translation>
+        <translation>Merci pour votre soutien&#xa0;!</translation>
     </message>
     <message>
         <source>Powered by:</source>
@@ -870,13 +866,6 @@
         </translation>
     </message>
     <message>
-        <source>Selected files must be reviewed individually.</source>
-        <translation variants="yes">
-            <lengthvariant>Examinez les fichiers sélectionnés un par un.</lengthvariant>
-            <lengthvariant>Examinez les fichiers un par un.</lengthvariant>
-        </translation>
-    </message>
-    <message>
         <source>Save file revision as</source>
         <translation>Enregistrer la révision du fichier sous</translation>
     </message>
@@ -1164,7 +1153,7 @@
     </message>
     <message>
         <source>We’ve made changes to this file in &lt;i&gt;our&lt;/i&gt; branch, but &lt;i&gt;their&lt;/i&gt; branch has deleted it.</source>
-        <translation>Nous avons modifié ce fichier dans &lt;i&gt;notre&lt;/b&gt; branche, mais &lt;i&gt;leur&lt;/i&gt; branche l’a supprimé.</translation>
+        <translation>Nous avons modifié ce fichier dans &lt;i&gt;notre&lt;/i&gt; branche, mais &lt;i&gt;leur&lt;/i&gt; branche l’a supprimé.</translation>
     </message>
     <message>
         <source>Accept deletion</source>
@@ -1655,6 +1644,10 @@
         <translation>Exporter un correctif de cette section...</translation>
     </message>
     <message>
+        <source>Find text in diff|Find in diff</source>
+        <translation>Rechercher du texte dans la diff|Rech. dans la diff|Rech. dans diff</translation>
+    </message>
+    <message>
         <source>Stage Selection</source>
         <translation>Indexer la sélection</translation>
     </message>
@@ -1748,10 +1741,7 @@
     </message>
     <message>
         <source>Find in Diff</source>
-        <translation variants="yes">
-            <lengthvariant>Rechercher dans la diff</lengthvariant>
-            <lengthvariant>Rech. dans la diff</lengthvariant>
-        </translation>
+        <translation>Rechercher dans la diff</translation>
     </message>
     <message>
         <source>End of diff reached.</source>
@@ -1825,13 +1815,6 @@
         <translation>
             <numerusform>Indexer le sous-module</numerusform>
             <numerusform>Indexer %n sous-modules</numerusform>
-        </translation>
-    </message>
-    <message>
-        <source>Selected files must be reviewed individually.</source>
-        <translation variants="yes">
-            <lengthvariant>Examinez les fichiers sélectionnés un par un.</lengthvariant>
-            <lengthvariant>Examinez les fichiers un par un.</lengthvariant>
         </translation>
     </message>
 </context>
@@ -2167,6 +2150,18 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
             <numerusform>Éditer les versions en &amp;HEAD dans {0}</numerusform>
         </translation>
     </message>
+    <message>
+        <source>Please review the files individually.</source>
+        <translation>Examinez les fichiers un par un.</translation>
+    </message>
+    <message>
+        <source>Can’t stage this selection in bulk.</source>
+        <translation>La sélection ne peut pas être indexée en masse.</translation>
+    </message>
+    <message>
+        <source>Can’t unstage this selection in bulk.</source>
+        <translation>La sélection ne peut pas être désindexée en masse.</translation>
+    </message>
 </context>
 <context>
     <name>GFApplication</name>
@@ -2202,7 +2197,7 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
     <name>GetCommitInfo</name>
     <message numerus="yes">
         <source>%n Parents</source>
-        <comment>singular form can just say &apos;Parent&apos;</comment>
+        <comment>please omit %n in singular form</comment>
         <translation>
             <numerusform>Parent</numerusform>
             <numerusform>%n parents</numerusform>
@@ -2256,6 +2251,10 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
         <translation>Ce commit ne figure pas dans le graphe.</translation>
     </message>
     <message>
+        <source>Find a commit by hash, message or author|Find commit</source>
+        <translation>Rechercher un commit par son hachage, message ou auteur|Rechercher un commit|Rech. un commit|Rech. commit</translation>
+    </message>
+    <message>
         <source>Load up to {0} commits</source>
         <translation>Charger jusqu’à {0} commits</translation>
     </message>
@@ -2292,14 +2291,6 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
         <translation>Copier le &amp;hachage du commit</translation>
     </message>
     <message>
-        <source>Find a commit by hash, message or authorFind commit</source>
-        <translation variants="yes">
-            <lengthvariant>Rechercher un commit par son hachage, message ou auteur</lengthvariant>
-            <lengthvariant>Rechercher un commit</lengthvariant>
-            <lengthvariant>Rech. un commit</lengthvariant>
-        </translation>
-    </message>
-    <message>
         <source>E&amp;xport As Patch...</source>
         <translation>E&amp;xporter correctif...</translation>
     </message>
@@ -2312,6 +2303,7 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
     <name>HardSolveConflicts</name>
     <message numerus="yes">
         <source>%n conflicts resolved.</source>
+        <comment>please omit %n in singular form</comment>
         <translation>
             <numerusform>Conflit résolu.</numerusform>
             <numerusform>%n conflits résolus.</numerusform>
@@ -2356,13 +2348,6 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
         <translation>
             <numerusform>Committer %n fichier</numerusform>
             <numerusform>Committer %n fichiers</numerusform>
-        </translation>
-    </message>
-    <message>
-        <source>Working directory cleanWorkdir clean</source>
-        <translation variants="yes">
-            <lengthvariant>Répertoire de travail propre</lengthvariant>
-            <lengthvariant>Rép. de travail propre</lengthvariant>
         </translation>
     </message>
     <message>
@@ -2413,6 +2398,13 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
         <source>Unknown reference {0}.</source>
         <translation>Référence {0} inconnue.</translation>
     </message>
+    <message numerus="yes">
+        <source>%n changes:|%n ch.:</source>
+        <translation>
+            <numerusform>%n modification&#xa0;:|%n modif&#xa0;:</numerusform>
+            <numerusform>%n modifications&#xa0;:|%n modifs&#xa0;:</numerusform>
+        </translation>
+    </message>
     <message>
         <source>Commit {0} doesn’t affect any files.</source>
         <translation>Le commit {0} n’affecte aucun fichier.</translation>
@@ -2428,9 +2420,13 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
     <message numerus="yes">
         <source>%n renames detected.</source>
         <translation>
-            <numerusform>%n renommage détecté</numerusform>
-            <numerusform>%n renommages détectés</numerusform>
+            <numerusform>%n renommage détecté.</numerusform>
+            <numerusform>%n renommages détectés.</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Working directory clean|Workdir clean</source>
+        <translation>Répertoire de travail propre|Rép. de travail propre|Rép. propre</translation>
     </message>
     <message>
         <source>Empty commit</source>
@@ -2448,19 +2444,6 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
         <translation>
             <numerusform>Indexé (%n)</numerusform>
             <numerusform>Indexés (%n)</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%n changes:</source>
-        <translation>
-            <numerusform variants="yes">
-                <lengthvariant>%n modification&#xa0;:</lengthvariant>
-                <lengthvariant>%n modif&#xa0;:</lengthvariant>
-            </numerusform>
-            <numerusform variants="yes">
-                <lengthvariant>%n modifications&#xa0;:</lengthvariant>
-                <lengthvariant>%n modifs&#xa0;:</lengthvariant>
-            </numerusform>
         </translation>
     </message>
     <message>
@@ -3220,6 +3203,7 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
     </message>
     <message numerus="yes">
         <source>%n files stashed.</source>
+        <comment>please omit %n in singular form</comment>
         <translation>
             <numerusform>Fichier remisé.</numerusform>
             <numerusform>%n fichiers remisés.</numerusform>
@@ -3510,17 +3494,11 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
     </message>
     <message>
         <source>Commit History</source>
-        <translation variants="yes">
-            <lengthvariant>Historique commits</lengthvariant>
-            <lengthvariant>Historique</lengthvariant>
-        </translation>
+        <translation>Historique commits</translation>
     </message>
     <message>
         <source>External Tools</source>
-        <translation variants="yes">
-            <lengthvariant>Outils externes</lengthvariant>
-            <lengthvariant>Outils ext.</lengthvariant>
-        </translation>
+        <translation>Outils externes</translation>
     </message>
     <message>
         <source>Shorten hashes to # characters</source>
@@ -3992,7 +3970,7 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
     </message>
     <message>
         <source>Settings will be saved in {0}</source>
-        <translation>Ces paramètres seront stockés dans {0}.</translation>
+        <translation>Ces paramètres seront stockés dans {0}</translation>
     </message>
 </context>
 <context>
@@ -5017,6 +4995,14 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
         <translation>Aller aux Modifications non-committées</translation>
     </message>
     <message>
+        <source>Uncommitted Changes|Changes</source>
+        <translation>Modifications non-committées|Modifs non-committées|Modifications|Modifs</translation>
+    </message>
+    <message>
+        <source>Local Branches|Branches</source>
+        <translation>Branches locales|Branches</translation>
+    </message>
+    <message>
         <source>Stashes</source>
         <translation>Remises</translation>
     </message>
@@ -5063,22 +5049,6 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
     <message>
         <source>[unborn]</source>
         <translation>[non-née]</translation>
-    </message>
-    <message>
-        <source>Uncommitted ChangesChanges</source>
-        <translation variants="yes">
-            <lengthvariant>Modifications non-committées</lengthvariant>
-            <lengthvariant>Modifs non-committées</lengthvariant>
-            <lengthvariant>Modifications</lengthvariant>
-            <lengthvariant>Modifs</lengthvariant>
-        </translation>
-    </message>
-    <message>
-        <source>Local BranchesBranches</source>
-        <translation variants="yes">
-            <lengthvariant>Branches locales</lengthvariant>
-            <lengthvariant>Branches</lengthvariant>
-        </translation>
     </message>
 </context>
 <context>
@@ -5163,6 +5133,7 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
     <name>StageFiles</name>
     <message numerus="yes">
         <source>%n files staged.</source>
+        <comment>please omit %n in singular form</comment>
         <translation>
             <numerusform>Fichier indexé.</numerusform>
             <numerusform>%n fichiers indexés.</numerusform>
@@ -5192,6 +5163,7 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
     <name>StagedFiles</name>
     <message numerus="yes">
         <source>&amp;Unstage %n Files</source>
+        <comment>please omit %n in singular form</comment>
         <translation>
             <numerusform>Désinde&amp;xer le fichier</numerusform>
             <numerusform>Désinde&amp;xer %n fichiers</numerusform>
@@ -5219,13 +5191,6 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
         <translation>
             <numerusform>Ouvrir le sous-module dans nouvel onglet</numerusform>
             <numerusform>Ouvrir %n sous-modules dans nouveaux onglets</numerusform>
-        </translation>
-    </message>
-    <message>
-        <source>Selected files must be reviewed individually.</source>
-        <translation variants="yes">
-            <lengthvariant>Examinez les fichiers sélectionnés un par un.</lengthvariant>
-            <lengthvariant>Examinez les fichiers un par un.</lengthvariant>
         </translation>
     </message>
 </context>

@@ -33,6 +33,7 @@
     </message>
     <message numerus="yes">
         <source>Open &amp;Folder</source>
+        <comment>please omit %n in singular form</comment>
         <translation>
             <numerusform>Open &amp;Folder</numerusform>
             <numerusform>Open %n &amp;Folders</numerusform>
@@ -40,6 +41,7 @@
     </message>
     <message numerus="yes">
         <source>&amp;Copy Path</source>
+        <comment>please omit %n in singular form</comment>
         <translation>
             <numerusform>&amp;Copy Path</numerusform>
             <numerusform>&amp;Copy %n Paths</numerusform>
@@ -312,7 +314,7 @@
     <name>GetCommitInfo</name>
     <message numerus="yes">
         <source>%n Parents</source>
-        <comment>singular form can just say &apos;Parent&apos;</comment>
+        <comment>please omit %n in singular form</comment>
         <translation>
             <numerusform>Parent</numerusform>
             <numerusform>%n Parents</numerusform>
@@ -323,6 +325,7 @@
     <name>HardSolveConflicts</name>
     <message numerus="yes">
         <source>%n conflicts resolved.</source>
+        <comment>please omit %n in singular form</comment>
         <translation>
             <numerusform>Conflict resolved.</numerusform>
             <numerusform>%n conflicts resolved.</numerusform>
@@ -353,10 +356,10 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n changes:</source>
+        <source>%n changes:|%n ch.:</source>
         <translation>
-            <numerusform>%n change:</numerusform>
-            <numerusform>%n changes:</numerusform>
+            <numerusform>%n change:|%n ch.:</numerusform>
+            <numerusform>%n changes:|%n ch.:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -395,6 +398,7 @@
     <name>NewStash</name>
     <message numerus="yes">
         <source>%n files stashed.</source>
+        <comment>please omit %n in singular form</comment>
         <translation>
             <numerusform>File stashed.</numerusform>
             <numerusform>%n files stashed.</numerusform>
@@ -439,6 +443,7 @@
     <name>StageFiles</name>
     <message numerus="yes">
         <source>%n files staged.</source>
+        <comment>please omit %n in singular form</comment>
         <translation>
             <numerusform>File staged.</numerusform>
             <numerusform>%n files staged.</numerusform>
@@ -456,6 +461,7 @@
     <name>StagedFiles</name>
     <message numerus="yes">
         <source>&amp;Unstage %n Files</source>
+        <comment>please omit %n in singular form</comment>
         <translation>
             <numerusform>&amp;Unstage File</numerusform>
             <numerusform>&amp;Unstage %n Files</numerusform>

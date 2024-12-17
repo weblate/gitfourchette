@@ -74,7 +74,7 @@ class StageFiles(_BaseStagingTask):
 
         yield from self.debriefPostStage(patches)
 
-        self.postStatus = self.tr("%n files staged.", "", len(patches))
+        self.postStatus = self.tr("%n files staged.", "please omit %n in singular form", len(patches))
 
     def debriefPostStage(self, patches: list[Patch]):
         debrief = {}
@@ -360,7 +360,7 @@ class HardSolveConflicts(RepoTask):
         # Write index modifications to disk
         index.write()
 
-        self.postStatus = self.tr("%n conflicts resolved.", "", len(conflictedFiles))
+        self.postStatus = self.tr("%n conflicts resolved.", "please omit %n in singular form", len(conflictedFiles))
 
 
 class MarkConflictSolved(RepoTask):

@@ -139,9 +139,10 @@ class TrTables:
     @staticmethod
     def _init_sidebarItems():
         from gitfourchette.sidebar.sidebarmodel import SidebarItem as E
+        from gitfourchette.toolbox import toLengthVariants
         return {
-            E.UncommittedChanges: translate("SidebarModel", "Uncommitted ChangesChanges"),
-            E.LocalBranchesHeader: translate("SidebarModel", "Local BranchesBranches"),
+            E.UncommittedChanges: toLengthVariants(translate("SidebarModel", "Uncommitted Changes|Changes")),
+            E.LocalBranchesHeader: toLengthVariants(translate("SidebarModel", "Local Branches|Branches")),
             E.StashesHeader: translate("SidebarModel", "Stashes"),
             E.RemotesHeader: translate("SidebarModel", "Remotes"),
             E.TagsHeader: translate("SidebarModel", "Tags"),

@@ -252,7 +252,7 @@ class SearchBar(QWidget):
             wrapCount += 1
             self.searchItemView(op, wrappedFrom=start, wrapCount=wrapCount)
         else:
-            title = self.lineEdit.placeholderText().split("")[0]
+            title = self.lineEdit.placeholderText().split("\x9C")[0]
             message = self.notFoundMessage(self.rawSearchTerm)
             qmb = asyncMessageBox(self, 'information', title, message)
             qmb.show()

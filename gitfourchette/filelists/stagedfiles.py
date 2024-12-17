@@ -30,7 +30,7 @@ class StagedFiles(FileList):
 
         if not anySubmodules:
             contextMenuActionUnstage = ActionDef(
-                self.tr("&Unstage %n Files", "", n),
+                self.tr("&Unstage %n Files", "please omit %n in singular form", n),
                 self.unstage,
                 icon="git-unstage",
                 shortcuts=GlobalShortcuts.discardHotkeys[0])
@@ -64,8 +64,10 @@ class StagedFiles(FileList):
             ]
 
         else:
+            sorry = (translate("FileList", "Can’t unstage this selection in bulk.") + "\n" +
+                     translate("FileList", "Please review the files individually."))
             actions += [
-                ActionDef(self.tr("Selected files must be reviewed individually."), enabled=False)
+                ActionDef(sorry, enabled=False),
             ]
 
         actions += super().contextMenuActions(patches)

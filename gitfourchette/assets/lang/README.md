@@ -45,11 +45,11 @@ For example, I translated “Push branch” to “Publier la branche (push)” i
 
 ### Length variants
 
-Occasionally, English strings contain the STRING TERMINATOR character (U+009C). This instructs Qt to use a shorter variant of the string if the full text doesn’t fit in its widget.
+Occasionally, English strings contain a pipe character `|`, e.g.: `Working directory clean|Workdir clean`. For these strings, GitFourchette instructs Qt to use a shorter variant of the string if the full text doesn’t fit in its widget.
 
-You are welcome to use length variants in your language, but **do not insert U+009C in your strings manually**. Instead, please use `View » Length Variants` in Qt Linguist.
+If the English string contains a pipe character, you’re free to define as many variants as you like in your translation – you can add more variants than in English, or you can even just provide a single variant if your language is short enough.
 
-You may also use length variants sparingly even if the source text doesn’t contain U+009C, but be aware that not all widgets can display them properly. Buttons are good candidates for length variants; verbose dialog text isn’t. Please test that your custom length variants are displayed properly before submitting your translation.
+Please **do not** use Qt Linguist’s built-in `View » Length Variants` feature for compatibility with Weblate.
 
 ### A note about English
 

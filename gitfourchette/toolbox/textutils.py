@@ -19,6 +19,10 @@ _naturalSortSplit = re.compile(r"(\d+)")
 _titleLowercaseWords = {"a", "an", "and", "as", "but", "by", "in", "of", "on", "or", "the", "to"}
 
 
+def toLengthVariants(pipeSeparatedString: str) -> str:
+    return pipeSeparatedString.replace("|", "\x9C")
+
+
 def getElideMetrics() -> QFontMetrics:
     # Cannot initialize _elideMetrics too early for Windows offscreen unit tests
     global _elideMetrics

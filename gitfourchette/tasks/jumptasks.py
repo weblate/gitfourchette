@@ -173,7 +173,7 @@ class Jump(RepoTask):
         # Early out if workdir is clean
         if rw.dirtyFiles.isEmpty() and rw.stagedFiles.isEmpty():
             locator = locator.replace(path="")
-            header = self.tr("Working directory cleanWorkdir clean")
+            header = toLengthVariants(self.tr("Working directory clean|Workdir clean"))
             sde = SpecialDiffError(
                 self.tr("The working directory is clean."),
                 self.tr("There aren’t any changes to commit."))
@@ -316,7 +316,9 @@ class Jump(RepoTask):
                 numChanges = flv.model().rowCount()
 
             # Set header text
-            area.committedHeader.setText(self.tr("%n changes:", "", numChanges))
+            headerText = self.tr("%n changes:|%n ch.:", "", numChanges)
+            headerText = toLengthVariants(headerText)
+            area.committedHeader.setText(headerText)
             area.committedHeader.setToolTip("<p>" + escape(summary).replace("\n", "<br>"))
 
         # Early out if the commit is empty

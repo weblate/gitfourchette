@@ -713,7 +713,7 @@ class SidebarModel(QAbstractItemModel):
                 numUncommittedChanges = self.repoModel.numUncommittedChanges
                 if numUncommittedChanges != 0:
                     ucSuffix = f" ({numUncommittedChanges})"
-                    changesText = changesText.replace("", ucSuffix + "") + ucSuffix
+                    changesText = changesText.replace("\x9C", ucSuffix + "\x9C") + ucSuffix
                 return changesText
             elif refRole:
                 # Return fake ref so we can select Uncommitted Changes from elsewhere

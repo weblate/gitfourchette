@@ -79,6 +79,7 @@ from .qtutils import (
     QPoint_zero,
 )
 from .textutils import (
+    toLengthVariants,
     escape, escamp, paragraphs, messageSummary, elide,
     toRoomyUL,
     toTightUL,

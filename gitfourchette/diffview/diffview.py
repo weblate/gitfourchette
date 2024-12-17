@@ -105,7 +105,7 @@ class DiffView(QPlainTextEdit):
         self.cursorPositionChanged.connect(self.updateRubberBand)
         self.selectionChanged.connect(self.updateRubberBand)
 
-        self.searchBar = SearchBar(self, self.tr("Find in Diff"))
+        self.searchBar = SearchBar(self, toLengthVariants(self.tr("Find text in diff|Find in diff")))
         self.searchBar.textChanged.connect(self.highlighter.rehighlight)
         self.searchBar.searchNext.connect(lambda: self.search(SearchBar.Op.NEXT))
         self.searchBar.searchPrevious.connect(lambda: self.search(SearchBar.Op.PREVIOUS))

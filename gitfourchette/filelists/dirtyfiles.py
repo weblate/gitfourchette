@@ -71,11 +71,6 @@ class DirtyFiles(FileList):
                     self.tr("Resolve by Keeping “Ours”"),
                     self.mergeKeepOurs,
                 ),
-
-                # ActionDef(
-                #     self.tr("Merge in {0}").format(settings.getMergeToolName()),
-                #     self.mergeInTool,
-                # )
             ]
 
         elif onlySubmodules:
@@ -101,8 +96,10 @@ class DirtyFiles(FileList):
         else:
             # Conflicted + non-conflicted files selected
             # or Submodules + non-submodules selected
+            sorry = (translate("FileList", "Can’t stage this selection in bulk.") + "\n" +
+                     translate("FileList", "Please review the files individually."))
             actions += [
-                ActionDef(self.tr("Selected files must be reviewed individually."), enabled=False),
+                ActionDef(sorry, enabled=False),
             ]
 
         if actions:

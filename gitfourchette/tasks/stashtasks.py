@@ -75,7 +75,7 @@ class NewStash(RepoTask):
             self.effects |= TaskEffects.Workdir
             self.repo.restore_files_from_head(tickedFiles)
 
-        self.postStatus = self.tr("%n files stashed.", "", len(tickedFiles))
+        self.postStatus = self.tr("%n files stashed.", "please omit %n in singular form", len(tickedFiles))
 
 
 class ApplyStash(RepoTask):

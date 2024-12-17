@@ -64,7 +64,7 @@ class GraphView(QListView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onContextMenuRequested)
 
-        self.searchBar = SearchBar(self, self.tr("Find a commit by hash, message or authorFind commit"))
+        self.searchBar = SearchBar(self, toLengthVariants(self.tr("Find a commit by hash, message or author|Find commit")))
         self.searchBar.detectHashes = True
         self.searchBar.setUpItemViewBuddy()
         self.searchBar.hide()
