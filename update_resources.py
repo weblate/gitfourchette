@@ -40,6 +40,9 @@ def makeParser():
     parser.add_argument("--clean-lang", action="store_true",
                         help="update .ts/.qm files without source code info")
 
+    parser.add_argument("--ui", action="store_true",
+                        help="update UI files")
+
     parser.add_argument("--lupdate", default="pyside6-lupdate",
                         help="path to Python-compatible lupdate tool ('pyside6-lupdate' by default, 'pylupdate6' NOT supported)")
 
@@ -300,17 +303,18 @@ if __name__ == '__main__':
     writeStatusIcon('#ff00ff', 'X')  # unknown
 
     # Generate .py files from .ui files
-    for root, _, files in os.walk(SRC_DIR):
-        for file in files:
-            basename = os.path.splitext(file)[0]
-            fullpath = os.path.join(root, file)
+    if args.ui:
+        for root, _, files in os.walk(SRC_DIR):
+            for file in files:
+                basename = os.path.splitext(file)[0]
+                fullpath = os.path.join(root, file)
 
-            if file.endswith(".ui"):
-                compileUi(args.uic, fullpath, F"{root}/ui_{basename}.py", force=args.force, cleanupOutput=not args.no_uic_cleanup)
-            elif re.match(r"^ui_.+\.py$", file) and \
-                    not os.path.isfile(F"{root}/{basename.removeprefix('ui_')}.ui"):
-                print("[!] Removing generated UI source file because there's no matching designer file:", fullpath)
-                os.unlink(fullpath)
+                if file.endswith(".ui"):
+                    compileUi(args.uic, fullpath, F"{root}/ui_{basename}.py", force=args.force, cleanupOutput=not args.no_uic_cleanup)
+                elif re.match(r"^ui_.+\.py$", file) and \
+                        not os.path.isfile(F"{root}/{basename.removeprefix('ui_')}.ui"):
+                    print("[!] Removing generated UI source file because there's no matching designer file:", fullpath)
+                    os.unlink(fullpath)
 
     if args.lang or args.clean_lang:
         updateTsFiles(args.lupdate, args.clean_lang)
