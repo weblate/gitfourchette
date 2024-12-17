@@ -47,7 +47,7 @@ def makeParser():
                         help="path to Python-compatible lupdate tool ('pyside6-lupdate' by default, 'pylupdate6' NOT supported)")
 
     parser.add_argument("--lrelease", default="pyside6-lrelease",
-                        help="path to lrelease tool ('pyside6-lrelease' by default)")
+                        help="path to lrelease tool ('pyside6-lrelease' by default; standard Qt 'lrelease' also supported.)")
 
     parser.add_argument("--uic", default="pyuic6",
                         help="path to Python-compatible uic tool ('pyuic6' by default; AVOID 'pyside6-uic' because its output doesn't work with PyQt6)")
@@ -198,10 +198,10 @@ def updateTsFiles(lupdate, clean):
         opts = "-extensions py,ui"
         if clean:
             opts += " -no-ui-lines -no-obsolete -locations none"
-        if file == "gitfourchette_en.ts":
-            opts += " -pluralonly"
 
         call(lupdate, *opts.split(), SRC_DIR, "-ts", filePath, capture_output=False)
+
+    cleanUpEnglishFile(os.path.join(LANG_DIR, "gitfourchette_en.ts"))
 
     if not clean:
         print("""
@@ -211,6 +211,32 @@ def updateTsFiles(lupdate, clean):
     this script again with --clean-lang.
     *******************************************************************************
     """)
+
+
+def cleanUpEnglishFile(filePath):
+    """ Post-process English .ts file for compatibility with Weblate """
+    xml = ET.parse(filePath)
+
+    for messageTag in xml.getroot().findall('context/message'):
+        sourceText = messageTag.findtext('source').strip()
+        translationTag = messageTag.find('translation')
+
+        # Skip numerus strings. Those must be manually translated.
+        if translationTag.find('numerusform') is not None:
+            continue
+
+        assert translationTag.text in [None, sourceText], \
+            f"English text mismatch: {translationTag.text} // {sourceText}"
+
+        translationTag.text = sourceText
+
+        # Remove type='unfinished'
+        with suppress(KeyError):
+            translationTag.attrib.pop('type')
+
+    text = ET.tostring(xml.getroot(), "unicode")
+    text = '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE TS>\n' + text
+    Path(filePath).write_text(text, "utf-8")
 
 
 def updateQmFiles(lrelease):
