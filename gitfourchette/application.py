@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 
 # Import as few internal modules as possible here to avoid premature initialization
 # from cascading imports before the QApplication has booted.
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 
 if TYPE_CHECKING:
@@ -322,11 +323,11 @@ class GFApplication(QApplication):
         while self.installedTranslators:
             self.removeTranslator(self.installedTranslators.pop())
 
-        # Try to load app translators for the preferred language first.
-        # If that failed, load the English translations for proper numerus forms.
-        appTranslatorAssetParams = ["gitfourchette", "_", "assets:lang/", ".qm"]
-        if not self.loadTranslator(locale, *appTranslatorAssetParams):
-            self.loadTranslator(QLocale(QLocale.Language.English), *appTranslatorAssetParams)
+        # Try to load gettext translator for application strings.
+        languageCode = locale.name()
+        languageCode = languageCode.split("_")[0]  # strip territory (e.g. fr_FR --> fr)
+        languageFile = QFile(f"assets:lang/{languageCode}.mo")
+        installGettextTranslator(languageFile.fileName())
 
         # Load Qt base translation
         if not QT5:  # Do this on Qt 6 and up only

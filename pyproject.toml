@@ -39,7 +39,7 @@ memory-indicator = ["psutil"]
 [tool.setuptools]
 package-dir = {gitfourchette = "gitfourchette"}
 package-data = {"gitfourchette.assets" = ['**']}
-exclude-package-data = {"gitfourchette.assets" = ['lang/*.ts', '**/README.md']}
+exclude-package-data = {"gitfourchette.assets" = ['lang/*.po', 'lang/*.pot', '**/README.md']}
 
 [tool.setuptools.dynamic]
 version = {attr = "gitfourchette.appconsts.APP_VERSION"}

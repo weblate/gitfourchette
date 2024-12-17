@@ -7,6 +7,7 @@
 import logging
 from typing import Any
 
+from gitfourchette.localization import *
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.settings import (
@@ -289,8 +290,18 @@ class PrefsDialog(QDialog):
         if not prefValue:
             control.setCurrentIndex(0)
         control.insertSeparator(1)
-        langDir = QDir("assets:lang", "gitfourchette_*.qm")
-        languages = [qmFile.removeprefix("gitfourchette_").removesuffix(".qm") for qmFile in langDir.entryList()]
+
+        langDir = QDir("assets:lang", "*.mo")
+        languages = [f.removesuffix(".mo") for f in langDir.entryList()]
+
+        if not languages:  # pragma: no cover
+            control.addItem("Translation files missing!")
+            missingItem: QStandardItem = control.model().item(control.count() - 1)
+            missingItem.setFlags(missingItem.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+
+        assert "en" not in "languages"  # English has no .po file
+        languages.insert(0, "en")  # Make English appear on top
+
         for enumMember in languages:
             lang = QLocale(enumMember)
             control.addItem(lang.nativeLanguageName().title(), enumMember)

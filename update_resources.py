@@ -13,7 +13,6 @@ import re
 import subprocess
 import sys
 import textwrap
-import xml.etree.ElementTree as ET
 from contextlib import suppress
 from pathlib import Path
 
@@ -24,6 +23,7 @@ REPO_ROOTDIR = os.path.relpath(REPO_ROOTDIR)
 SRC_DIR = os.path.join(REPO_ROOTDIR, "gitfourchette")
 ASSETS_DIR = os.path.join(SRC_DIR, "assets")
 LANG_DIR = os.path.join(ASSETS_DIR, "lang")
+LANG_TEMPLATE = os.path.join(LANG_DIR, "gitfourchette.pot")
 
 FORCE = False
 
@@ -31,35 +31,44 @@ FORCE = False
 def makeParser():
     parser = argparse.ArgumentParser(description="Update GitFourchette assets")
 
-    parser.add_argument("--force", action="store_true",
+    parser.add_argument("-f", "--force", action="store_true",
                         help="skip mtime and equality checks before regenerating an asset")
 
-    parser.add_argument("--lang", action="store_true",
-                        help="update .ts/.qm files")
-
-    parser.add_argument("--clean-lang", action="store_true",
-                        help="update .ts/.qm files without source code info")
-
-    parser.add_argument("--ui", action="store_true",
-                        help="update UI files")
-
-    parser.add_argument("--lupdate", default="pyside6-lupdate",
-                        help="path to Python-compatible lupdate tool ('pyside6-lupdate' by default, 'pylupdate6' NOT supported)")
-
-    parser.add_argument("--lrelease", default="pyside6-lrelease",
-                        help="path to lrelease tool ('pyside6-lrelease' by default; standard Qt 'lrelease' also supported.)")
-
-    parser.add_argument("--uic", default="pyuic6",
-                        help="path to Python-compatible uic tool ('pyuic6' by default; AVOID 'pyside6-uic' because its output doesn't work with PyQt6)")
-
-    parser.add_argument("--no-uic-cleanup", action="store_true",
-                        help="don't postprocess uic output")
-
-    parser.add_argument("--version", action="store_true",
+    parser.add_argument("-V", "--version", action="store_true",
                         help="show tool versions and exit")
 
-    parser.add_argument("--freeze", default="", metavar="QT_API",
-                        help="write frozen constants to appconsts.py and exit")
+    loc_group = parser.add_argument_group("Localization options")
+
+    loc_group.add_argument("--pot", action="store_true",
+                           help="sync .pot template with new strings from python code")
+
+    loc_group.add_argument("--po", action="store_true",
+                           help="sync translatable .po files with .pot template")
+
+    loc_group.add_argument("--mo", action="store_true",
+                           help="compile .po files to .mo so you can try them in GitFourchette")
+
+    loc_group.add_argument("-l", "--lang", action="store_true",
+                           help="sync all .pot/.po/.mo files (run all localization steps above)")
+
+    loc_group.add_argument("--clean-po", action="store_true",
+                           help="remove obsolete strings from .po files")
+
+    ui_group = parser.add_argument_group("UI Designer options")
+
+    ui_group.add_argument("-u", "--ui", action="store_true",
+                          help="update ui_*.py files from .ui files (and svg status icons)")
+
+    ui_group.add_argument("--uic", default="pyuic6",
+                          help="path to Python-compatible uic tool ('pyuic6' by default; AVOID 'pyside6-uic' because its output doesn't work with PyQt6)")
+
+    ui_group.add_argument("--no-uic-cleanup", action="store_true",
+                          help="don't postprocess uic output")
+
+    pkg_group = parser.add_argument_group("Packaging options")
+
+    pkg_group.add_argument("--freeze", default="", metavar="QT_API",
+                           help="write frozen constants to appconsts.py")
 
     return parser
 
@@ -83,48 +92,41 @@ def call(*args, **kwargs) -> subprocess.CompletedProcess:
         sys.exit(1)
 
 
-def writeIfDifferent(path, text, ignoreChangedLines=None):
+def writeIfDifferent(path: Path, text: str, ignoreChangedLines=None):
     ignoreChangedLines = ignoreChangedLines or []
     needRewrite = True
 
-    if not FORCE:
+    if not FORCE and path.is_file():
         ignoreList = []
         for icl in ignoreChangedLines:
             ignoreList.append("+ " + icl)
             ignoreList.append("- " + icl)
 
-        if os.path.isfile(path):
-            with open(path, encoding="utf-8") as existingFile:
-                oldText = existingFile.read()
-
-            # See if the differences can be ignored (e.g. Qt User Interface Compiler version comment)
-            needRewrite = False
-            if oldText != text:
-                needRewrite = False
-                t1 = oldText.splitlines(keepends=True)
-                t2 = text.splitlines(keepends=True)
-                for dl in difflib.ndiff(t1, t2):
-                    if (dl.rstrip() not in ["+", "-"]  # pure whitespace change
-                            and not dl.startswith(tuple(ignoreList))
-                            and dl.startswith(("+ ", "- "))):
-                        needRewrite = True
-                        break
+        # See if the differences can be ignored (e.g. Qt User Interface Compiler version comment)
+        oldText = path.read_text(encoding="utf-8")
+        needRewrite = False
+        if oldText != text:
+            t1 = oldText.splitlines(keepends=True)
+            t2 = text.splitlines(keepends=True)
+            for dl in difflib.ndiff(t1, t2):
+                if (dl.rstrip() not in ["+", "-"]  # pure whitespace change
+                        and not dl.startswith(tuple(ignoreList))
+                        and dl.startswith(("+ ", "- "))):
+                    needRewrite = True
+                    break
 
     if needRewrite:
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(text)
-            print("Wrote", path)
+        path.write_text(text, encoding="utf-8")
+        print("Wrote", path)
     else:
-        Path(path).touch()
+        path.touch()
 
 
-def patchSection(path: str, contents: str):
+def patchSection(path: Path, contents: str):
     def ensureNewline(s: str):
         return s + ("" if s.endswith("\n") else "\n")
 
-    with open(path, encoding="utf-8") as f:
-        text = f.read()
-
+    text = path.read_text(encoding="utf-8")
     contents = ensureNewline(contents)
     lines = contents.splitlines(keepends=True)
     assert len(lines) >= 2
@@ -147,140 +149,146 @@ def writeStatusIcon(fill='#ff00ff', char='X', round=2):
         svg += f"<rect rx='{round}' ry='{round}' x='0.5' y='0.5' width='15' height='15' stroke='{color}' stroke-width='1' fill='{fill}'/>\n"
         svg += f"<text x='8' y='12' font-weight='bold' font-size='11' font-family='sans-serif' text-anchor='middle' fill='{color}'>{char}</text>\n"
         svg += "</svg>"
-        svgFileName = F"{ASSETS_DIR}/icons/status_{char.lower()}{suffix}.svg"
-        writeIfDifferent(svgFileName, svg)
+        svgPath = Path(ASSETS_DIR) / f"icons/status_{char.lower()}{suffix}.svg"
+        writeIfDifferent(svgPath, svg)
 
 
-def compileUi(uic, uiPath, pyPath, force=False, cleanupOutput=True):
+def compileUi(uic: str, uiPath: Path, pyPath: Path, force=False, cleanupOutput=True):
     if not force:
         with suppress(FileNotFoundError):
-            uiStat = os.stat(uiPath)
-            pyStat = os.stat(pyPath)
-            if pyStat.st_mtime > uiStat.st_mtime:
+            if pyPath.stat().st_mtime > uiPath.stat().st_mtime:
                 return
 
-    result = call(uic, os.path.basename(uiPath), cwd=os.path.dirname(uiPath))
+    result = call(uic, uiPath.name, cwd=uiPath.parent)
     text = result.stdout
+    nukePatterns = []
     ignoreDiffs = []
+
+    myImport = "from gitfourchette.localization import *\nfrom gitfourchette.qt import *"
 
     if not cleanupOutput:
         pass
     elif "from PyQt" in text:
-        text = re.sub(r"^from PyQt[56] import .+$", "from gitfourchette.qt import *", text, count=1, flags=re.M)
-        text = re.sub(r"(?<!\w)Qt(Core|Gui|Widgets)\.", "", text, flags=re.M)
+        text = re.sub(r"^from PyQt[56] import .+$", myImport, text, count=1, flags=re.M)
+        text = re.sub(r"_translate(?=\(\")", "_p", text, flags=re.M)
+        nukePatterns = [
+            r"(?<!\w)Qt(Core|Gui|Widgets)\.",
+            r"^\s+_translate = QCoreApplication\.translate\n",
+        ]
+        ignoreDiffs = ["# Created by: PyQt6 UI code generator"]
         text = text.strip() + "\n"
-        ignoreDiffs = ["# Created by: PyQt5 UI code generator",
-                       "# Created by: PyQt6 UI code generator",]
     elif "from PySide" in text:
-        text = re.sub(r"^# -\*- coding:.*$", "", text, flags=re.M)
-        text = re.sub(r"^from PySide6.* import \([^\)]+\)$", "from gitfourchette.qt import *", text, count=1, flags=re.M)
-        for nukePattern in [
-                r"^# -\*- coding:.*$",
-                r"^from PySide6.* import \([^\)]+\)$\n",
-                r"^ {4}# (setupUi|retranslateUi)$\n",
-        ]:
-            text = re.sub(nukePattern, "", text, flags=re.M)
+        text = re.sub(r"^from PySide6.* import \([^\)]+\)$", myImport, text, count=1, flags=re.M)
+        text = re.sub(r"QCoreApplication\.translate\((.+), None\)", r"_p(\1)", text, flags=re.M)
+        nukePatterns = [
+            r"^#if QT_CONFIG\(.+\n",
+            r"^#endif // QT_CONFIG\(.+\n",
+            r"^from PySide6.* import \([^\)]+\)$\n",
+            r"^ {4}# (setupUi|retranslateUi)$\n",
+        ]
         ignoreDiffs = ["## Created by: Qt User Interface Compiler version"]
+        text = text.strip() + "\n"
     else:
         print("Unknown uic output")
+
+    for pattern in nukePatterns:
+        text = re.sub(pattern, "", text, flags=re.M)
 
     writeIfDifferent(pyPath, text, ignoreDiffs)
 
 
-def updateTsFiles(lupdate, clean):
-    """ Update .ts files from strings contained in the source code """
-    for file in os.listdir(LANG_DIR):
-        if not file.endswith(".ts"):
-            continue
+def compileUiFiles(uic, force, cleanupOutput):
+    for uiPath in Path(SRC_DIR).glob("**/*.ui"):
+        pyPath = uiPath.parent / f"ui_{uiPath.stem}.py"
+        compileUi(uic, uiPath, pyPath, force=force, cleanupOutput=cleanupOutput)
 
-        filePath = os.path.join(LANG_DIR, file)
-
-        opts = "-extensions py,ui"
-        if clean:
-            opts += " -no-ui-lines -no-obsolete -locations none"
-
-        call(lupdate, *opts.split(), SRC_DIR, "-ts", filePath, capture_output=False)
-
-    cleanUpEnglishFile(os.path.join(LANG_DIR, "gitfourchette_en.ts"))
-
-    if not clean:
-        print("""
-    *******************************************************************************
-    You are using --lang, which generates extra info in the .ts files.
-    Before committing the .ts files, please clean them up by running
-    this script again with --clean-lang.
-    *******************************************************************************
-    """)
+    for pyPath in Path(SRC_DIR).glob("**/ui_*.py"):
+        uiPath = pyPath.parent / (pyPath.stem.removeprefix("ui_") + ".ui")
+        if not uiPath.exists():
+            print("[!] Removing obsolete compiled ui file because there's no matching designer file:", pyPath)
+            pyPath.unlink()
 
 
-def cleanUpEnglishFile(filePath):
-    """ Post-process English .ts file for compatibility with Weblate """
-    xml = ET.parse(filePath)
-
-    for messageTag in xml.getroot().findall('context/message'):
-        sourceText = messageTag.findtext('source').strip()
-        translationTag = messageTag.find('translation')
-
-        # Skip numerus strings. Those must be manually translated.
-        if translationTag.find('numerusform') is not None:
-            continue
-
-        assert translationTag.text in [None, sourceText], \
-            f"English text mismatch: {translationTag.text} // {sourceText}"
-
-        translationTag.text = sourceText
-
-        # Remove type='unfinished'
-        with suppress(KeyError):
-            translationTag.attrib.pop('type')
-
-    text = ET.tostring(xml.getroot(), "unicode")
-    text = '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE TS>\n' + text
-    Path(filePath).write_text(text, "utf-8")
+def generateIcons():
+    # Generate status icons.
+    # 'U' (unmerged) has custom colors/text, so don't generate it automatically.
+    # 'C' (copied) doesn't appear in GitFourchette.
+    writeStatusIcon('#0EDF00', 'A')  # add
+    writeStatusIcon('#FE635F', 'D')  # delete
+    writeStatusIcon('#F7C342', 'M')  # modify
+    writeStatusIcon('#D18DE1', 'R')  # rename
+    writeStatusIcon('#85144B', 'T')  # typechange
+    writeStatusIcon('#ff00ff', 'X')  # unknown
 
 
-def updateQmFiles(lrelease):
-    """Generate .qm files from .ts files"""
+def updatePotTemplate():
+    """ Update .pot files from strings contained in the source code """
+    # Gather all .py files
+    pyFiles = [str(f.relative_to(SRC_DIR)) for f in Path(SRC_DIR).glob("**/*.py")]
+    pyFiles.sort()
+    call(
+        "xgettext",
+        "--output=" + LANG_TEMPLATE,
+        "--sort-by-file",
+        "--no-wrap",
+        "--language=Python",
+        "--from-code=UTF-8",
+        "--keyword=_n:1,2",
+        "--keyword=_p:1c,2",
+        "--keyword=_np:1c,2,3",
+        "--directory=" + SRC_DIR,
+        "--package-name=GitFourchette",
+        "--msgid-bugs-address=https://github.com/jorio/gitfourchette/issues",
+        *pyFiles,
+        capture_output=False,
+    )
 
-    anyPlaceholderMismatches = False
-    for file in os.listdir(LANG_DIR):
-        if not file.endswith(".ts"):
-            continue
+    nukePatterns = [
+        r"^# SOME DESCRIPTIVE TITLE\.\n",
+        r"^# Copyright .C. YEAR THE PACKAGE'S COPYRIGHT HOLDER\n",
+        r"^# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR\.\n",
+        r'^"POT-Creation-Date: .+"\n',
+        r'^"PO-Revision-Date: .+"\n',
+        r'^"Language-Team: .+"\n',
+    ]
+    text = Path(LANG_TEMPLATE).read_text(encoding="utf-8")
+    for pattern in nukePatterns:
+        text = re.sub(pattern, "", text, flags=re.M)
+    Path(LANG_TEMPLATE).write_text(text, "utf-8")
 
-        filePath = os.path.join(LANG_DIR, file)
-        basename = os.path.splitext(file)[0]
-        qmPath = os.path.join(LANG_DIR, F"{basename}.qm")
-        call(lrelease, "-removeidentical", filePath, "-qm", qmPath)
 
-        # Check placeholders in .ts files
-        for messageTag in ET.parse(filePath).getroot().findall('context/message'):
-            sourceText = messageTag.findtext('source')
-            sourcePlaceholders = set(re.findall(r"\{.*?\}", sourceText))
-            if not sourcePlaceholders:
-                continue
 
-            translationText = messageTag.findtext('translation').strip()
-            if translationText:
-                translations = [translationText]
-            else:
-                translations = [t.text for t in messageTag.find('translation') if t.text and t.text.strip()]
+def updatePoFiles():
+    """ Update .po files from strings contained in the .pot template """
+    for poPath in Path(LANG_DIR).glob("*.po"):
+        call(
+            "msgmerge",
+            "--update",
+            "--sort-by-file",
+            "--no-wrap",
+            str(poPath),
+            LANG_TEMPLATE,
+            capture_output=False)
 
-            for tt in translations:
-                translationPlaceholders = set(re.findall(r"\{.*?\}", tt))
-                missingPlaceholders = sourcePlaceholders - translationPlaceholders
-                if translationPlaceholders != sourcePlaceholders:
-                    anyPlaceholderMismatches = True
-                    print(f"******* {file}: PLACEHOLDER MISMATCH! "
-                          f"Missing: {' '.join(s for s in missingPlaceholders)} "
-                          f"in: \"{tt}\"")
 
-    if anyPlaceholderMismatches:
-        print("""
-    *******************************************************************************
-    THE TRANSLATION FILES CONTAIN MISMATCHED PLACEHOLDERS.
-    PLEASE REVIEW THE TRANSLATIONS BEFORE COMMITTING!
-    *******************************************************************************
-    """)
+def cleanUpPoFiles():
+    """ Remove obsolete strings from .po files """
+    for poPath in Path(LANG_DIR).glob("*.po"):
+        call(
+            "msgattrib",
+            "--sort-by-file",
+            "--no-wrap",
+            "--no-obsolete",
+            "-o", str(poPath),
+            str(poPath),
+            capture_output=False)
+
+
+def compileMoFiles():
+    """ Generate .mo files from .po files """
+    for poPath in Path(LANG_DIR).glob("*.po"):
+        moPath = poPath.with_suffix(".mo")
+        call("msgfmt", "-o", str(moPath), str(poPath), capture_output=False)
 
 
 def writeFreezeFile(qtApi: str):
@@ -306,42 +314,38 @@ if __name__ == '__main__':
 
     FORCE = args.force
 
+    if args.lang:
+        args.pot = True
+        args.po = True
+        args.mo = True
+
     if args.version:
         toolVersions = ""
-        toolVersions += call(args.uic, "--version").stdout
-        toolVersions += call(args.lupdate, "-version").stdout
-        toolVersions += call(args.lrelease, "-version").stdout
+        toolVersions += args.uic + " " + call(args.uic, "--version").stdout
+        toolVersions += call("msgmerge", "--version").stdout.splitlines()[0]
         print(toolVersions)
         sys.exit(0)
 
     if args.freeze:
         writeFreezeFile(args.freeze)
-        sys.exit(0)
 
-    # Generate status icons.
-    # 'U' (unmerged) has custom colors/text, so don't generate it automatically.
-    # 'C' (copied) doesn't appear in GitFourchette.
-    writeStatusIcon('#0EDF00', 'A')  # add
-    writeStatusIcon('#FE635F', 'D')  # delete
-    writeStatusIcon('#F7C342', 'M')  # modify
-    writeStatusIcon('#D18DE1', 'R')  # rename
-    writeStatusIcon('#85144B', 'T')  # typechange
-    writeStatusIcon('#ff00ff', 'X')  # unknown
+    if not (args.ui or args.pot or args.po or args.mo or args.clean_po):
+        makeParser().print_usage()
+        sys.exit(1)
 
     # Generate .py files from .ui files
     if args.ui:
-        for root, _, files in os.walk(SRC_DIR):
-            for file in files:
-                basename = os.path.splitext(file)[0]
-                fullpath = os.path.join(root, file)
+        generateIcons()
+        compileUiFiles(args.uic, args.force, not args.no_uic_cleanup)
 
-                if file.endswith(".ui"):
-                    compileUi(args.uic, fullpath, F"{root}/ui_{basename}.py", force=args.force, cleanupOutput=not args.no_uic_cleanup)
-                elif re.match(r"^ui_.+\.py$", file) and \
-                        not os.path.isfile(F"{root}/{basename.removeprefix('ui_')}.ui"):
-                    print("[!] Removing generated UI source file because there's no matching designer file:", fullpath)
-                    os.unlink(fullpath)
+    if args.pot:
+        updatePotTemplate()
 
-    if args.lang or args.clean_lang:
-        updateTsFiles(args.lupdate, args.clean_lang)
-        updateQmFiles(args.lrelease)
+    if args.po:
+        updatePoFiles()
+
+    if args.mo:
+        compileMoFiles()
+
+    if args.clean_po:
+        cleanUpPoFiles()

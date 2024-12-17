@@ -1,35 +1,25 @@
-# GitFourchette localization README
+# GitFourchette localization guide
 
-You are welcome to submit a PR to improve an existing translation, or to localize the software to a new language!
+You are welcome to submit a PR to improve an existing translation, or to localize GitFourchette to a new language!
 
 ## How to work with translation files
 
-There are two kinds of translation files in `gitfourchette/assets/lang`:
-- `.ts` files, which you can edit in [Qt Linguist](https://doc.qt.io/qt-6/linguist-translators.html).
-- `.qm` files are “compiled” binary files that GitFourchette reads from.
+There are 3 kinds of translation files in `gitfourchette/assets/lang`:
+- `gitfourchette.pot` is a template containing reference U.S. English text.
+- `.po` files, which you can edit in [POEdit](https://poedit.net).
+- `.mo` files are compiled binary files that GitFourchette reads from.
 
-If your language has no translation yet, you must first create a blank `.ts` file. For example, for Dutch (ISO-639 language code `nl`):
+**If your language has no translation yet,** you must first create a blank `.po` file from the `.pot` template. To do that, open POEdit and go to *File » New From POT/PO File*, then select `gitfourchette/assets/lang/gitfourchette.pot`. POEdit will then ask you to pick a target language, and you can begin translating. Save the `.po` file in `gitfourchette/assets/lang` and be sure to keep the two-character language name suggested by POEdit.
 
-```bash
-pyside6-lupdate -source-language en -target-language nl \
-    -extensions py,ui ./gitfourchette/ \
-    -ts gitfourchette/assets/lang/gitfourchette_nl.ts
-```
+**To preview your changes in GitFourchette,** generate an `.mo` file beside your `.po` file in `gitfourchette/assets/lang`. In POEdit, run *File » Compile to MO*. In GitFourchette, your new language should automatically show up in *Settings » General » Language* once you’ve generated the `.mo` file for it.
 
-To update an existing translation:
-- Run `update_resources.py --lang` to sync the `.ts` files with any new translatable contents in the source code.
-- Edit the `.ts` file for your language in [Qt Linguist](https://doc.qt.io/qt-6/linguist-translators.html).
-- When you’re done editing the `.ts` file, generate the `.qm` files to preview your changes in GitFourchette. This can be done in one of two ways:
-    - In Qt Linguist, run `File » Publish`;
-    - Alternatively, run `update_resources.py --lang` again, which also updates the `.qm` file.
+**When you’re ready to submit your translation,** commit both the `.po` file and the `.mo` file.
 
-When you’re ready to commit your changes:
-- Run `update_resources.py --clean-lang` to **clean up** the `.ts` files.
-- Commit both the `.ts` file and the `.qm` file.
+### Advanced/optional steps
 
-### Warning! Avoid updating .qm files while GitFourchette is running
+**To sync the `.pot` and `.po` files** with any new strings from the source code **and automatically generate the `.mo` files**, you can run `./update_resources.py --lang`. Under the hood, this calls `xgettext` and `msgmerge`.
 
-Modifying or deleting a `.qm` file (compiled translations) that is currently loaded in GitFourchette may cause Qt to crash! So, if you’re running a development copy of GitFourchette while working on the translations, you should **close it before updating the `.qm` files**.
+**To declutter your `.po` file,** you can clean up obsolete entries before committing. Use this command: `./update-resources.py --clean-po`
 
 ## Localization guidelines
 
@@ -47,14 +37,4 @@ For example, I translated “Push branch” to “Publier la branche (push)” i
 
 Occasionally, English strings contain a pipe character `|`, e.g.: `Working directory clean|Workdir clean`. For these strings, GitFourchette instructs Qt to use a shorter variant of the string if the full text doesn’t fit in its widget.
 
-If the English string contains a pipe character, you’re free to define as many variants as you like in your translation – you can add more variants than in English, or you can even just provide a single variant if your language is short enough.
-
-Please **do not** use Qt Linguist’s built-in `View » Length Variants` feature for compatibility with Weblate.
-
-### A note about English
-
-The source language for all localizable strings is U.S. English. However, strings containing a plural declension must still be “translated” into U.S. English.
-
-For instance, the source code contains `Stage %n file(s)`, which `gitfourchette_en.ts` “translates” to `Stage %n file` and `Stage %n files`.
-
-`gitfourchette_en.ts` only contains strings for singular/plural forms. This is enforced by the `-pluralonly` parameter passed to “lupdate” (in `update_resources.py`).
+If the English string contains a pipe character, feel free to define as many variants as you like in your translation – you can add more variants than in English, or you can even just provide a single variant if your language is short enough.
