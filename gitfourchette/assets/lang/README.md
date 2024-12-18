@@ -1,10 +1,23 @@
 # GitFourchette localization guide
 
-You are welcome to submit a PR to improve an existing translation, or to localize GitFourchette to a new language!
+You are welcome to improve an existing translation, or to localize GitFourchette to a new language!
 
-## How to work with translation files
+## How to translate via Weblate (recommended)
 
-There are 3 kinds of translation files in `gitfourchette/assets/lang`:
+To localize GitFourchette, you can use Weblate, a convenient localization platform. It's quick and easy, no need to set up any development tools!
+
+Head over to [GitFourchette on Weblate](https://hosted.weblate.org/projects/gitfourchette/gitfourchette), pick your language (or create a new one) and translate at your own pace.
+
+### Preview your translation in GitFourchette
+
+Translations are periodically merged from Weblate into GitFourchette’s repo. If you don’t wait for a merge to preview your work in GitFourchette itself, you can download an `.mo` file from Weblate for your language ([fr](https://hosted.weblate.org/download/gitfourchette/gitfourchette/fr/?format=mo),
+[it](https://hosted.weblate.org/download/gitfourchette/gitfourchette/it/?format=mo)).
+
+Rename it to the two-letter code for your language (e.g. `fr.mo`) and drop it into `gitfourchette/assets/lang`. If you’ve done this correctly, GitFourchette should automatically pick up your new language (in *Settings » General » Language*).
+
+## How to work with .po/.mo files (offline)
+
+If you prefer to work offline, this section describes the translation files in `gitfourchette/assets/lang`. This directory contains 3 kinds of translation files:
 - `gitfourchette.pot` is a template containing reference U.S. English text.
 - `.po` files, which you can edit in [POEdit](https://poedit.net).
 - `.mo` files are compiled binary files that GitFourchette reads from.
