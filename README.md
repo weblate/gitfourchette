@@ -16,6 +16,7 @@ Learn more on GitFourchette’s homepage at [gitfourchette.org](https://gitfourc
 - [How to install or run from source](https://gitfourchette.org/install.html)
 - [Limitations](https://gitfourchette.org/limitations.html)
 - [Changelog](CHANGELOG.md)
+- [Localization guide](gitfourchette/assets/lang/README.md)
 
 ## Install
 
@@ -31,6 +32,10 @@ Learn more on GitFourchette’s homepage at [gitfourchette.org](https://gitfourc
 ## About the project
 
 I started out writing GitFourchette in my spare time to scratch my itch for a Git UI I’d feel cozy in. After plenty of “dogfooding it” to develop my other projects, I’m finally taking the plunge and releasing it publicly—maybe it’ll become your favorite Git client too.
+
+## Translations welcome
+
+Feel free to [localize GitFourchette for your language on Weblate](https://hosted.weblate.org/projects/gitfourchette/gitfourchette/)—it's quick and easy, no need to set up any development tools. See also our [localization guide](gitfourchette/assets/lang/README.md).
 
 ## Donate 🩷
 
