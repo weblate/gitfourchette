@@ -61,6 +61,7 @@ class TaskBook:
             tasks.FetchRemoteBranch: _("Fetch remote branch"),
             tasks.GetCommitInfo: _("Get commit information"),
             tasks.HardSolveConflicts: _("Accept/reject incoming changes"),
+            tasks.InteractiveRebase: _("Interactive rebase"),
             tasks.Jump: _("Navigate in repo"),
             tasks.JumpBack: _("Navigate back"),
             tasks.JumpForward: _("Navigate forward"),
