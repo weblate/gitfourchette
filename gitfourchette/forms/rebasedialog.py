@@ -4,8 +4,6 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-from pathlib import Path
-
 from gitfourchette.forms.ui_rebasedialog import Ui_RebaseDialog
 from gitfourchette.localization import *
 from gitfourchette.qt import *
@@ -19,7 +17,7 @@ class RebaseDialog(QDialog):
     def view(self):
         return self.ui.commitList
 
-    def __init__(self, parent: QWidget | None, sequence: TRebaseSequence):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self.ui = Ui_RebaseDialog()
         self.ui.setupUi(self)
@@ -27,17 +25,17 @@ class RebaseDialog(QDialog):
         self.view.setItemDelegate(RebaseSequenceDelegate(self.view))
         assert self.view.uniformItemSizes()
 
-        # Fill out model
-        self.view.clear()
-        for item in sequence:
-            self.view.addItem(RebaseLineWrapper(item))
-
         # Bind hotkeys
         legalKeys = set("abcdefghijklmnopqrstuvwxyz")
         for command in RebaseOp:
             hotkey = RebaseOpLetters[command]
             legalKeys.remove(hotkey)  # for debugging, raise KeyError if key assigned twice
             QShortcut(hotkey, self.view, lambda c=command: self.setCommandOnSelection(c), context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+    def setSequence(self, sequence: TRebaseSequence):
+        self.view.clear()
+        for item in sequence:
+            self.view.addItem(RebaseLineWrapper(item))
 
     def iterateSelectedItems(self):
         for wrapper in self.view.selectedItems():
@@ -94,11 +92,3 @@ class RebaseDialog(QDialog):
     def serializeSequence(self):
         text = "\n".join(str(i) for i in self.iterateAllItems())
         return text
-
-    def writeSequenceFile(self, path: str):
-        text = self.serializeSequence()
-        Path(path).write_text(text, encoding="utf-8")
-
-    @classmethod
-    def writeEmptySequenceFile(cls, path: str):
-        Path(path).write_text("\n", encoding="utf-8")
