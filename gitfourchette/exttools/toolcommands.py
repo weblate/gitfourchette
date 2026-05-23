@@ -327,26 +327,39 @@ class ToolCommands:
         """
         assert module.startswith("gitfourchette"), module
 
+        # -B: Don't write .pyc files on import
+        # -P: Don't prepend potentially unsafe path to sys.path (Python 3.11+)
+        # -s: Don't add user site directory to sys.path (only in frozen distributions)
+        # -m: Module name
+        interpreterOptions = "-B"
+        if APP_FREEZE_COMMIT:
+            # Add -Ps only in frozen distributions, because these may cause
+            # issues resolving user-installed pip dependencies.
+            interpreterOptions += "Ps"
+        interpreterOptions += "m" + module
+
         if FLATPAK and not sandbox:
             # Command to be called by host system's git, which lives outside the
             # flatpak sandbox. Spawn another instance of our flatpak.
-            tokens = ["flatpak", "run", "--command=python", FLATPAK_ID, "-m", module]
+            tokens = ["flatpak", "run", "--command=python", FLATPAK_ID, interpreterOptions]
         elif "APPIMAGE" in INITIAL_ENVIRONMENT:
             # AVOID "sys.executable" (path to .AppImage file) to spawn a child,
             # may cause SIGTTIN in parent process!
             python = sys.orig_argv[0]  # python in AppImage tmpfs mount
-            tokens = [python, "-m", module]
+            tokens = [python, interpreterOptions]
         elif PYINSTALLER_MEIPASS:
+            # App bundle: special case in our __main__.py
             tokens = [sys.executable, f"--start-module={module}"]
         else:
             # Just spawn another Python interpreter.
-            tokens = [sys.executable, "-m", module]
+            tokens = [sys.executable, interpreterOptions]
 
         # The new instance is supposed to be a child process, so it will inherit
         # the environment variables of the current process. We don't need to
         # explicitly copy them to 'env'. For reference, some of the relevant
         # variables for a successful child process include:
-        # - PYTHONPATH (":".join(sys.path))
+        # - PYTHONPATH (os.pathsep.join(sys.path)), though this may be empty
+        #   e.g. in unit tests
         # - For AppImage only: APPIMAGE, APPDIR, ARGV0, SSL_CERT_FILE
         # Without these, askpass.sh may fail to start unless it's a child
         # process of a GitFourchette instance.

@@ -88,6 +88,7 @@ for _tentative in _qtBindingOrder:
             from PySide6.QtCore import *
             from PySide6.QtWidgets import *
             from PySide6.QtGui import *
+            from PySide6.QtNetwork import *
             from PySide6 import __version__ as QT_BINDING_VERSION
             QT_BINDING = "PySide6"
             QT6 = PYSIDE6 = True
@@ -95,6 +96,7 @@ for _tentative in _qtBindingOrder:
             from PyQt6.QtCore import *
             from PyQt6.QtWidgets import *
             from PyQt6.QtGui import *  # type: ignore[no-redef]
+            from PyQt6.QtNetwork import *
             QT_BINDING_VERSION = PYQT_VERSION_STR
             QT_BINDING = "PyQt6"
             QT6 = PYQT6 = True
@@ -102,6 +104,7 @@ for _tentative in _qtBindingOrder:
             from PyQt5.QtCore import *
             from PyQt5.QtWidgets import *
             from PyQt5.QtGui import *
+            from PyQt5.QtNetwork import *
             QT_BINDING_VERSION = PYQT_VERSION_STR
             QT_BINDING = "PyQt5"
             QT5 = PYQT5 = True

@@ -13,6 +13,7 @@ from typing import ClassVar
 from gitfourchette import trtables
 from gitfourchette import settings
 from gitfourchette import tasks
+from gitfourchette.application import GFApplication
 from gitfourchette.diffarea import DiffArea
 from gitfourchette.exttools.toolprocess import ToolProcess
 from gitfourchette.exttools.usercommand import UserCommand
@@ -354,8 +355,9 @@ class RepoWidget(QWidget):
 
     def jump(self, locator: NavLocator, check=False):
         tasks.Jump.invoke(self, locator)
-        if check:
-            self.taskRunner.joinWorkerThread()
+        if check:  # unit test helper
+            while self.taskRunner.isBusy():
+                GFApplication.instance().processEventsNoInput()
             assert self.navLocator.isSimilarEnoughTo(locator), f"failed to jump to: {locator}"
 
     def navigateBack(self):
