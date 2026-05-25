@@ -4,7 +4,6 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-import base64
 import logging
 import os
 import shlex
@@ -21,88 +20,91 @@ logger = logging.getLogger(__name__)
 
 
 class GFIpcServer(QLocalServer):
-    clientConnected = Signal(str)
+    clientConnected = Signal(dict, QLocalSocket)
+    _globalSocketCounter = 0
 
-    currentConnection: QLocalSocket | None
-    serverKey: str
+    socketPath: str
 
-    def __init__(self, parent: QObject):
+    def __init__(self, parent: QObject, singleShot: bool, startNow: bool = True):
         super().__init__(parent)
-        self.currentConnection = None
 
-        randomBlob = base64.urlsafe_b64encode(os.urandom(12)).decode("ascii")
-        self.serverKey = f"{APP_SYSTEM_NAME}_{randomBlob}"
+        self.socketNumber = GFIpcServer._globalSocketCounter
+        GFIpcServer._globalSocketCounter += 1
+        self.socketPath = str(Path(qTempDir(), f"ipc{self.socketNumber}.sock"))
+        self.singleShot = singleShot
 
         self.setSocketOptions(QLocalServer.SocketOption.UserAccessOption)
         self.setMaxPendingConnections(1)
         self.newConnection.connect(self.onNewConnection)
 
-        doesListen = self.listen(self.serverKey)
-        logger.debug(f"IPC server listening on {self.serverKey}: {doesListen} -- {self.fullServerName()}")
-        assert doesListen
+        if startNow:
+            doesListen = self.listenOnSocketPath()
+            logger.debug(f"IPC server listening on {self.socketPath}: {doesListen} -- {self.fullServerName()}")
+            assert doesListen
+
+    def listenOnSocketPath(self) -> bool:
+        return self.listen(self.socketPath)
 
     def onNewConnection(self):
         socket: QLocalSocket | None = self.nextPendingConnection()
         assert socket is not None
         logger.debug(f"New connection on {socket.fullServerName()}")
+        assert socket.isValid()
+        assert socket.isOpen()
 
         # Single-shot server: Stop listening for any additional connections
-        self.close()
+        if self.singleShot:
+            self.close()
 
         # Get handshake from client
-        tag, payload = GFIpcProtocol.readMessage(socket, timeout=GFIpcProtocol.FastTimeout)
-        if tag != GFIpcProtocol.MessageTag.ClientHandshake:
-            logger.warning(f"unexpected tag: {tag}")
+        payload = GFIpcProtocol.readMessage(socket, timeout=GFIpcProtocol.FastTimeout)
+        if "args" not in payload:
+            logger.warning("invalid payload from client")
             socket.close()
             return
 
         logger.debug(f"Got client handshake: {payload}")
-        self.currentConnection = socket
-        self.clientConnected.emit(payload)
+        self.clientConnected.emit(payload, socket)
 
-    def writeAndDisconnect(self, tag: GFIpcProtocol.MessageTag, payload: str = ""):
-        assert self.currentConnection is not None
-        GFIpcProtocol.writeMessage(self.currentConnection, tag, payload)
-        self.currentConnection.disconnectFromServer()
-        self.currentConnection = None
-
-    def replyAndDisconnect(self, payload: str = ""):
-        self.writeAndDisconnect(GFIpcProtocol.MessageTag.ServerReply, payload)
-
-    def gitEnvironmentForClient(self, varName: str):
+    def clientCommand(self, askpass: bool = False) -> str:
         """
-        Return a dict of environment variables that should be passed to git so
-        it can start an IPC client.
-
-        varName is the name of the environment variable that git will use,
-        e.g. GIT_SEQUENCE_EDITOR.
+        Return a command starting an IPC client that connects to this server.
         """
 
         sandbox = settings.prefs.isGitSandboxed()
-        fileName = "ipc_sandboxed.sh" if sandbox else "ipc.sh"
+        infix1 = f"ask{self.socketNumber}" if askpass else ""
+        infix2 = "s" if sandbox else ""
+        fileName = f"ipc{infix1}{infix2}.sh"
         launcherScript = Path(qTempDir(), fileName)
 
         if not launcherScript.exists():
-            module = GFIpcProtocol.__module__
-            tokens = ToolCommands.spawnNewInstance(module, sandbox=sandbox)
-
-            # Using sys.path instead of PYTHONPATH because the latter may be empty in unit tests
-            paths = sys.path[:]
-            with suppress(ValueError):
-                paths.remove("")  # disallow empty path (current working directory)
-            pythonpath = shlex.quote(os.pathsep.join(paths))
-
-            # Discard stderr to avoid forwarding Qt error spam to ProcessDialog.
-            script = (
-                '#!/usr/bin/env bash\n'
-                f'export PYTHONPATH={pythonpath}\n'
-                f'exec {shlex.join(tokens)} "$@"\n'  # 2>/dev/null\n')
-            )
-
-            launcherScript.write_text(script, "utf-8")
+            scriptText = self._clientScript(sandbox, askpass)
+            launcherScript.write_text(scriptText, "utf-8")
             launcherScript.chmod(0o500)
 
-        return {
-            varName: str(launcherScript),
-            GFIpcProtocol.EnvKey: self.serverKey,
-        }
+        if askpass:
+            return str(launcherScript)
+        else:
+            return shlex.join([str(launcherScript), self.socketPath])
+
+    def _clientScript(self, sandbox: bool, askpass: bool) -> str:
+        module = GFIpcProtocol.__module__
+        tokens = ToolCommands.spawnNewInstance(module, sandbox=sandbox)
+
+        # Using sys.path instead of PYTHONPATH because the latter may be empty in unit tests
+        paths = sys.path[:]
+        with suppress(ValueError):
+            paths.remove("")  # disallow empty path (current working directory)
+        pythonpath = shlex.quote(os.pathsep.join(paths))
+
+        inargs = []
+        if askpass:
+            inargs.append("--askpass")
+            inargs.append(shlex.quote(self.socketPath))
+            inargs.append("--")
+
+        return (
+            '#!/usr/bin/env bash\n'
+            f'export PYTHONPATH={pythonpath}\n'
+            f'exec {shlex.join(tokens)} {" ".join(inargs)} "$@"\n'
+        )

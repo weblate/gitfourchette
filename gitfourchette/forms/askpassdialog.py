@@ -4,18 +4,15 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-from gitfourchette.pycompat import *
-
-import os
 import re
-import shlex
 from enum import StrEnum
 from pathlib import Path
 
+from gitfourchette.application import GFApplication
+from gitfourchette.ipc.ipcprotocol import GFIpcProtocol
 from gitfourchette.localization import *
 from gitfourchette.forms.textinputdialog import TextInputDialog
 from gitfourchette.qt import *
-from gitfourchette.sshagent import SshAgent
 from gitfourchette.toolbox import *
 
 _ClearTextPromptPatterns = [
@@ -61,13 +58,22 @@ class AskpassPrompt(StrEnum):
 
 
 class AskpassDialog(TextInputDialog):
+    messageForClient = Signal(GFIpcProtocol.Response)
+
     promptKind: AskpassPrompt | str
 
     autoYesOnAcceptEmptyText: bool
     "Reply 'yes' if the dialog is accepted with an empty text input."
 
-    def __init__(self, parent: QWidget | None, prompt: str):
-        promptKind = os.environ.get("SSH_ASKPASS_PROMPT", AskpassPrompt.Entry)
+    def __init__(
+            self,
+            parent: QWidget | None,
+            prompt: str,
+            sshAskpassPrompt: str = "",
+            sshAuthSock: str = "",
+            sshAgentPid: str = "",
+    ):
+        promptKind = AskpassPrompt(sshAskpassPrompt)
         self.promptKind = promptKind
 
         prompt = prompt.strip()
@@ -94,12 +100,12 @@ class AskpassDialog(TextInputDialog):
 
         subtitle = ""
         if promptKind == AskpassPrompt.Entry and not clearText:
-            hasBuiltInAgent = bool(os.environ.get(SshAgent.EnvBuiltInAgentPid, ""))
-            hasAgentSocket = os.path.exists(os.environ.get("SSH_AUTH_SOCK", ""))
-            if hasBuiltInAgent:
+            ownAgent = GFApplication.instance().sshAgent
+
+            if ownAgent and sshAgentPid == ownAgent.environment["SSH_AGENT_PID"]:
                 subtitle = _("{app}’s ssh-agent will remember this credential "
                              "until you quit the application.", app=qAppName())
-            elif hasAgentSocket:
+            elif Path(sshAuthSock).exists():
                 subtitle = _("An ssh-agent is running on your system. It will remember this credential "
                              "if {0} is enabled in your SSH configuration.", tquo("AddKeysToAgent"))
             else:
@@ -220,60 +226,14 @@ class AskpassDialog(TextInputDialog):
         return ""
 
     def onFinish(self, result: int):
-        if not result:
-            QApplication.instance().exit(1)
-            return
+        m = GFIpcProtocol.Response()
 
-        if self.promptKind == AskpassPrompt.Entry:
+        if not result:  # canceled
+            m.abort = _("You clicked the Cancel button.")
+        elif self.promptKind == AskpassPrompt.Entry:
             secret = self.lineEdit.text()
-
             if not secret and self.autoYesOnAcceptEmptyText:
                 secret = "yes"
+            m.print = secret
 
-            print(secret)
-
-        QApplication.instance().exit(0)
-
-    @classmethod
-    def run(cls, prompt: str = ""):
-        app = QApplication.instance()
-        prompt = prompt or " ".join(app.arguments()[1:])
-        dialog = AskpassDialog(None, prompt)
-        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        dialog.show()
-        return dialog
-
-    @classmethod
-    def environmentForChildProcess(cls, sandbox: bool):
-        from gitfourchette.exttools.toolcommands import ToolCommands
-
-        fileName = "askpass_sandboxed.sh" if sandbox else "askpass.sh"
-        launcherScript = Path(qTempDir(), fileName)
-
-        if not launcherScript.exists():
-            tokens = ToolCommands.spawnNewInstance(__name__, sandbox=sandbox)
-
-            # Discard stderr to avoid forwarding Qt error spam to ProcessDialog.
-            script = ('#!/usr/bin/env bash\n'
-                      f'exec {shlex.join(tokens)} "$@" 2>/dev/null\n')
-
-            launcherScript.write_text(script, "utf-8")
-            launcherScript.chmod(0o755)
-
-        return {
-            "SSH_ASKPASS": str(launcherScript),
-            "SSH_ASKPASS_REQUIRE": "force",
-        }
-
-
-def main():
-    from gitfourchette.application import GFApplication
-    import sys
-    app = GFApplication(sys.argv, barebones=True)
-    _dontCollectMe = AskpassDialog.run()
-    returnCode = app.exec()
-    return sys.exit(returnCode)
-
-
-if __name__ == "__main__":
-    main()
+        self.messageForClient.emit(m)

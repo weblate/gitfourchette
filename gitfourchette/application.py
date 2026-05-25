@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from gitfourchette.settings import Session
     from gitfourchette.mount.mountmanager import MountManager
     from gitfourchette.sshagent import SshAgent
+    from gitfourchette.ipc.ipcserver import GFIpcServer
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ class GFApplication(QApplication):
     initialSession: Session | None
     commandLinePaths: list
     sshAgent: SshAgent | None
+    askpassServer: GFIpcServer | None
     mountManager: MountManager | None
 
     @classmethod
@@ -72,6 +74,7 @@ class GFApplication(QApplication):
         self.installedLocale = None
         self.qtbaseTranslator = QTranslator(self)
         self.sshAgent = None
+        self.askpassServer = None
         self.restylingGuard = 0
 
         # Show an error dialog in case of unhandled exceptions.
@@ -266,6 +269,10 @@ class GFApplication(QApplication):
             settings.history.write()
         self.stopSshAgent()
 
+        self.askpassServer.close()
+        self.askpassServer.deleteLater()
+        self.askpassServer = None
+
         assert not self.mountManager.mountedCommits, "mount points remaining"
         self.mountManager.deleteLater()
         self.mountManager = None
@@ -283,6 +290,7 @@ class GFApplication(QApplication):
         from gitfourchette.settings import QtApiNames
         from gitfourchette.forms.donateprompt import DonatePrompt
         from gitfourchette.mount.mountmanager import MountManager
+        from gitfourchette.ipc.ipcserver import GFIpcServer
 
         assert self.mainWindow is None, "already have a MainWindow"
         assert self.initialSession is not None, "initial session should have been prepared before bootUi"
@@ -311,6 +319,9 @@ class GFApplication(QApplication):
 
         # Initialize SSH agent
         self.applySshAgentPref()
+
+        self.askpassServer = GFIpcServer(self, singleShot=False, startNow=False)
+        self.askpassServer.clientConnected.connect(self.onAskpassClientConnected)
 
         # Restore session then consume it
         self.mainWindow.restoreSession(self.initialSession, self.commandLinePaths)
@@ -744,3 +755,17 @@ class GFApplication(QApplication):
             context=Qt.ShortcutContext.WindowShortcut)
 
         logger.debug(f"Installed return shortcut on {dialog}")
+
+    def onAskpassClientConnected(self, handshake: dict[str,str], socket: QLocalSocket):
+        from gitfourchette.forms.askpassdialog import AskpassDialog
+        from gitfourchette.ipc.ipcprotocol import GFIpcProtocol
+
+        dialog = AskpassDialog(
+            self.mainWindow,
+            prompt=handshake["args"],
+            sshAskpassPrompt=handshake["SSH_ASKPASS_PROMPT"],
+            sshAuthSock=handshake["SSH_AUTH_SOCK"],
+            sshAgentPid=handshake["SSH_AGENT_PID"],
+        )
+        dialog.messageForClient.connect(lambda response: GFIpcProtocol.writeMessage(socket, response))
+        dialog.show()

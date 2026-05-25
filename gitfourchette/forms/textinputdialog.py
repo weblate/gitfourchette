@@ -39,8 +39,11 @@ class TextInputDialog(QDialog):
             promptLabel.setTextFormat(Qt.TextFormat.AutoText)
             promptLabel.setWordWrap(True)
             layout.addWidget(promptLabel, 0, 0)
+            self.promptLabel = promptLabel
             if selectableLabel:
                 promptLabel.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        else:
+            self.promptLabel = None
 
         if hint:
             hintButton = QHintButton(self, hint)

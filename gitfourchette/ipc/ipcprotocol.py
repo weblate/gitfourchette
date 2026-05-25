@@ -4,67 +4,69 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+import argparse
+import json
 import os
 import sys
-from enum import StrEnum
 
-from gitfourchette import pycompat  # noqa: F401 - StrEnum for Python 3.10
-from gitfourchette.qt import QLocalSocket
+from gitfourchette.qt import QLocalSocket, PYSIDE6
 
 
 class GFIpcProtocol:
-    EnvKey = "_GITFOURCHETTE_IPCKEY"
-
     FastTimeout = 5000  # timeout for "instantaneous" client/server comms
     UserTimeout = -1  # timeout when waiting for user input
-
-    TagLength = 1
-
-    class MessageTag(StrEnum):
-        ClientHandshake = "C"
-        ServerReply = "S"
-        Abort = "A"
+    MaxPayloadSize = 4096
 
     @classmethod
-    def writeMessage(cls, socket: QLocalSocket, tag: MessageTag, text: str = ""):
-        assert len(tag) == cls.TagLength
-        payload = (tag + text).encode("utf-8", errors="replace")
+    def writeMessage(cls, socket: QLocalSocket, payloadObj: dict[str, str]):
+        payload = json.dumps(payloadObj).encode("utf-8", errors="replace")
         socket.write(payload)
         didWrite = socket.waitForBytesWritten(cls.FastTimeout)
         if not didWrite:
             raise TimeoutError(f"timed out writing on socket - {socket.errorString()}")
 
     @classmethod
-    def readMessage(cls, socket: QLocalSocket, timeout: int) -> tuple[MessageTag, str]:
+    def readMessage(cls, socket: QLocalSocket, timeout: int) -> dict[str, str]:
         if not socket.waitForReadyRead(timeout):
-            raise TimeoutError(f"timed out ({timeout} ms) waiting for data on socket - {socket.errorString()}")
+            raise TimeoutError(f"timed out waiting for data on socket - {socket.errorString()}")
 
-        payload = socket.readAll().data().decode("utf-8", errors="replace")
-        tag = cls.MessageTag(payload[0 : cls.TagLength])
-        text = payload[cls.TagLength:]
-        return tag, text
+        payload = socket.read(cls.MaxPayloadSize)
+        if PYSIDE6:
+            payload = bytes(payload)
+        assert isinstance(payload, bytes)
+        payloadObj = json.loads(payload)
+        return payloadObj
 
     @classmethod
     def clientMain(cls):
-        serverKey = os.environ[cls.EnvKey]
-        handshakePayload = " ".join(sys.argv[1:])
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--askpass", action="store_true")
+        parser.add_argument("socket")
+        parser.add_argument("forward", nargs="*")
+        args = parser.parse_args()
 
         socket = QLocalSocket(None)
-        socket.connectToServer(serverKey)
+        socket.connectToServer(args.socket)
         if not socket.waitForConnected(cls.FastTimeout):
             raise TimeoutError(f"timed out waiting for connection - {socket.errorString()}")
 
-        cls.writeMessage(socket, cls.MessageTag.ClientHandshake, handshakePayload)
+        handshakeObj = {"args": " ".join(args.forward)}
+        if args.askpass:
+            for var in ["SSH_ASKPASS_PROMPT", "SSH_AUTH_SOCK", "SSH_AGENT_PID"]:
+                handshakeObj[var] = os.environ.get(var, "")
 
-        tag, replyPayload = cls.readMessage(socket, timeout=cls.UserTimeout)
-        if tag != cls.MessageTag.ServerReply:
-            raise ValueError(f"unexpected server reply tag: {tag}")
+        cls.writeMessage(socket, handshakeObj)
+        responseObj = cls.readMessage(socket, timeout=cls.UserTimeout)
 
         socket.disconnectFromServer()
         socket.deleteLater()
 
-        if replyPayload:
-            print(replyPayload, flush=True)
+        if "print" in responseObj:
+            print(responseObj["print"], flush=True)
+
+        if "abort" in responseObj:
+            print(responseObj["abort"], file=sys.stderr)
+            sys.exit(1)
 
 
 if __name__ == '__main__':

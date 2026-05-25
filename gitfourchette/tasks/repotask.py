@@ -13,9 +13,10 @@ import shlex
 from collections.abc import Generator
 from typing import Any, Literal, ClassVar
 
+from gitfourchette.application import GFApplication
 from gitfourchette.exttools.toolcommands import ToolCommands
-from gitfourchette.forms.askpassdialog import AskpassDialog
 from gitfourchette.gitdriver import GitDriver
+from gitfourchette.ipc.ipcserver import GFIpcServer
 from gitfourchette.manualgc import gcHint
 from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator
@@ -200,6 +201,8 @@ class RepoTask(QObject):
     """
     Task that manipulates a repository.
     """
+
+    _boundAskpassServerProcessAttr: ClassVar = "_RepoTask_boundAskpassServer"
 
     type Flow[FlowReturnType] = Generator[FlowControlToken, None, FlowReturnType]
 
@@ -509,6 +512,7 @@ class RepoTask(QObject):
             yield from processWrapper.coWaitFinished(autoFail)
         finally:
             self._currentProcess = None
+            processWrapper.cleanup()
             processWrapper.deleteLater()
 
     def flowCallGit(
@@ -531,10 +535,10 @@ class RepoTask(QObject):
             env: dict[str, str] | None = None,
     ) -> GitDriver:
         from gitfourchette import settings
-        from gitfourchette.application import GFApplication
         from gitfourchette.porcelain import GitConfigHelper
 
         repo = self.repo
+        app = GFApplication.instance()
 
         if not workdir:
             workdir = repo.workdir if repo is not None else ""
@@ -556,12 +560,16 @@ class RepoTask(QObject):
             env["TMPDIR"] = qTempDir()
 
         # SSH_ASKPASS
+        askpassServer = None
         if settings.prefs.ownAskpass:
-            env |= AskpassDialog.environmentForChildProcess(settings.prefs.isGitSandboxed())
+            askpassServer = app.askpassServer
+            assert askpassServer is not None
+            env["SSH_ASKPASS"] = askpassServer.clientCommand(askpass=True)
+            env["SSH_ASKPASS_REQUIRE"] = "force"
 
         # Use internal ssh-agent
         if settings.prefs.ownSshAgent:
-            sshAgent = GFApplication.instance().sshAgent
+            sshAgent = app.sshAgent
             if sshAgent:
                 env |= sshAgent.environment
                 sshOptions += ["-o", "AddKeysToAgent=yes"]
@@ -594,6 +602,8 @@ class RepoTask(QObject):
             process.setWorkingDirectory(workdir)
         ToolCommands.setQProcessEnvironment(process, env)
         ToolCommands.wrapFlatpakCommand(process)
+
+        setattr(process, RepoTask._boundAskpassServerProcessAttr, askpassServer)
 
         return process
 
@@ -1214,9 +1224,20 @@ class ProcessWrapper(QObject):
     def _onStarted(self):
         self._didStart = True
 
-    def coWaitStart(self):
+    def _boundAskpassServer(self) -> GFIpcServer | None:
+        askpassServer = getattr(self.process, RepoTask._boundAskpassServerProcessAttr, None)
+        assert isinstance(askpassServer, GFIpcServer | None)
+        return askpassServer
+
+    def coWaitStart(self) -> RepoTask.Flow[None]:
         logger.info(self.formatCommand(simple=True))
 
+        # Start askpass server before the process
+        askpass = self._boundAskpassServer()
+        if askpass is not None:
+            askpass.listenOnSocketPath()
+
+        # Start the process
         process = self.process
         process.start()
 
@@ -1242,7 +1263,7 @@ class ProcessWrapper(QObject):
             message += f"<p style='font-size: small'><code>{escape(self.formatCommand(simple=True))}</code><br>"
             raise AbortTask(message)
 
-    def coWaitFinished(self, autoFail=True):
+    def coWaitFinished(self, autoFail=True) -> RepoTask.Flow[None]:
         process = self.process
         assert self._didStart
 
@@ -1275,6 +1296,11 @@ class ProcessWrapper(QObject):
                     message += f"<p style='white-space: pre-wrap'>{escape(stderr)}</p>"
 
             raise AbortTask(message, details=self.formatCommand())
+
+    def cleanup(self):
+        askpass = self._boundAskpassServer()
+        if askpass is not None:
+            askpass.close()
 
     def formatCommand(self, simple=False):
         process = self.process

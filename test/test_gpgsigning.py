@@ -11,13 +11,13 @@ import textwrap
 import pytest
 
 from gitfourchette.exttools.toolcommands import ToolCommands
+from gitfourchette.forms.askpassdialog import AskpassDialog
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.commitinfodialog import CommitInfoDialog
 from gitfourchette.gitdriver import GitDriver
 from gitfourchette.nav import NavLocator
 from gitfourchette.repomodel import GpgStatus
 from gitfourchette.tasks import VerifyGpgQueue
-from .test_remotelink import AskpassShim
 from .util import *
 
 
@@ -178,21 +178,22 @@ def testCommitWithPgpSignature(tempDir, mainWindow, tempGpgHome, amend):
 @requiresGpg
 @pytest.mark.parametrize("amend", [False, True], ids=["commit", "amend"])
 @pytest.mark.parametrize("passphrase", [False, True], ids=["simple", "passphrase"])
-def testCommitWithSshSignature(tempDir, mainWindow, tempGpgHome, amend, passphrase):
+def testCommitWithSshSignature(tempDir, mainWindow, tempGpgHome, taskThread, amend, passphrase):
     wd = unpackRepo(tempDir)
 
     keyName = "simple" if not passphrase else "pygit2_empty"
     setUpForSshSigning(tempDir.name, wd, keyName)
 
-    rw = mainWindow.openRepo(wd)
+    mainWindow.openRepo(wd)
+    rw = waitForRepoWidget(mainWindow)
 
     if not amend:
         rw.diffArea.commitButton.click()
-        acceptQMessageBox(rw, "empty commit")
+        waitForQMessageBox(rw, "empty commit").accept()
     else:
         triggerMenuAction(mainWindow.menuBar(), "repo/amend last commit")
 
-    commitDialog = findQDialog(rw, "commit", CommitDialog)
+    commitDialog = waitForQDialog(rw, "commit", t=CommitDialog)
     commitDialog.ui.summaryEditor.setText("TEST SSH-SIGNED COMMIT")
 
     signAction = commitDialog.ui.gpg.actions()[0]
@@ -202,12 +203,15 @@ def testCommitWithSshSignature(tempDir, mainWindow, tempGpgHome, amend, passphra
     keyDisplay = commitDialog.ui.gpg.actions()[1]
     assert keyName in keyDisplay.text()
 
-    with AskpassShim(password="empty") as askpassShim:
-        commitDialog.accept()
+    commitDialog.accept()
 
-        if passphrase:
-            # Make sure we were prompted to enter the passphrase for the correct key
-            assert re.search("Enter passphrase( for.+pygit2_empty)?", askpassShim.dumpFile.read_text())
+    if passphrase:
+        askpassDialog = waitForQDialog(mainWindow, "enter ssh credentials", t=AskpassDialog)
+        assert findTextInWidget(askpassDialog.promptLabel, r"Enter passphrase( for.+pygit2_empty)?")
+        askpassDialog.lineEdit.setText("empty")
+        askpassDialog.accept()
+
+    waitUntilTrue(lambda: not rw.taskRunner.isBusy())
 
     commit = rw.repo.head_commit
     assert commit.message.strip() == "TEST SSH-SIGNED COMMIT"
