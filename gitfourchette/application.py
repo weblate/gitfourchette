@@ -12,7 +12,7 @@ import os
 import sys
 from pathlib import Path
 from string import Template
-from typing import Any
+from typing import Any, ClassVar
 
 # Import as few internal modules as possible here to avoid premature initialization
 # from cascading imports before the QApplication has booted.
@@ -26,11 +26,17 @@ if TYPE_CHECKING:
     from gitfourchette.mount.mountmanager import MountManager
     from gitfourchette.sshagent import SshAgent
     from gitfourchette.ipc.ipcserver import GFIpcServer
+    from gitfourchette.ipc.singleinstancesocket import SingleInstanceSocket
 
 logger = logging.getLogger(__name__)
 
 
 class GFApplication(QApplication):
+    # Constants
+    OptionNamesNewInstance: ClassVar = ["n", "new"]
+    "CLI option names to start a new instance of the application."
+
+    # Signals
     restyle = Signal()
     prefsChanged = Signal()
     regainForeground = Signal()
@@ -49,6 +55,7 @@ class GFApplication(QApplication):
     commandLinePaths: list
     sshAgent: SshAgent | None
     askpassServer: GFIpcServer | None
+    singleInstanceSocket: SingleInstanceSocket | None
     mountManager: MountManager | None
 
     @classmethod
@@ -75,6 +82,7 @@ class GFApplication(QApplication):
         self.qtbaseTranslator = QTranslator(self)
         self.sshAgent = None
         self.askpassServer = None
+        self.singleInstanceSocket = None
         self.restylingGuard = 0
 
         # Show an error dialog in case of unhandled exceptions.
@@ -135,12 +143,26 @@ class GFApplication(QApplication):
             return
 
         # Process command line
+        newInstanceOption = QCommandLineOption(self.OptionNamesNewInstance, _("Start a new instance instead of switching to an existing one."))
+
         parser = QCommandLineParser()
         parser.setApplicationDescription(qAppName() + " - " + _("The comfortable Git UI for Linux."))
         parser.addHelpOption()
         parser.addVersionOption()
+        parser.addOption(newInstanceOption)
         parser.addPositionalArgument("repos", _("Repository paths to open on launch."), "[repos...]")
         parser.process(argv)
+
+        # Get initial session tabs
+        commandLinePaths = parser.positionalArguments()
+        commandLinePaths = [str(Path(p).resolve()) for p in commandLinePaths]
+        self.commandLinePaths = commandLinePaths
+
+        # Try to raise existing instance
+        if not parser.isSet(newInstanceOption):
+            from gitfourchette.ipc.singleinstancesocket import SingleInstanceSocket
+            if SingleInstanceSocket.connectToExistingInstance(commandLinePaths):
+                sys.exit(0)
 
         # Schedule cleanup on quit
         self.aboutToQuit.connect(self.endSession)
@@ -151,11 +173,6 @@ class GFApplication(QApplication):
         # Prime singletons
         GlobalShortcuts.initialize()
         TaskBook.initialize()
-
-        # Get initial session tabs
-        commandLinePaths = parser.positionalArguments()
-        commandLinePaths = [str(Path(p).resolve()) for p in commandLinePaths]
-        self.commandLinePaths = commandLinePaths
 
     # -------------------------------------------------------------------------
 
@@ -291,6 +308,7 @@ class GFApplication(QApplication):
         from gitfourchette.forms.donateprompt import DonatePrompt
         from gitfourchette.mount.mountmanager import MountManager
         from gitfourchette.ipc.ipcserver import GFIpcServer
+        from gitfourchette.ipc.singleinstancesocket import SingleInstanceSocket
 
         assert self.mainWindow is None, "already have a MainWindow"
         assert self.initialSession is not None, "initial session should have been prepared before bootUi"
@@ -320,6 +338,9 @@ class GFApplication(QApplication):
         # Initialize SSH agent
         self.applySshAgentPref()
 
+        self.singleInstanceSocket = SingleInstanceSocket(self.mainWindow)
+        self.singleInstanceSocket.restoreSession.connect(self.restoreSessionFromOtherInstance)
+
         self.askpassServer = GFIpcServer(self, singleShot=False, startNow=False)
         self.askpassServer.clientConnected.connect(self.onAskpassClientConnected)
 
@@ -343,6 +364,17 @@ class GFApplication(QApplication):
         DonatePrompt.onBoot(self.mainWindow)
 
         self.installEventFilter(self)
+
+    def restoreSessionFromOtherInstance(self, paths: list[str]):
+        if not self.mainWindow:
+            return
+
+        from gitfourchette import settings
+        session = settings.Session(paths, activeTabIndex=len(paths)-1)
+
+        self.mainWindow.raise_()
+        self.mainWindow.activateWindow()
+        self.mainWindow.restoreSession(session, sloppyPaths=paths)
 
     def onMainWindowDestroyed(self):
         logger.debug("Main window destroyed")

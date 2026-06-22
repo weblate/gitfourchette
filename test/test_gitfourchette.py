@@ -5,6 +5,7 @@
 # -----------------------------------------------------------------------------
 
 import dataclasses
+import json
 import os.path
 from contextlib import suppress
 
@@ -922,3 +923,20 @@ def testSshAgentSandboxingMatchesGit(tempDir, mainWindow):
     app.applyPrefs(gitPath="/usr/bin/git")
     assert not settings.prefs.isGitSandboxed()
     assert not app.sshAgent.isSandboxed()
+
+
+def testRaiseExistingInstance(tempDir, mainWindow):
+    socketPath = GFApplication.instance().singleInstanceSocket.socketPath
+
+    wd = unpackRepo(tempDir)
+    handshake = {"paths": shlex.join([wd]), "_protocol": APP_VERSION}
+    handshakeBlob = json.dumps(handshake).encode("utf-8")
+
+    socket = QLocalSocket()
+    socket.connected.connect(lambda: socket.write(handshakeBlob))
+
+    assert mainWindow.tabs.count() == 0
+
+    socket.connectToServer(socketPath)
+    waitUntilTrue(lambda: mainWindow.tabs.count() == 1)
+    assert os.path.samefile(wd, mainWindow.currentRepoWidget().workdir)

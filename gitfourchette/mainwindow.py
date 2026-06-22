@@ -980,7 +980,9 @@ class MainWindow(QMainWindow):
         # restored in application.py to avoid flashing a window with incorrect
         # dimensions on boot
 
-        RepoWidget.sharedSplitterSizes = copy.deepcopy(session.splitterSizes)
+        if session.splitterSizes:
+            RepoWidget.sharedSplitterSizes.clear()
+            RepoWidget.sharedSplitterSizes.update(copy.deepcopy(session.splitterSizes))
 
         # Stop here if there are no tabs to load
         if not session.tabs:

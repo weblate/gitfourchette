@@ -25,22 +25,33 @@ class GFIpcServer(QLocalServer):
 
     socketPath: str
 
-    def __init__(self, parent: QObject, singleShot: bool, startNow: bool = True):
+    def __init__(
+            self,
+            parent: QObject,
+            singleShot: bool,
+            startNow: bool = True,
+            socketPath: str = "",
+    ):
         super().__init__(parent)
 
+        self.singleShot = singleShot
         self.socketNumber = GFIpcServer._globalSocketCounter
         GFIpcServer._globalSocketCounter += 1
-        self.socketPath = str(Path(qTempDir(), f"ipc{self.socketNumber}.sock"))
-        self.singleShot = singleShot
+
+        if not socketPath:
+            socketPath = str(Path(qTempDir(), f"ipc{self.socketNumber}.sock"))
+        if len(socketPath) >= 104:  # pragma: no cover
+            logger.warning(f"very long socket path may fail on some platforms: {socketPath}")
+        self.socketPath = socketPath
 
         self.setSocketOptions(QLocalServer.SocketOption.UserAccessOption)
         self.setMaxPendingConnections(1)
         self.newConnection.connect(self.onNewConnection)
 
         if startNow:
-            doesListen = self.listenOnSocketPath()
-            logger.debug(f"IPC server listening on {self.socketPath}: {doesListen} -- {self.fullServerName()}")
-            assert doesListen
+            isListening = self.listenOnSocketPath()
+            logger.debug(f"IPC server listening on {self.socketPath}: {isListening} -- {self.errorString()} -- {self.fullServerName()}")
+            assert isListening, self.errorString()
 
     def listenOnSocketPath(self) -> bool:
         return self.listen(self.socketPath)
@@ -57,9 +68,13 @@ class GFIpcServer(QLocalServer):
             self.close()
 
         # Get handshake from client
-        payload = GFIpcProtocol.readMessage(socket, timeout=GFIpcProtocol.FastTimeout)
-        if "args" not in payload:
-            logger.warning("invalid payload from client")
+        socket.readyRead.connect(lambda: self.onReadyReadGetHandshakeFromClient(socket))
+
+    def onReadyReadGetHandshakeFromClient(self, socket: QLocalSocket):
+        try:
+            payload = GFIpcProtocol.readMessage(socket)
+        except ValueError as ex:
+            logger.warning(f"Did not get client handshake: {ex}")
             socket.close()
             return
 
