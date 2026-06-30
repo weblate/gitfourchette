@@ -4,12 +4,22 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from gitfourchette import trtables
 from gitfourchette.forms.ui_rebasedialog import Ui_RebaseDialog
-from gitfourchette.localization import *
 from gitfourchette.qt import *
-from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLineWrapper, RebaseOp, RebaseOpLetters, RebaseLine
+from gitfourchette.rebase.rebasemenustyle import RebaseMenuStyle
+from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLineWrapper, RebaseOp, RebaseOpColors, RebaseOpLetters, RebaseLine
 from gitfourchette.rebase.rebasesequencedelegate import RebaseSequenceDelegate
-from gitfourchette.toolbox import ActionDef, escamp
+
+
+SupportedRebaseOps = {
+    RebaseOp.Pick,
+    # RebaseOp.Reword,  # TODO - need message edit support
+    RebaseOp.Edit,
+    # RebaseOp.Squash,  # TODO - need message edit support
+    RebaseOp.Fixup,
+    RebaseOp.Drop,
+}
 
 
 class RebaseDialog(QDialog):
@@ -26,11 +36,10 @@ class RebaseDialog(QDialog):
         assert self.view.uniformItemSizes()
 
         # Bind hotkeys
-        legalKeys = set("abcdefghijklmnopqrstuvwxyz")
-        for command in RebaseOp:
-            hotkey = RebaseOpLetters[command]
-            legalKeys.remove(hotkey)  # for debugging, raise KeyError if key assigned twice
-            QShortcut(hotkey, self.view, lambda c=command: self.setCommandOnSelection(c), context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        for op, hotkey in RebaseOpLetters.items():
+            if op not in SupportedRebaseOps:
+                continue
+            QShortcut(hotkey, self.view, lambda c=op: self.setCommandOnSelection(c), context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
     def setSequence(self, sequence: TRebaseSequence):
         self.view.clear()
@@ -51,6 +60,7 @@ class RebaseDialog(QDialog):
             yield item
 
     def setCommandOnSelection(self, command: RebaseOp):
+        assert command in SupportedRebaseOps, f"rebase op '{command}' not supported yet"
         for item in self.iterateSelectedItems():
             item.op = command
         self.view.viewport().update()
@@ -66,27 +76,32 @@ class RebaseDialog(QDialog):
         if not selectedOps:
             return None
 
-        opHelp = {
-            "pick"  : _("Use commit as-is"),
-            "reword": _("Use commit, edit message"),
-            "edit"  : _("Use commit, stop for amending"),
-            "squash": _("Meld into previous commit, combine messages"),
-            "fixup" : _("Meld into previous commit, keep previous message only"),
-            "drop"  : _("Remove commit"),
-        }
+        proxy = RebaseMenuStyle()
+        menu = QMenu(self)
+        menu.setStyle(proxy)
+        actionGroup = QActionGroup(menu)
+        actionGroup.setExclusionPolicy(QActionGroup.ExclusionPolicy.Exclusive)
 
-        actions = [
-            ActionDef(
-                op.capitalize() + " - " + escamp(opHelp[op]),
-                lambda c=op: self.setCommandOnSelection(c),
-                checkState=1 if op in selectedOps else -1,
-                radioGroup="RebaseOpRadioGroup"
-            )
-            for op in RebaseOp
-        ]
+        for op in RebaseOp:
+            if op not in SupportedRebaseOps:
+                continue
 
-        menu = ActionDef.makeQMenu(self, actions)
-        menu.setObjectName(self.objectName() + "ContextMenu")
+            opColor = RebaseOpColors[op]
+            opName = op.capitalize()
+            opAccel = RebaseOpLetters.get(op, "")
+            opHelp = trtables.enum(op)
+
+            richLabel = f"<span style='color: {opColor.name()}; font-weight: bold;'>{opName}{_(':')}</span> {opHelp}"
+            plainLabel = proxy.prepareRichLabel(richLabel, accelerator=opAccel)
+
+            action = QAction(menu)
+            action.setText(plainLabel)
+            action.setCheckable(True)
+            action.setChecked(op in selectedOps)
+            action.setActionGroup(actionGroup)
+            action.triggered.connect(lambda _checked, c=op: self.setCommandOnSelection(c))
+            menu.addAction(action)
+
         return menu
 
     def serializeSequence(self):

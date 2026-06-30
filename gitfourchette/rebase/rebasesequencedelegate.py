@@ -6,17 +6,9 @@
 
 import math
 
-from gitfourchette import colors
 from gitfourchette.qt import *
-from gitfourchette.rebase.rebasemodel import RebaseOp, RebaseLine
+from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpColors
 from gitfourchette.toolbox import shortHash, mixColors
-
-RebaseOpColors: dict[RebaseOp, QColor] = {
-    RebaseOp.Pick      : colors.olive,
-    RebaseOp.Edit      : colors.yellow,
-    RebaseOp.Fixup     : colors.teal,
-    RebaseOp.Drop      : colors.red,
-}
 
 _ItemRole = Qt.ItemDataRole.UserRole
 _FallbackColor = QColor(Qt.GlobalColor.magenta)

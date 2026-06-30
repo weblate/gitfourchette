@@ -108,6 +108,7 @@ def _enumTable() -> dict[type[Enum], dict[Enum, str]]:
     from gitfourchette.nav import NavContext
     from gitfourchette.porcelain import FileMode, NameValidationError, RepositoryState
     from gitfourchette.toolbox import toLengthVariants
+    from gitfourchette.rebase.rebasemodel import RebaseOp
     from gitfourchette.sidebar.sidebarmodel import SidebarItem
     from gitfourchette.settings import (
         WhitespaceMode,
@@ -251,6 +252,15 @@ def _enumTable() -> dict[type[Enum], dict[Enum, str]]:
         QtApiNames.PySide6: "PySide6",
         QtApiNames.PyQt6: "PyQt6",
         QtApiNames.PyQt5: "PyQt5"
+    }
+
+    table[RebaseOp] = {
+        RebaseOp.Pick: _("Use commit as-is"),
+        RebaseOp.Reword: _("Rewrite the commit’s message"),
+        RebaseOp.Edit: _("Stop for amending the commit’s contents"),
+        RebaseOp.Squash: _("Meld into previous commit, combine messages"),
+        RebaseOp.Fixup: _("Meld into previous commit, discard message"),
+        RebaseOp.Drop: _("Remove commit"),
     }
 
     table[RefSort] = {

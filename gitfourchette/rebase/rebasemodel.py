@@ -8,38 +8,48 @@ import dataclasses
 import enum
 import re
 
+from gitfourchette import colors
 from gitfourchette.qt import *
 
 
-# Commented entries are not supported by GitFourchette
 class RebaseOp(enum.StrEnum):
     Pick        = "pick"
-    # Reword      = "reword"  # TODO - need message edit support
+    Reword      = "reword"
     Edit        = "edit"
-    # Squash      = "squash"  # TODO - need message edit support
+    Squash      = "squash"
     Fixup       = "fixup"
-    # Exec        = "exec"
-    # Break       = "break"
+    Exec        = "exec"
+    Break       = "break"
     Drop        = "drop"
-    # Label       = "label"
-    # Reset       = "reset"
-    # Merge       = "merge"
-    # UpdateRef   = "update-ref"
+    Label       = "label"
+    Reset       = "reset"
+    Merge       = "merge"
+    UpdateRef   = "update-ref"
 
 
-RebaseOpLetters = {
-    "pick"      : "p",
-    "reword"    : "r",
-    "edit"      : "e",
-    "squash"    : "s",
-    "fixup"     : "f",
-    "exec"      : "x",
-    "break"     : "b",
-    "drop"      : "d",
-    "label"     : "l",
-    "reset"     : "t",
-    "merge"     : "m",
-    "update-ref": "u",
+RebaseOpLetters: dict[RebaseOp, str] = {
+    RebaseOp.Pick       : "p",
+    RebaseOp.Reword     : "r",
+    RebaseOp.Edit       : "e",
+    RebaseOp.Squash     : "s",
+    RebaseOp.Fixup      : "f",
+    RebaseOp.Exec       : "x",
+    RebaseOp.Break      : "b",
+    RebaseOp.Drop       : "d",
+    RebaseOp.Label      : "l",
+    RebaseOp.Reset      : "t",
+    RebaseOp.Merge      : "m",
+    RebaseOp.UpdateRef  : "u",
+}
+
+
+RebaseOpColors: dict[RebaseOp, QColor] = {
+    RebaseOp.Pick      : colors.olive,
+    RebaseOp.Edit      : colors.yellow,
+    RebaseOp.Reword    : QColor(0xFFD18DE1),
+    RebaseOp.Squash    : colors.blue,
+    RebaseOp.Fixup     : colors.teal,
+    RebaseOp.Drop      : colors.red,
 }
 
 
