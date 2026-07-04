@@ -33,7 +33,7 @@ from gitfourchette.syntax import LexJobCache
 from gitfourchette.tasks import RepoTaskRunner, TaskEffects, TaskBook
 from gitfourchette.tasks.misctasks import VerifyGpgQueue
 from gitfourchette.tasks.nettasks import AutoFetchRemotes
-from gitfourchette.tasks.rebasetasks import AbortRebase
+from gitfourchette.tasks.rebasetasks import AbortRebase, ContinueRebase
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
@@ -610,8 +610,7 @@ class RepoWidget(QWidget):
         bannerTitle = trtables.enum(rstate) if rstate != RepositoryState.NONE else ""
         bannerText = ""
         bannerHeeded = False
-        bannerAction = ""
-        bannerCallback = None
+        bannerActions = {}
 
         def abortMerge():
             tasks.AbortMerge.invoke(self)
@@ -631,8 +630,7 @@ class RepoWidget(QWidget):
             else:
                 bannerText += _("Conflicts need fixing.")
 
-            bannerAction = englishTitleCase(_("Abort merge"))
-            bannerCallback = abortMerge
+            bannerActions[_("Abort merge")] = abortMerge
 
         elif rstate == RepositoryState.CHERRYPICK:
             if not repo.any_conflicts:
@@ -641,8 +639,7 @@ class RepoWidget(QWidget):
             else:
                 bannerText += _("Conflicts need fixing.")
 
-            bannerAction = englishTitleCase(_("Abort cherry-pick"))
-            bannerCallback = abortMerge
+            bannerActions[_("Abort cherry-pick")] = abortMerge
 
         elif rstate == RepositoryState.REVERT:
             if not repo.any_conflicts:
@@ -651,27 +648,27 @@ class RepoWidget(QWidget):
             else:
                 bannerText += _("Conflicts need fixing.")
 
-            bannerAction = englishTitleCase(_("Abort revert"))
-            bannerCallback = abortMerge
+            bannerActions[_("Abort revert")] = abortMerge
 
         elif rstate == RepositoryState.NONE:
             if repo.any_conflicts:
                 bannerTitle = _("Conflicts")
                 bannerText = _("Fix the conflicts among the uncommitted changes.")
-                bannerAction = englishTitleCase(_("Reset index"))
-                bannerCallback = abortMerge
+                bannerActions[_("Reset index")] = abortMerge
 
         elif rstate == RepositoryState.REBASE_INTERACTIVE:
             info = self.repo.rebase_info()
-            bannerTitle = _("({0}/{1}) Rebasing {2} onto {3}", info.msgnum, info.end,
-                            tquoe(info.head_shorthand),
-                            tquoe(shortHash(info.onto, maybe=True)))
+            mainText = _("Rebasing {0} onto {1}",
+                         tquoe(info.head_shorthand),
+                         tquoe(shortHash(info.onto, maybe=True)))
+            bannerTitle = f"({info.msgnum}/{info.end}) {mainText}"
             bannerText = _("Currently stopped at {0}",
                            tquoe(shortHash(info.stopped_sha, maybe=True)))
-            bannerAction = englishTitleCase(_("Abort rebase"))
-            def abortRebase():
-                AbortRebase.invoke(self)
-            bannerCallback = abortRebase
+
+            bannerActions = {
+                _("Abort rebase"): lambda: AbortRebase.invoke(self),
+                _("Continue rebase"): lambda: ContinueRebase.invoke(self),
+            }
 
         else:
             bannerTitle = _("Warning")
@@ -683,8 +680,8 @@ class RepoWidget(QWidget):
         with DisableWidgetUpdatesContext(self.sideSplitter):
             if bannerText or bannerTitle:
                 self.mergeBanner.popUp(bannerTitle, bannerText, heeded=bannerHeeded, canDismiss=False)
-                if bannerAction:
-                    self.mergeBanner.addButton(bannerAction, bannerCallback)
+                for actionName, actionCallback in bannerActions.items():
+                    self.mergeBanner.addButton(englishTitleCase(actionName), actionCallback)
             else:
                 self.mergeBanner.setVisible(False)
 

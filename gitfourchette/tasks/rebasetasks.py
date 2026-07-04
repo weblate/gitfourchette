@@ -10,7 +10,7 @@ from pathlib import Path
 from gitfourchette.forms.rebasedialog import RebaseDialog
 from gitfourchette.ipc.ipcprotocol import GFIpcProtocol
 from gitfourchette.localization import _
-from gitfourchette.porcelain import Oid, RepositoryState
+from gitfourchette.porcelain import Oid, RepositoryState, Repo, RebaseInfo
 from gitfourchette.ipc.ipcserver import GFIpcServer
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import parseRebaseTodo
@@ -21,12 +21,36 @@ from gitfourchette.toolbox import shortHash, tquoe, paragraphs
 logger = logging.getLogger(__name__)
 
 
+def _rebaseEpilogStatus(repo: Repo, previousInfo: RebaseInfo) -> str:
+    rstate = repo.state()
+
+    if rstate == RepositoryState.REBASE_INTERACTIVE:
+        info = repo.rebase_info()
+        phrase1 = _("Rebasing {0} onto {1}",
+                     tquoe(info.head_shorthand),
+                     tquoe(shortHash(info.onto, maybe=True)))
+        phrase2 = _("Currently stopped at {0}",
+                     tquoe(shortHash(info.stopped_sha, maybe=True)))
+        phrase3 = _("Your input is needed to continue.")
+        return f"({info.msgnum}/{info.end}) {phrase1}. {phrase2}. {phrase3}"
+
+    if rstate == RepositoryState.NONE:
+        return _("Finished rebasing {0} onto {1}.",
+                 tquoe(previousInfo.head_shorthand),
+                 tquoe(shortHash(previousInfo.onto, maybe=True)))
+
+    # Not translating this one because it's an error
+    return f"Rebase stopped with state {rstate}."
+
+
 class InteractiveRebase(RepoTask):
     allowProcessDialog = Signal(bool)
 
     dialog: RebaseDialog
     server: GFIpcServer
     todoFilePath: str
+    currentSocket: QLocalSocket | None
+    rebaseInfoAtStart: RebaseInfo | None
 
     def prereqs(self):
         # TODO: need clean workdir, too
@@ -42,6 +66,8 @@ class InteractiveRebase(RepoTask):
 
     def flow(self, rootCommit: Oid):
         self.todoFilePath = ""
+        self.currentSocket = None
+        self.rebaseInfoAtStart = None
 
         dialog = RebaseDialog(self.parentWidget())
         dialog.finished.connect(lambda: self.setProcessDialogAllowed(True))
@@ -66,11 +92,8 @@ class InteractiveRebase(RepoTask):
             env=env,
         )
 
-        if self.repo.state() == RepositoryState.REBASE_INTERACTIVE:
-            info = self.repo.rebase_info()
-            self.epilog.status = _("Rebasing {0} onto {1}. Your input is needed to continue.",
-                                   tquoe(info.head_shorthand),
-                                   tquoe(shortHash(info.onto, maybe=True)))
+        assert self.rebaseInfoAtStart is not None
+        self.epilog.status = _rebaseEpilogStatus(self.repo, self.rebaseInfoAtStart)  # type: ignore[unreachable] # mypy is incorrect here
 
     def dumpSequenceAndDisconnect(self, sequenceText: str):
         assert self.todoFilePath
@@ -117,9 +140,7 @@ class InteractiveRebase(RepoTask):
 
         # Prepare epilog message in case of success.
         # We'll override it if we're still in a rebase state after the dialog is closed.
-        self.epilog.status = _("Finished rebasing {0} onto {1}.",
-                               tquoe(info.head_shorthand),
-                               tquoe(shortHash(info.onto, maybe=True)))
+        self.rebaseInfoAtStart = info
 
         self.dialog.show()
 
@@ -148,8 +169,20 @@ class AbortRebase(RepoTask):
             ),
         )
 
-        self.epilog.effects |= TaskEffects.DefaultRefresh
-
+        self.epilog.effects |= TaskEffects.Head | TaskEffects.Workdir
         yield from self.flowCallGit("rebase", "--abort")
 
         self.epilog.status = _("Rebase aborted.")
+
+
+class ContinueRebase(RepoTask):
+    def flow(self):
+        assert self.repo.state() == RepositoryState.REBASE_INTERACTIVE, \
+            f"attempting to continue from state {self.repo.state()}"
+
+        rebaseInfoAtStart = self.repo.rebase_info()
+
+        self.epilog.effects |= TaskEffects.Head | TaskEffects.Workdir
+        yield from self.flowCallGit("rebase", "--continue")
+
+        self.epilog.status = _rebaseEpilogStatus(self.repo, rebaseInfoAtStart)
