@@ -33,6 +33,7 @@ from gitfourchette.syntax import LexJobCache
 from gitfourchette.tasks import RepoTaskRunner, TaskEffects, TaskBook
 from gitfourchette.tasks.misctasks import VerifyGpgQueue
 from gitfourchette.tasks.nettasks import AutoFetchRemotes
+from gitfourchette.tasks.rebasetasks import AbortRebase
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
@@ -659,6 +660,18 @@ class RepoWidget(QWidget):
                 bannerText = _("Fix the conflicts among the uncommitted changes.")
                 bannerAction = englishTitleCase(_("Reset index"))
                 bannerCallback = abortMerge
+
+        elif rstate == RepositoryState.REBASE_INTERACTIVE:
+            info = self.repo.rebase_info()
+            bannerTitle = _("({0}/{1}) Rebasing {2} onto {3}", info.msgnum, info.end,
+                            tquoe(info.head_shorthand),
+                            tquoe(shortHash(info.onto, maybe=True)))
+            bannerText = _("Currently stopped at {0}",
+                           tquoe(shortHash(info.stopped_sha, maybe=True)))
+            bannerAction = englishTitleCase(_("Abort rebase"))
+            def abortRebase():
+                AbortRebase.invoke(self)
+            bannerCallback = abortRebase
 
         else:
             bannerTitle = _("Warning")

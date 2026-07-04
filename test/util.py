@@ -12,6 +12,7 @@ import tempfile
 import warnings
 import zipfile
 from collections.abc import Callable
+from contextlib import contextmanager
 from os import PathLike
 from pathlib import Path
 from typing import Literal
@@ -214,6 +215,18 @@ class MockDesktopServicesContext(QObject):
             QDesktopServices.unsetUrlHandler(protocol)
         if self.parent() is None:
             self.deleteLater()
+
+
+@contextmanager
+def AsynchronousTaskContext(taskRunner):
+    assert not taskRunner.isBusy()
+    assert taskRunner.ForceSerial
+    taskRunner.__class__.ForceSerial = False
+
+    yield
+
+    taskRunner.__class__.ForceSerial = True
+    waitUntilTrue(lambda: not taskRunner.isBusy())
 
 
 def clearSessionwideIdentity():

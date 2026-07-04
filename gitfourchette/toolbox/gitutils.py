@@ -93,7 +93,14 @@ def abbreviatePerson(sig: Signature, style: AuthorDisplayStyle = AuthorDisplaySt
     return sig.email  # type: ignore[unreachable]
 
 
-def shortHash(oid: Oid | str) -> str:
+def shortHash(oid: Oid | str, maybe=False) -> str:
+    """
+    Shorten an Oid or str to the length defined in user preferences
+    (shortHashChars). If `maybe` is true, shorten only Oid, leave str intact.
+    """
+    if maybe and not isinstance(oid, Oid):
+        return oid
+
     from gitfourchette.settings import prefs
     return str(oid)[:prefs.shortHashChars]
 

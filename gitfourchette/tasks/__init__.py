@@ -74,6 +74,7 @@ from gitfourchette.tasks.nettasks import (
     UpdateSubmodulesRecursive,
 )
 from gitfourchette.tasks.rebasetasks import (
+    AbortRebase,
     InteractiveRebase,
 )
 from gitfourchette.tasks.remotetasks import (

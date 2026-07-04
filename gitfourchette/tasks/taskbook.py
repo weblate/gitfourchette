@@ -30,6 +30,7 @@ class TaskBook:
     def retranslate(cls):
         cls.names = {
             tasks.AbortMerge: _("Abort merge"),
+            tasks.AbortRebase: _("Abort rebase"),
             tasks.AbsorbSubmodule: _("Absorb submodule"),
             tasks.AutoFetchRemotes: _("Auto-fetch remotes"),
             tasks.AcceptMergeConflictResolution: _("Accept merge conflict resolution"),
