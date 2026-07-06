@@ -13,6 +13,7 @@ from gitfourchette.localization import _
 from gitfourchette.porcelain import Oid, RepositoryState, Repo, RebaseInfo
 from gitfourchette.ipc.ipcserver import GFIpcServer
 from gitfourchette.qt import *
+from gitfourchette.rebase.editmsgautofillserver import EditmsgAutoFillServer
 from gitfourchette.rebase.rebasemodel import parseRebaseTodo
 from gitfourchette.tasks import TaskPrereqs, TaskEffects
 from gitfourchette.tasks.repotask import RepoTask
@@ -74,22 +75,20 @@ class InteractiveRebase(RepoTask):
         dialog.accepted.connect(self.onDialogAccepted)
         dialog.rejected.connect(self.onDialogRejected)
 
-        server = GFIpcServer(self, singleShot=True, startNow=True)
-        server.clientConnected.connect(self.onClientConnected)
+        sequenceServer = GFIpcServer(self, singleShot=True, startNow=True)
+        sequenceServer.clientConnected.connect(self.onClientConnected)
 
         self.dialog = dialog
-        self.server = server
-
-        env = {
-            "GIT_SEQUENCE_EDITOR": server.clientCommand(),
-        }
 
         # TODO: DON'T wait for finished synchronously!
         yield from self.flowCallGit(
             "-c", "core.abbrev=no",
             "rebase", "-i", str(rootCommit),
             # "--keep-base",
-            env=env,
+            env={
+                "GIT_SEQUENCE_EDITOR": sequenceServer.clientCommand(),
+                "GIT_EDITOR": EditmsgAutoFillServer(self).clientCommand(),
+            },
         )
 
         assert self.rebaseInfoAtStart is not None
@@ -182,7 +181,17 @@ class ContinueRebase(RepoTask):
 
         rebaseInfoAtStart = self.repo.rebase_info()
 
+        env = {}
+
+        # We need GIT_EDITOR if any reword operations are pending.
+        todoPath = Path(self.repo.in_gitdir("rebase-merge/git-rebase-todo"))
+        todoText = todoPath.read_text("utf-8")
+        todoSequence = parseRebaseTodo(todoText)
+        if any(item.op.isEditable() for item in todoSequence):
+            editorServer = EditmsgAutoFillServer(self)
+            env["GIT_EDITOR"] = editorServer.clientCommand()
+
         self.epilog.effects |= TaskEffects.Head | TaskEffects.Workdir
-        yield from self.flowCallGit("rebase", "--continue")
+        yield from self.flowCallGit("rebase", "--continue", env=env)
 
         self.epilog.status = _rebaseEpilogStatus(self.repo, rebaseInfoAtStart)

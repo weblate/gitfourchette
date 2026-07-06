@@ -14,7 +14,7 @@ from gitfourchette.rebase.rebasesequencedelegate import RebaseSequenceDelegate
 
 SupportedRebaseOps = {
     RebaseOp.Pick,
-    # RebaseOp.Reword,  # TODO - need message edit support
+    RebaseOp.Reword,
     RebaseOp.Edit,
     # RebaseOp.Squash,  # TODO - need message edit support
     RebaseOp.Fixup,
@@ -33,6 +33,7 @@ class RebaseDialog(QDialog):
         self.ui.setupUi(self)
         self.view.customContextMenuRequested.connect(self.onContextMenuRequested)
         self.view.setItemDelegate(RebaseSequenceDelegate(self.view))
+        self.view.setEditTriggers(QListView.EditTrigger.DoubleClicked | QListView.EditTrigger.EditKeyPressed)
         assert self.view.uniformItemSizes()
 
         # Bind hotkeys
@@ -61,8 +62,15 @@ class RebaseDialog(QDialog):
 
     def setCommandOnSelection(self, command: RebaseOp):
         assert command in SupportedRebaseOps, f"rebase op '{command}' not supported yet"
-        for item in self.iterateSelectedItems():
+
+        for wrapper in self.view.selectedItems():
+            assert isinstance(wrapper, RebaseLineWrapper)
+
+            item = wrapper.item
             item.op = command
+
+            wrapper.updateFlags()  # flip editable flag if rewording
+
         self.view.viewport().update()
 
     def onContextMenuRequested(self, point: QPoint):

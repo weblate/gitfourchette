@@ -223,10 +223,11 @@ def AsynchronousTaskContext(taskRunner):
     assert taskRunner.ForceSerial
     taskRunner.__class__.ForceSerial = False
 
-    yield
-
-    taskRunner.__class__.ForceSerial = True
-    waitUntilTrue(lambda: not taskRunner.isBusy())
+    try:
+        yield
+    finally:
+        taskRunner.__class__.ForceSerial = True
+        waitUntilTrue(lambda: not taskRunner.isBusy())
 
 
 def clearSessionwideIdentity():
@@ -394,12 +395,18 @@ def qlvFindRow(view: QListView, data: str, role=Qt.ItemDataRole.DisplayRole):
     raise IndexError(f"didn't find a row containing '{data}'")
 
 
-def qlvClickNthRow(view: QListView, n: int, modifier: Qt.KeyboardModifier = Qt.KeyboardModifier.NoModifier):
+def qlvClickNthRow(
+        view: QListView,
+        n: int,
+        modifier: Qt.KeyboardModifier = Qt.KeyboardModifier.NoModifier,
+        doubleClick = False
+):
     index = view.model().index(n, 0)
     assert index.isValid()
     view.scrollTo(index)
     rect = view.visualRect(index)
-    QTest.mouseClick(view.viewport(), Qt.MouseButton.LeftButton, modifier, pos=rect.center())
+    mouseClick = QTest.mouseDClick if doubleClick else QTest.mouseClick
+    mouseClick(view.viewport(), Qt.MouseButton.LeftButton, modifier, pos=rect.center())
     return index.data(Qt.ItemDataRole.DisplayRole)
 
 

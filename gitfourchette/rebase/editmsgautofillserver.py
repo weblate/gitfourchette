@@ -1,0 +1,52 @@
+# -----------------------------------------------------------------------------
+# Copyright (C) 2026 Iliyas Jorio.
+# This file is part of GitFourchette, distributed under the GNU GPL v3.
+# For full terms, see the included LICENSE file.
+# -----------------------------------------------------------------------------
+
+import logging
+from pathlib import Path
+
+from gitfourchette.ipc.ipcprotocol import GFIpcProtocol
+from gitfourchette.ipc.ipcserver import GFIpcServer
+from gitfourchette.qt import *
+from gitfourchette.rebase.rebasemodel import parseRebaseTodo
+
+logger = logging.getLogger(__name__)
+
+
+class EditmsgAutoFillServer(GFIpcServer):
+    """
+    During an interactive rebase, automatically fills out .git/COMMIT_EDITMSG
+    for commits that were reworded from our rebase dialog.
+
+    Pass clientCommand() as the GIT_EDITOR environment variable to 'git rebase'.
+    """
+
+    def __init__(self, parent):
+        # singleShot=False because a single 'git rebase -i' may call the editor
+        # multiple times if there are several commits to reword.
+        super().__init__(parent, singleShot=False)
+
+        self.clientConnected.connect(self.onClientConnected)
+
+    def onClientConnected(self, handshake: GFIpcProtocol.Handshake, socket: QLocalSocket):
+        assert len(handshake.args) == 1
+
+        editmsgPath = Path(handshake.args[0])
+        assert editmsgPath.name == "COMMIT_EDITMSG"
+
+        donePath = Path(editmsgPath.parent, "rebase-merge/done")
+        doneText = donePath.read_text("utf-8")
+        doneSequence = parseRebaseTodo(doneText)
+        doneLast = doneSequence[-1]
+
+        # If we stopped on a reword, dump the message
+        if doneLast.op.isEditable():
+            if not doneLast.payload:
+                logger.warning(f"No payload for: {doneLast}!")
+
+            editmsgPath.write_text(doneLast.payload)
+
+        # Tell client to quit gracefully
+        GFIpcProtocol.respondAndBail(socket)

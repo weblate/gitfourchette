@@ -4,9 +4,11 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+import base64
 import dataclasses
 import enum
 import re
+from typing import Any
 
 from gitfourchette import colors
 from gitfourchette.qt import *
@@ -25,6 +27,9 @@ class RebaseOp(enum.StrEnum):
     Reset       = "reset"
     Merge       = "merge"
     UpdateRef   = "update-ref"
+
+    def isEditable(self):
+        return self == "reword" or self == "squash"
 
 
 RebaseOpLetters: dict[RebaseOp, str] = {
@@ -53,17 +58,26 @@ RebaseOpColors: dict[RebaseOp, QColor] = {
 }
 
 
+_PayloadMagicPrefix = "GITFOURCHETTE_REBASE_PAYLOAD="
+
+
 @dataclasses.dataclass
 class RebaseLine:
     op: RebaseOp
     hexHash: str
     comment: str = ""
+    payload: str = ""
 
     def __str__(self) -> str:
-        # TODO: we could pass special info to the message editor via the comment.
-        # Note that git strips comment-only lines from .git/rebase-merge/git-rebase-todo
-        # (or why not just dump our data in .git/rebase-merge/gitfourchetterebase.json?)
-        return f"{self.op} {self.hexHash} # {self.comment}"
+        # Note that git strips comment-only lines from .git/rebase-merge/git-rebase-todo,
+        # so our payload must fit on the same line as the opcode.
+        if self.op.isEditable() and self.payload:
+            payloadBase64 = base64.b64encode(self.payload.encode("utf-8"))
+            comment = "#" + _PayloadMagicPrefix + payloadBase64.decode("ascii")
+        else:
+            comment = "# " + self.comment
+
+        return f"{self.op} {self.hexHash} {comment}"
 
 TRebaseSequence = list[RebaseLine]
 
@@ -72,6 +86,7 @@ class RebaseLineWrapper(QListWidgetItem):
     def __init__(self, item: RebaseLine):
         super().__init__()
         self.item = item
+        self.updateFlags()
 
     def data(self, role: int):
         if role == Qt.ItemDataRole.DisplayRole:
@@ -80,7 +95,31 @@ class RebaseLineWrapper(QListWidgetItem):
             return self.item
         elif role == Qt.ItemDataRole.ToolTipRole:
             return self.item.hexHash
+        elif role == Qt.ItemDataRole.EditRole:
+            # Message filling in QLineEdit
+            return self.item.payload or self.item.comment or ""
         return super().data(role)
+
+    def updateFlags(self):
+        flags = self.flags()
+        if self.item.op.isEditable():
+            flags |= Qt.ItemFlag.ItemIsEditable
+        else:
+            flags &= ~Qt.ItemFlag.ItemIsEditable
+        self.setFlags(flags)
+
+    def setData(self, role: int, value: Any):
+        # Called when the line edit has finished editing text.
+        # Only allowed on Reword and Squash.
+        assert role == Qt.ItemDataRole.EditRole
+        assert self.item.op.isEditable()
+        assert isinstance(value, str)
+
+        # Don't override if identical to original comment
+        if value == self.item.comment:
+            value = ""
+
+        self.item.payload = value
 
 
 def parseRebaseTodo(text: str) -> TRebaseSequence:
@@ -94,7 +133,14 @@ def parseRebaseTodo(text: str) -> TRebaseSequence:
         match = _todoLinePattern.match(line)
         assert match is not None, f"unsupported todo line: {line}"
         commandName, hexHash, comment = match.groups()
-        item = RebaseLine(RebaseOp(commandName), hexHash, comment)
+
+        if comment.startswith(_PayloadMagicPrefix):
+            payloadBase64 = comment.removeprefix(_PayloadMagicPrefix)
+            editedMessage = base64.b64decode(payloadBase64).decode("utf-8")
+        else:
+            editedMessage = ""
+
+        item = RebaseLine(RebaseOp(commandName), hexHash, comment, editedMessage)
         sequence.append(item)
     return sequence
 

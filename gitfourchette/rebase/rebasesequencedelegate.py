@@ -6,6 +6,7 @@
 
 import math
 
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpColors
 from gitfourchette.toolbox import shortHash, mixColors
@@ -52,7 +53,19 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         rect.setLeft(charRect.left() + _ColumnPadding)
 
         # Draw message
-        text = fontMetrics.elidedText(item.comment, option.textElideMode, rect.width())
+        if item.op.isEditable():
+            editableFont = QFont(painter.font())
+            editableFont.setItalic(True)
+            painter.setFont(editableFont)
+            fontMetrics = painter.fontMetrics()
+            if item.payload:
+                text = item.payload
+            else:
+                text = _("(double-click to reword)") + " " + item.comment
+        else:
+            text = item.comment
+
+        text = fontMetrics.elidedText(text, option.textElideMode, rect.width())
         colorRole = QPalette.ColorRole.HighlightedText if isSelected else QPalette.ColorRole.WindowText
         textColor = option.palette.color(colorGroup, colorRole)
         painter.setPen(textColor)
@@ -109,7 +122,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         # Op name
         # Add question mark if attempting to fixup nothing
         opText = str(op)
-        if op == RebaseOp.Fixup and not opAbove:
+        if not opAbove and (op == RebaseOp.Fixup or op == RebaseOp.Squash):
             opText = f"¿{opText}?"
 
         # Paint
@@ -140,11 +153,11 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             op: RebaseOp = index.data(_ItemRole).op
             if op == RebaseOp.Drop:
                 continue
-            if op == RebaseOp.Fixup:
+            if op == RebaseOp.Fixup or op == RebaseOp.Squash:
                 connectBelow = True
             break
 
-        if startOp == RebaseOp.Fixup:
+        if startOp == RebaseOp.Fixup or startOp == RebaseOp.Squash:
             connectAbove = startRow != 0
         elif startOp == RebaseOp.Drop:
             connectAbove = connectBelow
