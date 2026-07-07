@@ -34,7 +34,9 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         rect.adjust(2, 0, -2, 0)
 
         # Draw default background
-        widget.style().drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, widget)
+        # Note: PySide6 crashes accessing widget.style() if it's a proxy style
+        style = QApplication.style() if PYSIDE6 else widget.style()
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, widget)
 
         # Draw pill
         blendAbove, blendBelow = self.pillBlending(index)

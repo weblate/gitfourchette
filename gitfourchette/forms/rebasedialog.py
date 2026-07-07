@@ -7,6 +7,7 @@
 from gitfourchette import trtables
 from gitfourchette.forms.ui_rebasedialog import Ui_RebaseDialog
 from gitfourchette.qt import *
+from gitfourchette.rebase.rebaseliststyle import RebaseListStyle
 from gitfourchette.rebase.rebasemenustyle import RebaseMenuStyle
 from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLineWrapper, RebaseOp, RebaseOpColors, RebaseOpLetters, RebaseLine
 from gitfourchette.rebase.rebasesequencedelegate import RebaseSequenceDelegate
@@ -35,6 +36,8 @@ class RebaseDialog(QDialog):
         self.view.setItemDelegate(RebaseSequenceDelegate(self.view))
         self.view.setEditTriggers(QListView.EditTrigger.DoubleClicked | QListView.EditTrigger.EditKeyPressed)
         assert self.view.uniformItemSizes()
+
+        self.view.setStyle(RebaseListStyle())
 
         # Bind hotkeys
         for op, hotkey in RebaseOpLetters.items():
