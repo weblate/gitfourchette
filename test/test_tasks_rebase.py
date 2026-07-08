@@ -28,18 +28,18 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
         triggerContextMenuAction(rw.graphView.viewport(), "rebase")
         rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
 
-        commitList = rebaseDialog.ui.commitList
+        sequenceView = rebaseDialog.ui.sequence
 
         # Apply all operations
         for todo in todoList:
             # Select row
-            qlvClickNthRow(commitList, todo.row)
+            qlvClickNthRow(sequenceView, todo.row)
 
             # Press keyboard shortcut for desired operation
-            QTest.keyClicks(commitList.viewport(), RebaseOpLetters[todo.op])
+            QTest.keyClicks(sequenceView.viewport(), RebaseOpLetters[todo.op])
             QTest.qWait(0)
 
-            itemsSoFar = list(rebaseDialog.iterateAllItems())
+            itemsSoFar = sequenceView.allRebaseLines()
             assert itemsSoFar[todo.row].op == todo.op
 
             # Apply reworded message, if any
@@ -48,11 +48,11 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
 
                 # Bring up QLineEdit
                 if MACOS:
-                    qlvClickNthRow(commitList, todo.row, doubleClick=True)
+                    qlvClickNthRow(sequenceView, todo.row, doubleClick=True)
                 else:
-                    QTest.keyPress(commitList.viewport(), Qt.Key.Key_F2)
+                    QTest.keyPress(sequenceView.viewport(), Qt.Key.Key_F2)
 
-                lineEdit: QLineEdit = commitList.findChild(QLineEdit)
+                lineEdit: QLineEdit = sequenceView.findChild(QLineEdit)
                 assert lineEdit is not None
                 assert lineEdit.hasFocus()
 

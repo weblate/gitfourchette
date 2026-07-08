@@ -17,7 +17,16 @@ _ColumnPadding = 8
 
 
 class RebaseSequenceDelegate(QStyledItemDelegate):
+    ignoreMouseOverState: bool
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.ignoreMouseOverState = False
+
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        if self.ignoreMouseOverState:
+            option.state &= ~QStyle.StateFlag.State_MouseOver
+
         widget = option.widget
         isActive = bool(option.state & QStyle.StateFlag.State_Active)
         isSelected = bool(option.state & QStyle.StateFlag.State_Selected)

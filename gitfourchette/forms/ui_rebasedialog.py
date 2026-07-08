@@ -25,23 +25,24 @@ class Ui_RebaseDialog(object):
         self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Cancel|QDialogButtonBox.StandardButton.Ok)
         self.buttonBox.setObjectName("buttonBox")
         self.gridlayout.addWidget(self.buttonBox, 1, 1, 1, 1)
-        self.commitList = QListWidget(parent=RebaseDialog)
-        self.commitList.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.commitList.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.commitList.setDragEnabled(True)
-        self.commitList.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
-        self.commitList.setDefaultDropAction(Qt.DropAction.MoveAction)
-        self.commitList.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.commitList.setUniformItemSizes(True)
-        self.commitList.setObjectName("commitList")
-        self.gridlayout.addWidget(self.commitList, 0, 0, 1, 2)
+        self.sequence = RebaseSequenceView(parent=RebaseDialog)
+        self.sequence.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.sequence.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.sequence.setDragEnabled(True)
+        self.sequence.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.sequence.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.sequence.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.sequence.setUniformItemSizes(True)
+        self.sequence.setObjectName("sequence")
+        self.gridlayout.addWidget(self.sequence, 0, 0, 1, 2)
 
         self.retranslateUi(RebaseDialog)
-        self.buttonBox.accepted.connect(RebaseDialog.accept) # type: ignore
-        self.buttonBox.rejected.connect(RebaseDialog.reject) # type: ignore
+        self.buttonBox.accepted.connect(RebaseDialog.accept)
+        self.buttonBox.rejected.connect(RebaseDialog.reject)
 
     def retranslateUi(self, RebaseDialog):
         RebaseDialog.setWindowTitle(_p("RebaseDialog", "Rebase"))
         self.toolButton.setToolTip(_p("RebaseDialog", "Drag and drop lines to rearrange them.\n"
 "They are executed from top to bottom."))
+from gitfourchette.rebase.rebasesequenceview import RebaseSequenceView
 from gitfourchette.toolbox.qhintbutton import QHintButton

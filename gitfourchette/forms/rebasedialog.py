@@ -7,10 +7,8 @@
 from gitfourchette import trtables
 from gitfourchette.forms.ui_rebasedialog import Ui_RebaseDialog
 from gitfourchette.qt import *
-from gitfourchette.rebase.rebaseliststyle import RebaseListStyle
 from gitfourchette.rebase.rebasemenustyle import RebaseMenuStyle
-from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLineWrapper, RebaseOp, RebaseOpColors, RebaseOpLetters, RebaseLine
-from gitfourchette.rebase.rebasesequencedelegate import RebaseSequenceDelegate
+from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLineWrapper, RebaseOp, RebaseOpColors, RebaseOpLetters
 
 
 SupportedRebaseOps = {
@@ -24,49 +22,27 @@ SupportedRebaseOps = {
 
 
 class RebaseDialog(QDialog):
-    @property
-    def view(self):
-        return self.ui.commitList
-
     def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self.ui = Ui_RebaseDialog()
         self.ui.setupUi(self)
-        self.view.customContextMenuRequested.connect(self.onContextMenuRequested)
-        self.view.setItemDelegate(RebaseSequenceDelegate(self.view))
-        self.view.setEditTriggers(QListView.EditTrigger.DoubleClicked | QListView.EditTrigger.EditKeyPressed)
-        assert self.view.uniformItemSizes()
-
-        self.view.setStyle(RebaseListStyle())
+        self.ui.sequence.customContextMenuRequested.connect(self.onContextMenuRequested)
 
         # Bind hotkeys
         for op, hotkey in RebaseOpLetters.items():
             if op not in SupportedRebaseOps:
                 continue
-            QShortcut(hotkey, self.view, lambda c=op: self.setCommandOnSelection(c), context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
+            QShortcut(hotkey, self.ui.sequence, lambda c=op: self.setCommandOnSelection(c), context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
     def setSequence(self, sequence: TRebaseSequence):
-        self.view.clear()
+        self.ui.sequence.clear()
         for item in sequence:
-            self.view.addItem(RebaseLineWrapper(item))
-
-    def iterateSelectedItems(self):
-        for wrapper in self.view.selectedItems():
-            item = wrapper.item
-            assert isinstance(item, RebaseLine)
-            yield item
-
-    def iterateAllItems(self):
-        for row in range(self.view.count()):
-            wrapper = self.view.item(row)
-            item = wrapper.item
-            assert isinstance(item, RebaseLine)
-            yield item
+            self.ui.sequence.addItem(RebaseLineWrapper(item))
 
     def setCommandOnSelection(self, command: RebaseOp):
         assert command in SupportedRebaseOps, f"rebase op '{command}' not supported yet"
 
-        for wrapper in self.view.selectedItems():
+        for wrapper in self.ui.sequence.selectedItems():
             assert isinstance(wrapper, RebaseLineWrapper)
 
             item = wrapper.item
@@ -74,7 +50,7 @@ class RebaseDialog(QDialog):
 
             wrapper.updateFlags()  # flip editable flag if rewording
 
-        self.view.viewport().update()
+        self.ui.sequence.viewport().update()
 
     def onContextMenuRequested(self, point: QPoint):
         menu = self.makeContextMenu()
@@ -83,7 +59,7 @@ class RebaseDialog(QDialog):
             menu.popup(self.mapToGlobal(point))
 
     def makeContextMenu(self):
-        selectedOps = {item.op for item in self.iterateSelectedItems()}
+        selectedOps = {item.op for item in self.ui.sequence.selectedRebaseLines()}
         if not selectedOps:
             return None
 
@@ -116,5 +92,5 @@ class RebaseDialog(QDialog):
         return menu
 
     def serializeSequence(self):
-        text = "\n".join(str(i) for i in self.iterateAllItems())
+        text = "\n".join(str(i) for i in self.ui.sequence.allRebaseLines())
         return text

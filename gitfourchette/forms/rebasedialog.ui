@@ -36,7 +36,7 @@ They are executed from top to bottom.</string>
     </widget>
    </item>
    <item row="0" column="0" colspan="2">
-    <widget class="QListWidget" name="commitList">
+    <widget class="RebaseSequenceView" name="sequence">
      <property name="contextMenuPolicy">
       <enum>Qt::ContextMenuPolicy::CustomContextMenu</enum>
      </property>
@@ -67,6 +67,11 @@ They are executed from top to bottom.</string>
    <class>QHintButton</class>
    <extends>QToolButton</extends>
    <header>gitfourchette.toolbox.qhintbutton</header>
+  </customwidget>
+  <customwidget>
+   <class>RebaseSequenceView</class>
+   <extends>QListWidget</extends>
+   <header>gitfourchette.rebase.rebasesequenceview</header>
   </customwidget>
  </customwidgets>
  <resources/>

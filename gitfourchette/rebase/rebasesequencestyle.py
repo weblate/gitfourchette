@@ -8,9 +8,9 @@ from gitfourchette import settings
 from gitfourchette.qt import *
 
 
-class RebaseListStyle(QProxyStyle):
+class RebaseSequenceStyle(QProxyStyle):
     """
-    Provides a nicer-looking drop indicator for RebaseDialog's list view.
+    Provides a nicer-looking drop indicator for RebaseSequenceView.
     """
 
     def __init__(self):
