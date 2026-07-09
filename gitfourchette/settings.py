@@ -227,6 +227,9 @@ class Prefs(PrefsFile):
             monoFont.setPointSize(self.fontSize)
         return monoFont
 
+    def calcRowHeight(self, fontMetrics: QFontMetrics):
+        return fontMetrics.height() * self.graphRowHeight // 100
+
     def isSyntaxHighlightingEnabled(self):
         return self.syntaxHighlighting != PygmentsPresets.Off
 

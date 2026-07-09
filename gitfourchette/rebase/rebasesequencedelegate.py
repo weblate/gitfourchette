@@ -6,6 +6,7 @@
 
 import math
 
+from gitfourchette import settings
 from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpColors
@@ -22,6 +23,12 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ignoreMouseOverState = False
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
+        height = settings.prefs.calcRowHeight(option.fontMetrics)
+        size = super().sizeHint(option, index)
+        size.setHeight(height)
+        return size
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         if self.ignoreMouseOverState:

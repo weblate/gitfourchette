@@ -146,10 +146,10 @@ class CommitLogDelegate(QStyledItemDelegate):
     # Qt callbacks
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
-        mult = settings.prefs.graphRowHeight
-        r = super().sizeHint(option, index)
-        r.setHeight(option.fontMetrics.height() * mult // 100)
-        return r
+        height = settings.prefs.calcRowHeight(option.fontMetrics)
+        size = super().sizeHint(option, index)
+        size.setHeight(height)
+        return size
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex, fillBackground=True):
         painter.save()
