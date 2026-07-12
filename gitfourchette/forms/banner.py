@@ -92,7 +92,9 @@ class Banner(QFrame):
         if title:
             markup += f"<b>{title}</b>"
             if text:
-                markup += f"<br><sm>{text}</sm>"
+                if not text.startswith("<p"):
+                    markup += "<br>"
+                markup += f"<sm>{text}</sm>"
         else:
             markup += f"<sm>{text}</sm>"
 

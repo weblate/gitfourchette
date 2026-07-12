@@ -671,7 +671,16 @@ class RepoWidget(QWidget):
             title = _("Rebasing {0} onto {1}", tquoe(info.head_shorthand), tquoe(shortHash(info.onto, maybe=True)))
             title = f"({info.msgnum}/{info.end}) {title}"
 
-            textParts = [_("Stopped at {0}.", tquoe(shortHash(info.stopped_sha, maybe=True)))]
+            textParts = [_("Stopped at {commit}", commit=tquoe(shortHash(info.stopped_sha, maybe=True) or "???"))]
+
+            try:
+                preview = self.repo[info.stopped_sha].peel(Commit).message
+                preview, _dummy = messageSummary(preview)
+                preview = elide(preview, Qt.TextElideMode.ElideRight, 30)
+                preview = escape(tquo(preview))
+                textParts[-1] += f"<br><i><span style='font-weight:250; '>{preview}</i></span>"
+            except (ValueError, LookupError):
+                pass
 
             actions[_("Abort rebase") + ellipsis] = lambda: AbortRebase.invoke(self)
             actions[_("Continue rebase")] = lambda: ContinueRebase.invoke(self)
@@ -683,7 +692,7 @@ class RepoWidget(QWidget):
                 textParts.append(_("No conflicts: you can continue."))
                 heeded = True
 
-            text = "<br>".join(textParts)
+            text = paragraphs(*textParts)
 
         else:
             title = _("Warning")

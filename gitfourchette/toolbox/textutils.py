@@ -32,7 +32,7 @@ def getElideMetrics() -> QFontMetrics:
     return _elideMetrics
 
 
-def messageSummary(body: str, elision=" [\u2026]"):
+def messageSummary(body: str, elision=" [\u2026]") -> tuple[str, bool]:
     messageContinued = False
     message: str = body.strip()
     newline = message.find('\n')
