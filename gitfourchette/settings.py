@@ -410,6 +410,7 @@ class Session(PrefsFile):
     tabs                        : list[str]             = dataclasses.field(default_factory=list)
     activeTabIndex              : int                   = -1
     windowGeometry              : bytes                 = b""
+    rebaseDialogGeometry        : bytes                 = b""
     splitterSizes               : dict[str, list[int]]  = dataclasses.field(default_factory=dict)
 
 

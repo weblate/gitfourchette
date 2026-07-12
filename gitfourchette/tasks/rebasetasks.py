@@ -53,7 +53,7 @@ class InteractiveRebase(RepoTask):
         self.rebaseInfoAtStart = None
 
         dialog = RebaseDialog(self.parentWidget())
-        dialog.finished.connect(lambda: self.setProcessDialogAllowed(True))
+        dialog.finished.connect(self.onDialogFinished)
         dialog.accepted.connect(self.onDialogAccepted)
         dialog.rejected.connect(self.onDialogRejected)
 
@@ -87,6 +87,10 @@ class InteractiveRebase(RepoTask):
 
         self.currentSocket.disconnectFromServer()
         self.currentSocket.waitForDisconnected(GFIpcProtocol.FastTimeout)
+
+    def onDialogFinished(self, result: int):
+        RebaseDialog.LastGeometry = self.dialog.saveGeometry().data()
+        self.setProcessDialogAllowed(True)
 
     def onDialogAccepted(self):
         text = self.dialog.serializeSequence()

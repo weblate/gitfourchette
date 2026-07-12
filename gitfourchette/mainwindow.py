@@ -25,6 +25,7 @@ from gitfourchette.exttools.usercommand import UserCommand
 from gitfourchette.forms.aboutdialog import AboutDialog, USERS_GUIDE_URL
 from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.maintoolbar import MainToolBar
+from gitfourchette.forms.rebasedialog import RebaseDialog
 from gitfourchette.forms.repostub import RepoStub
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.textinputdialog import TextInputDialog
@@ -985,6 +986,9 @@ class MainWindow(QMainWindow):
             RepoWidget.sharedSplitterSizes.clear()
             RepoWidget.sharedSplitterSizes.update(copy.deepcopy(session.splitterSizes))
 
+        if session.rebaseDialogGeometry:
+            RebaseDialog.LastGeometry = session.rebaseDialogGeometry
+
         # Stop here if there are no tabs to load
         if not session.tabs:
             return
@@ -1054,6 +1058,7 @@ class MainWindow(QMainWindow):
         session.splitterSizes = RepoWidget.sharedSplitterSizes.copy()
         session.tabs = [widget.workdir for widget in self.tabs.widgets()]
         session.activeTabIndex = self.tabs.currentIndex()
+        session.rebaseDialogGeometry = RebaseDialog.LastGeometry
         session.setDirty()
         if writeNow:
             session.write()

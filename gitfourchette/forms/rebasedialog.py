@@ -22,6 +22,8 @@ SupportedRebaseOps = {
 
 
 class RebaseDialog(QDialog):
+    LastGeometry = b""
+
     def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self.ui = Ui_RebaseDialog()
@@ -33,6 +35,9 @@ class RebaseDialog(QDialog):
             if op not in SupportedRebaseOps:
                 continue
             QShortcut(hotkey, self.ui.sequence, lambda c=op: self.setCommandOnSelection(c), context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+        if not GNOME and RebaseDialog.LastGeometry:
+            self.restoreGeometry(RebaseDialog.LastGeometry)
 
     def setSequence(self, sequence: TRebaseSequence):
         self.ui.sequence.clear()
