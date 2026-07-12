@@ -44,7 +44,12 @@ class NavFlags(enum.IntFlag):
     "Bring window to the foreground after jumping to this location."
 
     FuzzyPath = enum.auto()
-    "The path may contain wildcards and should be expanded with fnmatch."
+    """The path may contain wildcards and should be expanded with fnmatch.
+    (Only valid in COMMITTED context!)"""
+
+    SelectAnyConflict = enum.auto()
+    """Select any file with conflicts; ignore the value of NavLocator.path if
+    it's not a conflict. (Only valid in UNSTAGED context!)"""
 
     DefaultFlags = 0
 

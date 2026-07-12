@@ -8,45 +8,22 @@ import logging
 from pathlib import Path
 
 from gitfourchette.forms.rebasedialog import RebaseDialog
+from gitfourchette.gitdriver import GitDriver
 from gitfourchette.ipc.ipcprotocol import GFIpcProtocol
 from gitfourchette.localization import _
-from gitfourchette.porcelain import Oid, RepositoryState, Repo, RebaseInfo
+from gitfourchette.nav import NavLocator, NavFlags
+from gitfourchette.porcelain import Oid, RepositoryState, RebaseInfo
 from gitfourchette.ipc.ipcserver import GFIpcServer
 from gitfourchette.qt import *
 from gitfourchette.rebase.editmsgautofillserver import EditmsgAutoFillServer
 from gitfourchette.rebase.rebasemodel import parseRebaseTodo
 from gitfourchette.tasks import TaskPrereqs, TaskEffects
-from gitfourchette.tasks.repotask import RepoTask
+from gitfourchette.tasks.repotask import RepoTask, AbortTask
 from gitfourchette.toolbox import shortHash, tquoe, paragraphs
 
 logger = logging.getLogger(__name__)
 
 _StandardRebaseTaskEffects = TaskEffects.Head | TaskEffects.Workdir
-
-
-def _rebaseEpilogStatus(repo: Repo, previousInfo: RebaseInfo) -> str:
-    rstate = repo.state()
-
-    if rstate == RepositoryState.REBASE_INTERACTIVE:
-        info = repo.rebase_info()
-        phrase1 = _("Rebasing {0} onto {1}",
-                    tquoe(info.head_shorthand),
-                    tquoe(shortHash(info.onto, maybe=True))) + _(":")
-
-        phrase2 = _("Stopped at {0}.",
-                    tquoe(shortHash(info.stopped_sha, maybe=True)))
-
-        phrase3 = _("Your input is needed to continue.")
-
-        return f"({info.msgnum}/{info.end}) {phrase1} {phrase2} {phrase3}"
-
-    if rstate == RepositoryState.NONE:
-        return _("Finished rebasing {0} onto {1}.",
-                 tquoe(previousInfo.head_shorthand),
-                 tquoe(shortHash(previousInfo.onto, maybe=True)))
-
-    # Not translating this one because it's an error
-    return f"Rebase stopped with state {rstate}."
 
 
 class InteractiveRebase(RepoTask):
@@ -87,7 +64,7 @@ class InteractiveRebase(RepoTask):
 
         # TODO: DON'T wait for finished synchronously!
         self.epilog.effects |= _StandardRebaseTaskEffects
-        yield from self.flowCallGit(
+        driver = yield from self.flowCallGit(
             "-c", "core.abbrev=no",
             "rebase", "-i", str(rootCommit),
             # "--keep-base",
@@ -95,10 +72,10 @@ class InteractiveRebase(RepoTask):
                 "GIT_SEQUENCE_EDITOR": sequenceServer.clientCommand(),
                 "GIT_EDITOR": EditmsgAutoFillServer(self).clientCommand(),
             },
+            autoFail=False,
         )
 
-        assert self.rebaseInfoAtStart is not None
-        self.epilog.status = _rebaseEpilogStatus(self.repo, self.rebaseInfoAtStart)  # type: ignore[unreachable] # mypy is incorrect here
+        _debriefRebase(self, driver, self.rebaseInfoAtStart)
 
     def dumpSequenceAndDisconnect(self, sequenceText: str):
         assert self.todoFilePath
@@ -193,11 +170,46 @@ class ContinueRebase(RepoTask):
         # - for commits marked 'reword' (fill in message from the payload we
         #   added to the todo file)
         # - after fixing conflicts (just leave message intact)
-        yield from self.flowCallGit(
+        driver = yield from self.flowCallGit(
             "rebase", "--continue",
             env={
                 "GIT_EDITOR": EditmsgAutoFillServer(self).clientCommand(),
             },
+            autoFail=False,
         )
 
-        self.epilog.status = _rebaseEpilogStatus(self.repo, rebaseInfoAtStart)
+        _debriefRebase(self, driver, rebaseInfoAtStart)
+
+
+def _debriefRebase(task: RepoTask, driver: GitDriver, previousInfo: RebaseInfo):
+    exitCode = driver.exitCode()
+    unknownFailure = exitCode not in [0, 1]
+
+    if exitCode == 1:
+        stderr = driver.stderrScrollback().strip()
+        if stderr.strip() == "error: nothing to do":
+            # Canceled from dialog, bail quietly
+            raise AbortTask()
+
+        stdout = driver.stdoutScrollback()
+        logger.debug(f"git rebase stdout: {stdout}")
+
+        if "CONFLICT" in stdout:
+            task.epilog.jumpTo = NavLocator.inUnstaged().withExtraFlags(NavFlags.SelectAnyConflict)
+        else:
+            unknownFailure = True
+
+    if unknownFailure:
+        # Bail loudly
+        raise AbortTask(driver.htmlErrorText())
+
+    state = task.repo.state()
+
+    if state == RepositoryState.NONE:
+        status = _("Finished rebasing {0} onto {1}.",
+                   tquoe(previousInfo.head_shorthand),
+                   tquoe(shortHash(previousInfo.onto, maybe=True)))
+    else:
+        status = _("Rebase stopped. Your input is needed to continue.")
+
+    task.epilog.status = status

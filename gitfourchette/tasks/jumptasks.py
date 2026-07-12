@@ -329,6 +329,17 @@ class Jump(RepoTask):
                 locator = locator.replace(context=NavContext.UNSTAGED)
             locator = rw.navHistory.refine(locator)
 
+        # Find any conflict
+        if locator.hasFlags(NavFlags.SelectAnyConflict):
+            assert locator.context == NavContext.UNSTAGED
+            try:
+                conflictDelta = repoModel.findWorkdirDelta(locator.path)  # see if current delta works...
+                if not conflictDelta or not conflictDelta.conflict:
+                    conflictDelta = next(d for d in repoModel.workdirUnstagedDeltas if d.conflict)
+                locator = locator.replace(path=conflictDelta.new.path)
+            except LookupError:
+                logger.debug("SelectAnyConflict did not find any conflicts")
+
         # Early out if workdir is clean
         if rw.dirtyFiles.isEmpty() and rw.stagedFiles.isEmpty():
             locator = locator.replace(path="")
