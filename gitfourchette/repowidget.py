@@ -96,6 +96,7 @@ class RepoWidget(QWidget):
         # Report progress in long-running background processes
         self.processDialog = ProcessDialog(self)
         self.taskRunner.processStarted.connect(self.processDialog.connectProcess)
+        self.taskRunner.hideProcessProgress.connect(self.processDialog.setExplicitHide)
 
         self.repoModel = repoModel
         self.lastAutoFetchTime = QDateTime.currentSecsSinceEpoch()

@@ -183,6 +183,7 @@ class RepoTask(QObject):
     type Flow[FlowReturnType] = Generator[FlowControlToken, None, FlowReturnType]
 
     uiReady = Signal()
+    hideProcessProgress = Signal(bool)
 
     repo: Repo
 
@@ -774,6 +775,7 @@ class RepoTaskRunner(QObject):
     repoGone = Signal()
     requestAttention = Signal()
     processStarted = Signal(QProcess, str)
+    hideProcessProgress = Signal(bool)
 
     repoModel: RepoModel | None
 
@@ -935,6 +937,7 @@ class RepoTaskRunner(QObject):
 
         # When the task is ready, continue the coroutine
         task.uiReady.connect(self._continueFlow)
+        task.hideProcessProgress.connect(self.hideProcessProgress)
 
         # Check task prerequisites
         try:
@@ -1149,6 +1152,7 @@ class RepoTaskRunner(QObject):
         assert task._taskStack is None, "popping all subtasks should have cleared reference to chain"
 
         task.uiReady.disconnect()
+        task.hideProcessProgress.disconnect()
 
         task._currentFlow = None
         self._currentTask = None

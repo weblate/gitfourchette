@@ -27,8 +27,6 @@ _StandardRebaseTaskEffects = TaskEffects.Head | TaskEffects.Workdir
 
 
 class InteractiveRebase(RepoTask):
-    allowProcessDialog = Signal(bool)
-
     dialog: RebaseDialog
     server: GFIpcServer
     todoFilePath: str
@@ -38,14 +36,6 @@ class InteractiveRebase(RepoTask):
     def prereqs(self):
         # TODO: need clean workdir, too
         return TaskPrereqs.NoConflicts | TaskPrereqs.NoUnborn | TaskPrereqs.NoCherrypick
-
-    def broadcastProcesses(self) -> bool:
-        # TODO: must be able to override processdialog on the fly
-        return False
-
-    def setProcessDialogAllowed(self, visible: bool):
-        # TODO: do something
-        pass
 
     def flow(self, rootCommit: Oid):
         self.todoFilePath = ""
@@ -90,7 +80,7 @@ class InteractiveRebase(RepoTask):
 
     def onDialogFinished(self, result: int):
         RebaseDialog.LastGeometry = self.dialog.saveGeometry().data()
-        self.setProcessDialogAllowed(True)
+        self.hideProcessProgress.emit(False)
 
     def onDialogAccepted(self):
         text = self.dialog.serializeSequence()
@@ -127,6 +117,10 @@ class InteractiveRebase(RepoTask):
         # Prepare epilog message in case of success.
         # We'll override it if we're still in a rebase state after the dialog is closed.
         self.rebaseInfoAtStart = info
+
+        # Prevent ProcessDialog from appearing on top of RebaseDialog while
+        # `git rebase` is awaiting our reply.
+        self.hideProcessProgress.emit(True)
 
         self.dialog.show()
 

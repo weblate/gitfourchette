@@ -16,6 +16,7 @@ class ProcessDialog(QDialog):
 
     processConnection: QProcessConnection
     sentSigterm: bool
+    explicitHide: bool
 
     def __init__(self, parent: QWidget):
         super().__init__(parent)
@@ -24,6 +25,7 @@ class ProcessDialog(QDialog):
         self.processConnection.processLost.connect(self.onProcessLost)
 
         self.sentSigterm = False
+        self.explicitHide = False
 
         # Set up UI
         layout = QVBoxLayout(self)
@@ -66,14 +68,35 @@ class ProcessDialog(QDialog):
         if self.isVisible():
             # Dialog already shown, update UI now
             self.connectProcessInStatusForm()
+        elif self.explicitHide:
+            pass
         elif not self.delayPopUp.isActive():
             # Delay popup to avoid ugly flashing + unnecessary layout work
             # if the process finishes fast enough
             self.delayPopUp.start()
 
+    def setExplicitHide(self, hide: bool):
+        self.explicitHide = hide
+
+        # Bail if no process yet
+        if not self.processConnection:
+            assert not self.delayPopUp.isActive()
+            return
+
+        if hide:
+            # Abort delay
+            self.delayPopUp.stop()
+            self.setVisible(False)
+            self.processConnection.stopTracking()
+        elif not self.delayPopUp.isActive():
+            # Restart delay
+            self.delayPopUp.start()
+
     def popUp(self):
         if not self.processConnection:
             return
+
+        assert not self.explicitHide
 
         self.connectProcessInStatusForm()
         self.show()
@@ -85,6 +108,9 @@ class ProcessDialog(QDialog):
     def onProcessLost(self):
         self.delayPopUp.stop()
         self.setVisible(False)
+
+        # Reset explicitHide inbetween processes
+        self.explicitHide = False
 
         # HACK: In offscreen unit tests, re-activate the previous window so we can assume
         # keyboard focus is still valid. Qt does this for us in non-offscreen mode.
