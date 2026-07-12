@@ -21,6 +21,8 @@ from gitfourchette.toolbox import shortHash, tquoe, paragraphs
 
 logger = logging.getLogger(__name__)
 
+_StandardRebaseTaskEffects = TaskEffects.Head | TaskEffects.Workdir
+
 
 def _rebaseEpilogStatus(repo: Repo, previousInfo: RebaseInfo) -> str:
     rstate = repo.state()
@@ -28,12 +30,15 @@ def _rebaseEpilogStatus(repo: Repo, previousInfo: RebaseInfo) -> str:
     if rstate == RepositoryState.REBASE_INTERACTIVE:
         info = repo.rebase_info()
         phrase1 = _("Rebasing {0} onto {1}",
-                     tquoe(info.head_shorthand),
-                     tquoe(shortHash(info.onto, maybe=True)))
-        phrase2 = _("Currently stopped at {0}",
-                     tquoe(shortHash(info.stopped_sha, maybe=True)))
+                    tquoe(info.head_shorthand),
+                    tquoe(shortHash(info.onto, maybe=True))) + _(":")
+
+        phrase2 = _("Stopped at {0}.",
+                    tquoe(shortHash(info.stopped_sha, maybe=True)))
+
         phrase3 = _("Your input is needed to continue.")
-        return f"({info.msgnum}/{info.end}) {phrase1}. {phrase2}. {phrase3}"
+
+        return f"({info.msgnum}/{info.end}) {phrase1} {phrase2} {phrase3}"
 
     if rstate == RepositoryState.NONE:
         return _("Finished rebasing {0} onto {1}.",
@@ -81,6 +86,7 @@ class InteractiveRebase(RepoTask):
         self.dialog = dialog
 
         # TODO: DON'T wait for finished synchronously!
+        self.epilog.effects |= _StandardRebaseTaskEffects
         yield from self.flowCallGit(
             "-c", "core.abbrev=no",
             "rebase", "-i", str(rootCommit),
@@ -168,7 +174,7 @@ class AbortRebase(RepoTask):
             ),
         )
 
-        self.epilog.effects |= TaskEffects.Head | TaskEffects.Workdir
+        self.epilog.effects |= _StandardRebaseTaskEffects
         yield from self.flowCallGit("rebase", "--abort")
 
         self.epilog.status = _("Rebase aborted.")
@@ -181,17 +187,17 @@ class ContinueRebase(RepoTask):
 
         rebaseInfoAtStart = self.repo.rebase_info()
 
-        env = {}
+        self.epilog.effects |= _StandardRebaseTaskEffects
 
-        # We need GIT_EDITOR if any reword operations are pending.
-        todoPath = Path(self.repo.in_gitdir("rebase-merge/git-rebase-todo"))
-        todoText = todoPath.read_text("utf-8")
-        todoSequence = parseRebaseTodo(todoText)
-        if any(item.op.isEditable() for item in todoSequence):
-            editorServer = EditmsgAutoFillServer(self)
-            env["GIT_EDITOR"] = editorServer.clientCommand()
-
-        self.epilog.effects |= TaskEffects.Head | TaskEffects.Workdir
-        yield from self.flowCallGit("rebase", "--continue", env=env)
+        # We need GIT_EDITOR to confirm the commit message:
+        # - for commits marked 'reword' (fill in message from the payload we
+        #   added to the todo file)
+        # - after fixing conflicts (just leave message intact)
+        yield from self.flowCallGit(
+            "rebase", "--continue",
+            env={
+                "GIT_EDITOR": EditmsgAutoFillServer(self).clientCommand(),
+            },
+        )
 
         self.epilog.status = _rebaseEpilogStatus(self.repo, rebaseInfoAtStart)

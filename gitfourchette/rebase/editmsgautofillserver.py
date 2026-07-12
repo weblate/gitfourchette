@@ -47,6 +47,8 @@ class EditmsgAutoFillServer(GFIpcServer):
                 logger.warning(f"No payload for: {doneLast}!")
 
             editmsgPath.write_text(doneLast.payload)
+        else:
+            logger.debug(f"confirming verbatim commit message: {doneLast}")
 
         # Tell client to quit gracefully
         GFIpcProtocol.respondAndBail(socket)

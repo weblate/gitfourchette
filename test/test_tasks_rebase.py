@@ -133,8 +133,8 @@ def testContinueRebase(tempDir, mainWindow):
     commitDialog.accept()
 
     # Continue rebasing
-    continueButton = next(button for button in rw.mergeBanner.buttons
-                          if findTextInWidget(button, "continue rebase"))
+    continueButton = next(b for b in rw.mergeBanner.buttons if findTextInWidget(b, "continue rebase"))
+    assert continueButton.isEnabled()
     continueButton.click()
 
     assert rw.repo.state() == RepositoryState.NONE
@@ -170,9 +170,55 @@ def testRebaseRewordAfterContinue(tempDir, mainWindow):
     _driveRebaseDialog(rw, onto, todo)
 
     assert rw.repo.state() == RepositoryState.REBASE_INTERACTIVE
-    continueButton = next(button for button in rw.mergeBanner.buttons
-                          if findTextInWidget(button, "continue rebase"))
+    assert rw.mergeBanner.isVisible()
+    continueButton = next(b for b in rw.mergeBanner.buttons if findTextInWidget(b, "continue rebase"))
+    assert continueButton.isEnabled()
     continueButton.click()
 
     assert rw.repo.state() == RepositoryState.NONE
     assert rw.repo.head_commit.message.strip() == "rewording still works after continue"
+
+
+def testRebaseCausesConflicts(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    shell("""
+        git branch hello2 49322bb17d3acc9146f98c97d078513228bbf3c0
+        git checkout hello2
+        echo 'bump' > c/c2.txt
+        git commit -am 'modifying c/c2.txt'
+    """, wd)
+
+    onto = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    todo = []
+
+    rw = mainWindow.openRepo(wd)
+    _driveRebaseDialog(rw, onto, todo)
+
+    # TODO: Do we want to keep this error message?
+    acceptQMessageBox(rw, "could not apply f044e03")
+
+    assert rw.repo.state() == RepositoryState.REBASE_INTERACTIVE
+    assert rw.mergeBanner.isVisible()
+
+    # Rebase blocked by conflict
+    assert findTextInWidget(rw.mergeBanner.label, "stopped at.+f044e03")
+    assert findTextInWidget(rw.mergeBanner.label, "fix conflicts to continue")
+    continueButton = next(b for b in rw.mergeBanner.buttons if findTextInWidget(b, "continue rebase"))
+    assert not continueButton.isEnabled()
+
+    # Resolve the conflict
+    # TODO: Have task auto-jump if conflicts?
+    rw.jump(NavLocator.inUnstaged("c/c2.txt"), check=True)
+    assert rw.conflictView.isVisible()
+    assert rw.conflictView.ui.theirsButton.isVisible()
+    assert "file will be restored" in rw.conflictView.ui.theirsButton.toolTip()
+    rw.conflictView.ui.theirsButton.click()
+
+    # Continue rebase
+    continueButton = next(b for b in rw.mergeBanner.buttons if findTextInWidget(b, "continue rebase"))
+    assert continueButton.isEnabled()
+    continueButton.click()
+
+    assert not rw.mergeBanner.isVisible()
+    assert rw.repo.state() == RepositoryState.NONE
+    assert rw.repo.head_commit.message.startswith("modifying c/c2.txt")

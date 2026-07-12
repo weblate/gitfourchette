@@ -603,87 +603,101 @@ class RepoWidget(QWidget):
 
     def refreshBanner(self):
         """ Refresh state banner (merging, cherrypicking, reverting, etc.) """
-        repo = self.repo
 
-        rstate = repo.state() if repo else RepositoryState.NONE
+        state = self.repo.state()
+        conflicts = self.repo.any_conflicts
 
-        bannerTitle = trtables.enum(rstate) if rstate != RepositoryState.NONE else ""
-        bannerText = ""
-        bannerHeeded = False
-        bannerActions = {}
+        # Hide banner and bail if no state and no conflicts
+        if state == RepositoryState.NONE and not conflicts:
+            self.mergeBanner.setVisible(False)
+            return
+
+        heeded = False
+        actions = {}
+        ellipsis = "\u2026"
 
         def abortMerge():
             tasks.AbortMerge.invoke(self)
 
-        if rstate == RepositoryState.MERGE:
+        if state == RepositoryState.NONE:
+            assert conflicts, "NONE + no conflicts: should have exited early"
+
+            title = _("Conflicts")
+            text = _("Fix the conflicts among the uncommitted changes.")
+            actions[_("Reset index") + ellipsis] = abortMerge
+
+        elif state == RepositoryState.MERGE:
             mergingWhat = ""
             with suppress(IndexError, KeyError):
                 mergehead = self.repoModel.mergeheads[0]
                 mergingWhat = shortHash(mergehead)  # Take commit hash first in case refsAt raises KeyError
                 mergingWhat = self.repoModel.refsAt[mergehead][0]
                 mergingWhat = RefPrefix.split(mergingWhat)[1]
-            bannerTitle = _("Merging {0}", bquo(mergingWhat))
+            title = _("Merging {0}", bquo(mergingWhat))
 
-            if not repo.any_conflicts:
-                bannerText += _("All conflicts fixed. Commit to conclude.")
-                bannerHeeded = True
+            if conflicts:
+                text = _("Conflicts need fixing.")
             else:
-                bannerText += _("Conflicts need fixing.")
+                text = _("All conflicts fixed. Commit to conclude.")
+                heeded = True
 
-            bannerActions[_("Abort merge")] = abortMerge
+            actions[_("Abort merge") + ellipsis] = abortMerge
 
-        elif rstate == RepositoryState.CHERRYPICK:
-            if not repo.any_conflicts:
-                bannerText += _("Commit to conclude the cherry-pick.")
-                bannerHeeded = True
+        elif state == RepositoryState.CHERRYPICK:
+            title = _p("RepositoryState", "Cherry-picking")
+
+            if conflicts:
+                text = _("Conflicts need fixing.")
             else:
-                bannerText += _("Conflicts need fixing.")
+                text = _("Commit to conclude the cherry-pick.")
+                heeded = True
 
-            bannerActions[_("Abort cherry-pick")] = abortMerge
+            actions[_("Abort cherry-pick") + ellipsis] = abortMerge
 
-        elif rstate == RepositoryState.REVERT:
-            if not repo.any_conflicts:
-                bannerText += _("Commit to conclude the revert.")
-                bannerHeeded = True
+        elif state == RepositoryState.REVERT:
+            title = _p("RepositoryState", "Reverting")
+
+            if conflicts:
+                text = _("Conflicts need fixing.")
             else:
-                bannerText += _("Conflicts need fixing.")
+                text = _("Commit to conclude the revert.")
+                heeded = True
 
-            bannerActions[_("Abort revert")] = abortMerge
+            actions[_("Abort revert") + ellipsis] = abortMerge
 
-        elif rstate == RepositoryState.NONE:
-            if repo.any_conflicts:
-                bannerTitle = _("Conflicts")
-                bannerText = _("Fix the conflicts among the uncommitted changes.")
-                bannerActions[_("Reset index")] = abortMerge
-
-        elif rstate == RepositoryState.REBASE_INTERACTIVE:
+        elif state == RepositoryState.REBASE_INTERACTIVE:
             info = self.repo.rebase_info()
-            mainText = _("Rebasing {0} onto {1}",
-                         tquoe(info.head_shorthand),
-                         tquoe(shortHash(info.onto, maybe=True)))
-            bannerTitle = f"({info.msgnum}/{info.end}) {mainText}"
-            bannerText = _("Currently stopped at {0}",
-                           tquoe(shortHash(info.stopped_sha, maybe=True)))
 
-            bannerActions = {
-                _("Abort rebase"): lambda: AbortRebase.invoke(self),
-                _("Continue rebase"): lambda: ContinueRebase.invoke(self),
-            }
+            title = _("Rebasing {0} onto {1}", tquoe(info.head_shorthand), tquoe(shortHash(info.onto, maybe=True)))
+            title = f"({info.msgnum}/{info.end}) {title}"
+
+            textParts = [_("Stopped at {0}.", tquoe(shortHash(info.stopped_sha, maybe=True)))]
+
+            actions[_("Abort rebase") + ellipsis] = lambda: AbortRebase.invoke(self)
+            actions[_("Continue rebase")] = lambda: ContinueRebase.invoke(self)
+
+            if conflicts:
+                textParts.append(_("Fix conflicts to continue."))
+                actions[_("Continue rebase")] = None
+            else:
+                textParts.append(_("No conflicts: you can continue."))
+                heeded = True
+
+            text = "<br>".join(textParts)
 
         else:
-            bannerTitle = _("Warning")
-            bannerText = _(
-                "The repo is currently in state {state}, which {app} doesn’t support yet. "
-                "Use <code>git</code> on the command line to continue.",
-                app=qAppName(), state=bquo(trtables.enum(rstate)))
+            title = _("Warning")
+            text = _("The repo is currently in state {state}, which {app} doesn’t support yet. "
+                     "Use <code>git</code> on the command line to continue.",
+                     app=qAppName(), state=bquo(trtables.enum(state)))
 
+        # Set up the banner
         with DisableWidgetUpdatesContext(self.sideSplitter):
-            if bannerText or bannerTitle:
-                self.mergeBanner.popUp(bannerTitle, bannerText, heeded=bannerHeeded, canDismiss=False)
-                for actionName, actionCallback in bannerActions.items():
-                    self.mergeBanner.addButton(englishTitleCase(actionName), actionCallback)
-            else:
-                self.mergeBanner.setVisible(False)
+            self.mergeBanner.popUp(title, text, heeded=heeded, canDismiss=False)
+
+            for actionName, actionCallback in actions.items():
+                button = self.mergeBanner.addButton(englishTitleCase(actionName), actionCallback)
+                button.setEnabled(actionCallback is not None)
 
     def refreshNumUncommittedChanges(self):
         self.sidebar.repaintUncommittedChanges()
