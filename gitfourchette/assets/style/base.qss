@@ -33,6 +33,12 @@ CommitHookButton::menu-indicator,
 SignoffButton::menu-indicator,
 GpgButton::menu-indicator { image: none; }
 
+RebaseSequenceView QLineEdit {
+    border: 2px solid palette(accent);
+    border-radius: 6px;
+    padding: 0 2px;
+}
+
 QMenu QLabel.ActionDefSection { font-weight: bold; }
 
 ContextHeader { background-color: ${headerBg}; }

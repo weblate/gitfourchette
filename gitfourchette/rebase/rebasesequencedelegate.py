@@ -23,6 +23,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ignoreMouseOverState = False
+        self.textLeft = 0
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         height = settings.prefs.calcRowHeight(option.fontMetrics)
@@ -69,6 +70,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             painter.drawText(charRect, Qt.AlignmentFlag.AlignCenter, hashChar)
             charRect.translate(hcw, 0)
         rect.setLeft(charRect.left() + _ColumnPadding)
+        self.textLeft = rect.left()
 
         # Draw message
         if item.op.isEditable():
@@ -191,3 +193,25 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             opBelow = below.data(_ItemRole).op
 
         return opAbove, opBelow
+
+    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
+        editor = QLineEdit(parent)
+        editor.setFrame(True)  # honored by Fusion but ignored by Breeze, hence some extra QSS to get a border anyway
+        editor.setClearButtonEnabled(True)
+        editor.setPlaceholderText(_("Leave blank to reset original message"))
+        return editor
+
+    def updateEditorGeometry(self, editor: QWidget, option: QStyleOptionViewItem, index: QModelIndex):
+        assert isinstance(editor, QLineEdit)
+
+        leftOffset = self.textLeft - 2 - 2 - 2  # QSS border - QSS padding - QLineEdit internal padding
+        rect = option.rect.adjusted(leftOffset, -1, 0, 1)
+
+        # For very long lines, option.rect may extend beyond the viewport.
+        # Clamp the QLineEdit to the right edge of the viewport.
+        parent = self.parent()
+        assert isinstance(parent, QAbstractScrollArea)
+        rect.setRight(parent.viewport().width() - 2)
+
+        editor.setGeometry(rect)
+
