@@ -46,7 +46,6 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         # Begin painting
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        fontMetrics = painter.fontMetrics()
         rect = QRect(option.rect)
         rect.adjust(2, 0, -2, 0)
 
@@ -63,33 +62,54 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         # Draw hash
         hcw = max(option.fontMetrics.horizontalAdvance(c) for c in "0123456789abcdef")
         charRect = QRect(rect.left(), rect.top(), hcw, rect.height())
-        colorRole = QPalette.ColorRole.HighlightedText if isSelected else QPalette.ColorRole.PlaceholderText
-        textColor = option.palette.color(colorGroup, colorRole)
-        painter.setPen(textColor)
+        mutedRole = QPalette.ColorRole.HighlightedText if isSelected else QPalette.ColorRole.PlaceholderText
+        mutedColor = option.palette.color(colorGroup, mutedRole)
+        painter.setPen(mutedColor)
         for hashChar in shortHash(item.hexHash):
             painter.drawText(charRect, Qt.AlignmentFlag.AlignCenter, hashChar)
             charRect.translate(hcw, 0)
         rect.setLeft(charRect.left() + _ColumnPadding)
         self.textLeft = rect.left()
 
-        # Draw message
-        if item.op.isEditable():
-            editableFont = QFont(painter.font())
-            editableFont.setItalic(True)
-            painter.setFont(editableFont)
-            fontMetrics = painter.fontMetrics()
+        # Figure out message text, message styling, and hint text
+        messageRole = QPalette.ColorRole.HighlightedText if isSelected else QPalette.ColorRole.WindowText
+        messageColor = option.palette.color(colorGroup, messageRole)
+        messageFont = QFont(painter.font())
+        message = item.comment
+        hint = ""
+        if item.op == RebaseOp.Drop:
+            messageFont.setStrikeOut(True)
+        elif item.op == RebaseOp.Fixup:
+            # hint = _("message discarded by {fixup}", fixup="fixup")
+            messageFont.setWeight(QFont.Weight.Light)
+            messageColor = mutedColor
+        elif item.op.isEditable():
             if item.payload:
-                text = item.payload
+                message = item.payload
+                hint = _("reworded")
+            elif MACOS:  # pragma: no cover
+                hint = _("double-click to reword")
             else:
-                text = _("(double-click to reword)") + " " + item.comment
-        else:
-            text = item.comment
+                hint = _("double-click/{key} to reword", key="F2")
 
-        text = fontMetrics.elidedText(text, option.textElideMode, rect.width())
-        colorRole = QPalette.ColorRole.HighlightedText if isSelected else QPalette.ColorRole.WindowText
-        textColor = option.palette.color(colorGroup, colorRole)
-        painter.setPen(textColor)
-        painter.drawText(rect, option.displayAlignment, text)
+        # Draw hint if we've got enough room
+        if hint and rect.width() > painter.fontMetrics().horizontalAdvance("M"*20):
+            hint = f"({hint})"
+            hintFont = QFont(painter.font())
+            hintFont.setItalic(True)
+            hintFont.setBold(True)
+            hintWidth = QFontMetricsF(hintFont).horizontalAdvance(hint)
+            hintAlign = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            painter.setFont(hintFont)
+            painter.setPen(mutedColor)
+            painter.drawText(rect.adjusted(0, 0, -4, 0), hintAlign, hint)
+            rect.adjust(0, 0, -int(hintWidth), 0)
+
+        # Draw message
+        message = painter.fontMetrics().elidedText(message, option.textElideMode, rect.width())
+        painter.setPen(messageColor)
+        painter.setFont(messageFont)
+        painter.drawText(rect, option.displayAlignment, message)
 
         # Finish painting
         painter.restore()
