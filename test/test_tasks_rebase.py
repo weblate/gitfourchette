@@ -32,12 +32,14 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
 
         # Apply all operations
         for todo in todoList:
+            sequenceView.setFocus()
+            waitUntilTrue(sequenceView.hasFocus)
+
             # Select row
             qlvClickNthRow(sequenceView, todo.row)
 
             # Press keyboard shortcut for desired operation
             QTest.keyClicks(sequenceView.viewport(), RebaseOpLetters[todo.op])
-            QTest.qWait(0)
 
             itemsSoFar = sequenceView.allRebaseLines()
             assert itemsSoFar[todo.row].op == todo.op
@@ -64,7 +66,8 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
         rebaseDialog.accept()
 
 
-def testCancelRebaseDialog(tempDir, mainWindow):
+@pytest.mark.parametrize("withChanges", [False, True], ids=["no changes", "with changes"])
+def testCancelRebaseDialog(tempDir, mainWindow, withChanges):
     wd = unpackRepo(tempDir)
 
     rw = mainWindow.openRepo(wd)
@@ -73,7 +76,21 @@ def testCancelRebaseDialog(tempDir, mainWindow):
     with AsynchronousTaskContext(rw.taskRunner):
         triggerContextMenuAction(rw.graphView.viewport(), "rebase")
         rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
+        assert rw.repo.state() == RepositoryState.REBASE_INTERACTIVE
+
+        if withChanges:
+            qlvClickNthRow(rebaseDialog.ui.sequence, 0)
+            waitUntilTrue(rebaseDialog.ui.sequence.hasFocus)
+            QTest.keyClicks(rebaseDialog.ui.sequence, RebaseOpLetters[RebaseOp.Edit])
+
         rebaseDialog.reject()
+
+        if withChanges:
+            qmb = findQMessageBox(rebaseDialog, "really close")
+            button = next(b for b in qmb.buttons() if findTextInWidget(b, "close"))
+            button.click()
+
+    assert rw.repo.state() == RepositoryState.NONE
 
 
 def testAbortRebase(tempDir, mainWindow):

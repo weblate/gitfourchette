@@ -9,6 +9,8 @@ from gitfourchette.forms.ui_rebasedialog import Ui_RebaseDialog
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemenustyle import RebaseMenuStyle
 from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLineWrapper, RebaseOp, RebaseOpColors, RebaseOpLetters
+from gitfourchette.toolbox import asyncMessageBox
+from gitfourchette.localization import *
 
 
 SupportedRebaseOps = {
@@ -26,9 +28,16 @@ class RebaseDialog(QDialog):
 
     def __init__(self, parent: QWidget | None):
         super().__init__(parent)
+
         self.ui = Ui_RebaseDialog()
         self.ui.setupUi(self)
         self.ui.sequence.customContextMenuRequested.connect(self.onContextMenuRequested)
+
+        # When data changes, flag the sequence as modified so that reject() asks
+        # for confirmation before closing.
+        listModel = self.ui.sequence.model()
+        listModel.rowsMoved.connect(lambda: self.setWindowModified(True))
+        listModel.dataChanged.connect(lambda: self.setWindowModified(True))
 
         # Bind hotkeys
         for op, hotkey in RebaseOpLetters.items():
@@ -42,6 +51,26 @@ class RebaseDialog(QDialog):
         # Restore window geometry (TODO: On GNOME, is issue #50 still relevant?)
         if not GNOME and RebaseDialog.LastGeometry:
             self.restoreGeometry(RebaseDialog.LastGeometry)
+
+    def reject(self):
+        if not self.isWindowModified():
+            super().reject()
+            return
+
+        def qmbFinished(result: int):
+            if result == QMessageBox.StandardButton.Close:
+                self.setWindowModified(False)
+                self.reject()
+
+        qmb = asyncMessageBox(
+            self,
+            "question",
+            _p("RebaseDialog", "Rebase"),
+            _("Really close this rebase plan? It won’t be saved."),
+            QMessageBox.StandardButton.Close | QMessageBox.StandardButton.Cancel,
+        )
+        qmb.finished.connect(qmbFinished)
+        qmb.show()
 
     def setSequence(self, sequence: TRebaseSequence):
         self.ui.sequence.clear()
