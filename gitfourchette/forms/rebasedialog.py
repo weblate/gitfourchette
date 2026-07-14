@@ -36,6 +36,10 @@ class RebaseDialog(QDialog):
                 continue
             QShortcut(hotkey, self.ui.sequence, lambda c=op: self.setCommandOnSelection(c), context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
+        # Reword always accessible via F2
+        QShortcut("F2", self.ui.sequence, lambda: self.setCommandOnSelection(RebaseOp.Reword), context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+        # Restore window geometry (TODO: On GNOME, is issue #50 still relevant?)
         if not GNOME and RebaseDialog.LastGeometry:
             self.restoreGeometry(RebaseDialog.LastGeometry)
 
@@ -47,13 +51,19 @@ class RebaseDialog(QDialog):
     def setCommandOnSelection(self, command: RebaseOp):
         assert command in SupportedRebaseOps, f"rebase op '{command}' not supported yet"
 
-        for wrapper in self.ui.sequence.selectedItems():
+        selectedItems = self.ui.sequence.selectedItems()
+
+        for wrapper in selectedItems:
             assert isinstance(wrapper, RebaseLineWrapper)
 
             item = wrapper.item
             item.op = command
 
             wrapper.updateFlags()  # flip editable flag if rewording
+
+        # Spawn QLineEdit immediately if rewording
+        if command.isEditable() and selectedItems:
+            self.ui.sequence.editItem(selectedItems[0])
 
         self.ui.sequence.viewport().update()
 

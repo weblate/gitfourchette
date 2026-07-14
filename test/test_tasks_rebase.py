@@ -46,12 +46,7 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
             if todo.message:
                 assert todo.op.isEditable(), "need editable op to change message"
 
-                # Bring up QLineEdit
-                if MACOS:
-                    qlvClickNthRow(sequenceView, todo.row, doubleClick=True)
-                else:
-                    QTest.keyPress(sequenceView.viewport(), Qt.Key.Key_F2)
-
+                # QLineEdit should have been brought up by hotkey
                 lineEdit: QLineEdit = sequenceView.findChild(QLineEdit)
                 assert lineEdit is not None
                 assert lineEdit.hasFocus()
