@@ -4,16 +4,13 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-import base64
 import dataclasses
-import json
 import logging
 import os
-import typing
-from types import NoneType, UnionType, GenericAlias
-from typing import Any
+from pathlib import Path
+from typing import ClassVar
 
-from gitfourchette.porcelain import *
+from gitfourchette import jsonfriendly
 from gitfourchette.qt import *
 
 logger = logging.getLogger(__name__)
@@ -21,9 +18,8 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class PrefsFile:
-    _filename = ""
-    _allowMakeDirs = True
-    _fileVersionKey = "_version"
+    _filename: ClassVar[str] = ""
+    _allowMakeDirs: ClassVar[bool] = True
 
     _dirty = False
     _fileVersion = ""
@@ -69,39 +65,20 @@ class PrefsFile:
             self.__dict__[f.name] = obj
 
     def write(self, force=False) -> str:
+        assert dataclasses.is_dataclass(self)
+
         # Prepare the path
         prefsPath = self._getFullPath(forWriting=True)
         if not prefsPath:
             logger.warning("Couldn't get path for writing")
             return ""
 
-        # Filter the values
-        assert dataclasses.is_dataclass(self)
-        fields: dict[str, dataclasses.Field] = self.__dataclass_fields__
-        filtered = {}
-        for key, field in fields.items():
-            # Skip private fields
-            if key.startswith("_"):
-                continue
-
-            if field.default_factory != dataclasses.MISSING:
-                default = field.default_factory()
-            else:
-                default = field.default
-
-            value = self.__dict__[key]
-
-            # Skip default values
-            if value == default:
-                continue
-
-            # Make the value JSON-friendly
-            value = self.encode(value)
-            filtered[key] = value
+        # Serialize the dataclass
+        jsonText = jsonfriendly.toJson(self, emptyStringIfDefaultDict=True)
 
         # If the filtered object comes out empty (all defaults)
         # avoid cluttering the directory - don't write out an empty object
-        if not filtered:
+        if not jsonText:
             if not self._getFullPath(forWriting=False):
                 # File doesn't exist - don't write out an empty object
                 logger.debug("Not writing empty object")
@@ -110,13 +87,8 @@ class PrefsFile:
                 os.unlink(prefsPath)
             return ""
 
-        # Inject file version into JSON object before writing
-        self._fileVersion = APP_VERSION
-        filtered[self._fileVersionKey] = self._fileVersion
-
         # Dump the object to disk
-        with open(prefsPath, "w", encoding="utf-8") as jsonFile:
-            json.dump(obj=filtered, fp=jsonFile, indent='\t')
+        Path(prefsPath).write_text(jsonText, encoding="utf-8")
         self._dirty = False
 
         logger.info(f"Wrote {prefsPath}")
@@ -127,106 +99,20 @@ class PrefsFile:
         if not prefsPath:  # couldn't be found
             return False
 
-        # Load JSON blob
-        with open(prefsPath, encoding="utf-8") as file:
-            try:
-                jsonObject: dict[str, Any] = json.load(file)
-            except ValueError as loadError:
-                logger.warning(f"{prefsPath}: {loadError}", exc_info=True)
-                return False
+        # Read JSON blob
+        jsonText = Path(prefsPath).read_text(encoding="utf-8")
 
-        if not isinstance(jsonObject, dict):
-            logger.warning(f"{prefsPath}: not a JSON dict")  # type: ignore[unreachable]
+        # Deserialize JSON blob into a dataclass
+        try:
+            obj, version = jsonfriendly.fromJson(jsonText, self.__class__)
+        except ValueError as loadError:
+            logger.warning(f"{prefsPath}: {loadError}", exc_info=True)
             return False
 
-        # Pop file version before decoding user fields
-        fv = jsonObject.pop(self._fileVersionKey, "")
-        if isinstance(fv, str):
-            self._fileVersion = fv
-
-        assert dataclasses.is_dataclass(self)
-        fields: dict[str, dataclasses.Field] = self.__dataclass_fields__
-
-        # Decode values and store them in this object
-        for key, value in jsonObject.items():
-            if key.startswith('_') or key not in fields:
-                logger.warning(f"{prefsPath}: dropping key: {key}")
-                continue
-
-            if value is None:
-                continue
-
-            try:
-                value = self.decode(value, fields[key].type)  # type: ignore
-            except ValueError as error:
-                logger.warning(f"{prefsPath}: {key}: {error}")
-                continue
-
-            self.__dict__[key] = value
+        # Merge into this object
+        clean = {k: v for k, v in obj.__dict__.items() if not k.startswith("_")}
+        self.__dict__.update(clean)
 
         self._dirty = False
+        self._fileVersion = version
         return True
-
-    @staticmethod
-    def encode(o: Any) -> Any:
-        """ Encode a value to make it JSON-friendly """
-        if isinstance(o, enum.Enum):  # Convert Qt enums to plain old data type
-            return o.value
-        elif type(o) is bytes:
-            return base64.b64encode(o).decode("ascii")
-        elif type(o) is set:
-            return list(o)
-        elif type(o) is Signature:
-            return {"name": o.name, "email": o.email, "time": o.time, "offset": o.offset}
-        return o
-
-    @staticmethod
-    def decode(o: Any, dstType: type | UnionType | GenericAlias) -> Any:
-        """ Convert a value coming from a JSON blob to a target type """
-        construct: typing.Callable[[Any], Any] | None = None
-
-        # Extract type from "SomeType | None" unions
-        if type(dstType) is UnionType:
-            union = typing.get_args(dstType)
-            assert len(union) == 2
-            dstType = next(t for t in union if t is not NoneType)
-        assert type(dstType) is not UnionType
-
-        # Extract generic class from GenericAlias, e.g. list[str] --> list
-        if type(dstType) is GenericAlias:
-            dstType = typing.get_origin(dstType)
-        assert not isinstance(dstType, GenericAlias)
-
-        srcType: type
-        if dstType is bytes:
-            srcType = str
-            construct = base64.b64decode
-        elif dstType is set:
-            srcType = list
-        elif issubclass(dstType, enum.StrEnum):
-            srcType = str
-        elif issubclass(dstType, enum.IntEnum | enum.Enum):
-            srcType = int
-        elif dstType is Signature:
-            srcType = dict
-            construct = PrefsFile.decodeSignature
-        else:
-            srcType = dstType
-
-        if srcType is not dstType:
-            if not isinstance(o, srcType):
-                raise ValueError("unexpected JSON field type")
-            if construct is not None:
-                o = construct(o)
-            else:
-                o = dstType(o)
-
-        return o
-
-    @staticmethod
-    def decodeSignature(j: dict) -> Signature:
-        name = str(j["name"])
-        email = str(j["email"])
-        time = int(j["time"])
-        offset = int(j["offset"])
-        return Signature(name, email, time, offset)

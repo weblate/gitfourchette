@@ -10,7 +10,7 @@ import logging
 import os
 from collections.abc import Iterator
 from contextlib import suppress
-from typing import TypedDict, ClassVar
+from typing import ClassVar
 
 from gitfourchette import colors
 from gitfourchette.exttools.toolcommands import ToolCommands
@@ -293,11 +293,12 @@ class PrefEffects:
 class History(PrefsFile):
     _filename = "history.json"
 
-    class JsonRepo(TypedDict, total=False):
-        seq: int
-        length: int
-        nickname: str
-        superproject: str
+    @dataclasses.dataclass
+    class JsonRepo:
+        seq: int = -1
+        length: int = 0
+        nickname: str = ""
+        superproject: str = ""
 
     repos: dict[str, JsonRepo] = dataclasses.field(default_factory=dict)
     cloneHistory: list[str] = dataclasses.field(default_factory=list)
@@ -309,7 +310,7 @@ class History(PrefsFile):
     def addRepo(self, path: str):
         path = os.path.normpath(path)
         repo = self.getRepo(path)
-        repo['seq'] = self.drawSequenceNumber()
+        repo.seq = self.drawSequenceNumber()
         return repo
 
     def getRepo(self, path: str) -> JsonRepo:
@@ -324,37 +325,25 @@ class History(PrefsFile):
     def getRepoNickname(self, path: str, strict: bool = False) -> str:
         repo = self.getRepo(path)
         path = os.path.normpath(path)
-        return repo.get("nickname", "" if strict else os.path.basename(path))
+        name = repo.nickname
+        if not name and not strict:
+            name = os.path.basename(path)
+        return name
 
     def setRepoNickname(self, path: str, nickname: str):
-        repo = self.getRepo(path)
-        nickname = nickname.strip()
-        if nickname:
-            repo['nickname'] = nickname
-        else:
-            repo.pop('nickname', None)
+        self.getRepo(path).nickname = nickname.strip()
 
     def getRepoNumCommits(self, path: str) -> int:
-        repo = self.getRepo(path)
-        return repo.get('length', 0)
+        return self.getRepo(path).length
 
     def setRepoNumCommits(self, path: str, commitCount: int):
-        repo = self.getRepo(path)
-        if commitCount > 0:
-            repo['length'] = commitCount
-        else:
-            repo.pop('length', None)
+        self.getRepo(path).length = commitCount
 
     def getRepoSuperproject(self, path: str) -> str:
-        repo = self.getRepo(path)
-        return repo.get('superproject', "")
+        return self.getRepo(path).superproject
 
     def setRepoSuperproject(self, path: str, superprojectPath: str):
-        repo = self.getRepo(path)
-        if superprojectPath:
-            repo['superproject'] = superprojectPath
-        else:
-            repo.pop('superproject', None)
+        self.getRepo(path).superproject = superprojectPath
 
     def getRepoTabName(self, path: str) -> str:
         name = self.getRepoNickname(path)
@@ -383,7 +372,7 @@ class History(PrefsFile):
 
     def getRecentRepoPaths(self, n: int, newestFirst=True) -> Iterator[str]:
         sortedPaths = (path for path, _ in
-                       sorted(self.repos.items(), key=lambda i: i[1].get('seq', -1), reverse=newestFirst))
+                       sorted(self.repos.items(), key=lambda i: i[1].seq, reverse=newestFirst))
 
         return (path for path, _ in zip(sortedPaths, range(n), strict=False))
 
@@ -413,7 +402,7 @@ class History(PrefsFile):
 
     def drawSequenceNumber(self, increment=1):
         if self._maxSeq < 0 and self.repos:
-            self._maxSeq = max(r.get('seq', -1) for r in self.repos.values())
+            self._maxSeq = max(r.seq for r in self.repos.values())
         self._maxSeq += increment
         return self._maxSeq
 

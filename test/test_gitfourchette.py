@@ -4,13 +4,13 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+import dataclasses
 import os.path
 from contextlib import suppress
 
 from pytestqt.qtbot import QtBot
 
 from gitfourchette import settings
-from gitfourchette.application import GFApplication
 from gitfourchette.forms.aboutdialog import AboutDialog
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.processdialog import ProcessDialog
@@ -19,6 +19,7 @@ from gitfourchette.forms.repostub import RepoStub
 from gitfourchette.forms.textinputdialog import TextInputDialog
 from gitfourchette.graphview.commitlogmodel import SpecialRow, CommitLogModel
 from gitfourchette.nav import NavLocator
+from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.repowidget import RepoWidget
 from gitfourchette.settings import Session
 from gitfourchette.sidebar.sidebarmodel import SidebarItem
@@ -861,6 +862,28 @@ def testPrefsFileGenericAliases(tempDir, mainWindow):
     settings.history.load()
     assert settings.history.cloneHistory == ["https://github.com/jorio/gitfourchette"]
     assert settings.history.getRepoNickname("/tmp/hello", strict=True) == "HelloWorld"
+
+
+def testPrefsFileDontTouchPrivateFields(tempDir, mainWindow):
+    @dataclasses.dataclass
+    class TestPrefs(PrefsFile):
+        _filename = "testprefs.json"
+
+        hello: str = ""
+        _dontOverwriteMe: str = ""
+
+    p = TestPrefs()
+    p.hello = "hello world"
+    p._dontOverwriteMe = "whatever"
+    p.setDirty()
+    p.write()
+    del p
+
+    p = TestPrefs()
+    p._dontOverwriteMe = "keep this"
+    p.load()
+    assert p.hello == "hello world"
+    assert p._dontOverwriteMe == "keep this"
 
 
 def testWindowSizeUnaffectedByLongRepoNames(tempDir, mainWindow):

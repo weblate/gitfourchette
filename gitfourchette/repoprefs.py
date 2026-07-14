@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# Copyright (C) 2025 Iliyas Jorio.
+# Copyright (C) 2026 Iliyas Jorio.
 # This file is part of GitFourchette, distributed under the GNU GPL v3.
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
@@ -25,23 +25,24 @@ class RepoPrefs(PrefsFile):
 
     _GitConfigShadowUpstreamKey = f"{APP_SYSTEM_NAME}-shadow-remote"
 
-    _repo: Repo
     draftCommitMessage: str = ""
     draftCommitSignature: Signature | None = None
     draftCommitSignatureOverride: SignatureOverride = SignatureOverride.Nothing
     draftAmendMessage: str = ""
-    hidePatterns: set = field(default_factory=set)
-    showPatterns: set = field(default_factory=set)
-    collapseCache: set = field(default_factory=set)
+    hidePatterns: set[str] = field(default_factory=set)
+    showPatterns: set[str] = field(default_factory=set)
+    collapseCache: set[str] = field(default_factory=set)
     sortBranches: RefSort = RefSort.UseGlobalPref
     sortRemoteBranches: RefSort = RefSort.UseGlobalPref
     sortTags: RefSort = RefSort.UseGlobalPref
     refSortClearTimestamp: int = 0
     customKeyFile: str = ""
+    _repo: Repo = None
 
     @classmethod
     def initForRepo(cls, repo: Repo):
-        repoPrefs = cls(repo)
+        repoPrefs = cls()
+        repoPrefs._repo = repo
         repoPrefs._parentDir = repo.path
         repoPrefs.load()
         return repoPrefs
