@@ -5,11 +5,13 @@
 # -----------------------------------------------------------------------------
 
 import argparse
-import json
+import dataclasses
 import os
-import shlex
 import sys
 
+from typing import TypeVar
+
+from gitfourchette import jsonfriendly
 from gitfourchette.qt import *
 
 
@@ -18,41 +20,56 @@ class GFIpcProtocol:
     UserTimeout = -1  # timeout when waiting for user input
     MaxPayloadSize = 4096
 
-    ProtocolVersionKey = "_protocol"
-    ProtocolVersionValue = APP_VERSION
+    @dataclasses.dataclass
+    class Handshake:
+        args: list[str]
+        env: dict[str, str] = dataclasses.field(default_factory=dict)
+
+    @dataclasses.dataclass
+    class Response:
+        print: str = ""
+        abort: str = ""
+
+    _THandshakeResponse = TypeVar("_THandshakeResponse", bound=Handshake | Response)
 
     @classmethod
-    def writeMessage(cls, socket: QLocalSocket, payloadObj: dict[str, str]) -> int:
+    def writeMessage(cls, socket: QLocalSocket, payloadObj: Handshake | Response) -> int:
         """
-        Serialize a dict over the socket.
+        Serialize a message over the socket.
         """
 
-        # Inject version
-        payloadObj = payloadObj.copy()
-        payloadObj[cls.ProtocolVersionKey] = cls.ProtocolVersionValue
-
-        payload = json.dumps(payloadObj).encode("utf-8", errors="replace")
-        return socket.write(payload)
+        payloadJson = jsonfriendly.toJson(payloadObj)
+        payloadBytes = payloadJson.encode("utf-8", errors="replace")
+        assert len(payloadBytes) <= cls.MaxPayloadSize
+        return socket.write(payloadBytes)
 
     @classmethod
-    def readMessage(cls, socket: QLocalSocket) -> dict[str, str]:
+    def respondAndBail(cls, socket: QLocalSocket, print: str = "", abort: str = "") -> None:
+        response = GFIpcProtocol.Response(print, abort)
+        cls.writeMessage(socket, response)
+        socket.disconnectFromServer()
+        socket.waitForDisconnected(GFIpcProtocol.FastTimeout)
+        socket.disconnectFromServer()
+
+    @classmethod
+    def readMessage(cls, socket: QLocalSocket, t: type[_THandshakeResponse]) -> _THandshakeResponse:
         """
         Deserialize a dict from the socket.
         May raise TimeoutError if the message couldn't be read in due time,
-        or ValueError if the payload doesn't honor protocol.
+        or TypeError/ValueError if the payload doesn't honor protocol.
         """
 
         assert socket.bytesAvailable() > 0, "did you forget to wait for readyRead?"
 
-        payload = socket.read(cls.MaxPayloadSize)
-        if PYSIDE6:
-            payload = bytes(payload)
-        assert isinstance(payload, bytes)
-        payloadObj = json.loads(payload)  # may raise JSONDecodeError (=ValueError)
+        payloadBytes = socket.read(cls.MaxPayloadSize)
+        if PYSIDE6:  # PySide6 returns a QByteArray
+            payloadBytes = bytes(payloadBytes)
+        assert isinstance(payloadBytes, bytes)
 
-        payloadVersion = payloadObj.get(cls.ProtocolVersionKey, "???")
-        if payloadVersion != cls.ProtocolVersionValue:
-            raise ValueError(f"incompatible protocol version '{payloadVersion}' (expected: '{cls.ProtocolVersionValue}')")
+        payloadObj, version = jsonfriendly.fromJson(payloadBytes, t)
+
+        if version != APP_VERSION:
+            raise ValueError(f"incompatible protocol version '{version}' (expected: '{APP_VERSION}')")
 
         return payloadObj
 
@@ -60,14 +77,14 @@ class GFIpcProtocol:
     def simpleBlockingClient(
             cls,
             socketPath: str,
-            handshakeObj: dict[str, str],
+            handshakeObj: Handshake,
             fastTimeout: int = FastTimeout,
             responseTimeout: int = UserTimeout,
             parent=None,
-    ) -> dict[str, str]:
+    ) -> Response:
         """
         Connect to a server, send a handshake, get the response, disconnect.
-        Return the response as a dict.
+        Return the response dataclass.
         WARNING: This blocks the main thread, so don't use this if the UI is running.
         """
 
@@ -86,16 +103,16 @@ class GFIpcProtocol:
             if not socket.waitForReadyRead(responseTimeout):
                 raise TimeoutError(f"timed out waiting for server response - {socket.errorString()}")
 
-            responseObj = cls.readMessage(socket)
+            responseObj = cls.readMessage(socket, t=GFIpcProtocol.Response)
         finally:
             socket.disconnectFromServer()
             socket.deleteLater()
 
-        if "print" in responseObj:
-            print(responseObj["print"], flush=True)
+        if responseObj.print:
+            print(responseObj.print, flush=True)
 
-        if "abort" in responseObj:
-            print(responseObj["abort"], file=sys.stderr)
+        if responseObj.abort:
+            print(responseObj.abort, file=sys.stderr)
             sys.exit(1)
 
         return responseObj
@@ -109,15 +126,11 @@ class GFIpcProtocol:
                             help="forward arguments, typically askpass")
         args = parser.parse_args()
 
-        if args.askpass:
-            forwardedArgs = " ".join(args.forward)
-        else:
-            forwardedArgs = shlex.join(args.forward)
+        handshakeObj = GFIpcProtocol.Handshake(args.forward)
 
-        handshakeObj = {"args": forwardedArgs}
         if args.askpass:
             for var in ["SSH_ASKPASS_PROMPT", "SSH_AUTH_SOCK", "SSH_AGENT_PID"]:
-                handshakeObj[var] = os.environ.get(var, "")
+                handshakeObj.env[var] = os.environ.get(var, "")
 
         return cls.simpleBlockingClient(args.socket, handshakeObj)
 

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from gitfourchette.settings import Session
     from gitfourchette.mount.mountmanager import MountManager
     from gitfourchette.sshagent import SshAgent
+    from gitfourchette.ipc.ipcprotocol import GFIpcProtocol
     from gitfourchette.ipc.ipcserver import GFIpcServer
     from gitfourchette.ipc.singleinstancesocket import SingleInstanceSocket
 
@@ -788,16 +789,22 @@ class GFApplication(QApplication):
 
         logger.debug(f"Installed return shortcut on {dialog}")
 
-    def onAskpassClientConnected(self, handshake: dict[str,str], socket: QLocalSocket):
+    def onAskpassClientConnected(self, handshake: GFIpcProtocol.Handshake, socket: QLocalSocket):
         from gitfourchette.forms.askpassdialog import AskpassDialog
         from gitfourchette.ipc.ipcprotocol import GFIpcProtocol
 
         dialog = AskpassDialog(
             self.mainWindow,
-            prompt=handshake["args"],
-            sshAskpassPrompt=handshake["SSH_ASKPASS_PROMPT"],
-            sshAuthSock=handshake["SSH_AUTH_SOCK"],
-            sshAgentPid=handshake["SSH_AGENT_PID"],
+            prompt=" ".join(handshake.args),
+            sshAskpassPrompt=handshake.env["SSH_ASKPASS_PROMPT"],
+            sshAuthSock=handshake.env["SSH_AUTH_SOCK"],
+            sshAgentPid=handshake.env["SSH_AGENT_PID"],
         )
-        dialog.messageForClient.connect(lambda response: GFIpcProtocol.writeMessage(socket, response))
+
+        def forwardResponse(response: GFIpcProtocol.Response):
+            # Do NOT respondAndBail here; let git close the socket
+            GFIpcProtocol.writeMessage(socket, response)
+
+        dialog.messageForClient.connect(forwardResponse)
+
         dialog.show()

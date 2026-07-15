@@ -6,7 +6,6 @@
 
 import logging
 import os
-import shlex
 from pathlib import Path
 
 from gitfourchette.application import GFApplication
@@ -50,26 +49,23 @@ class SingleInstanceSocket(GFIpcServer):
         if not raiseSocketPath.is_socket():
             return False
 
+        handshake = GFIpcProtocol.Handshake(paths)
+
         try:
             GFIpcProtocol.simpleBlockingClient(
                 str(raiseSocketPath),
-                {"paths": shlex.join(paths)},
+                handshake,
                 responseTimeout=GFIpcProtocol.FastTimeout)
             return True
         except TimeoutError:
             return False
 
-    def _newConnection(self, handshake: dict[str, str], socket: QLocalSocket):
-        try:
-            paths: list[str] = shlex.split(handshake["paths"])
-        except (KeyError, ValueError) as ex:
-            logger.warning(f"could not get paths from client: {ex}")
-            return
+    def _newConnection(self, handshake: GFIpcProtocol.Handshake, socket: QLocalSocket):
+        paths = handshake.args
 
         message = _("Switching to running instance {pid}. Pass {switch} to start a new instance.",
                     pid=f"(PID {os.getpid()})",
                     switch="--" + GFApplication.OptionNamesNewInstance[-1])
 
-        GFIpcProtocol.writeMessage(socket, {"print": message})
-
+        GFIpcProtocol.respondAndBail(socket, print=message)
         self.restoreSession.emit(paths)

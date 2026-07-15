@@ -5,7 +5,6 @@
 # -----------------------------------------------------------------------------
 
 import dataclasses
-import json
 import os.path
 from contextlib import suppress
 
@@ -19,6 +18,7 @@ from gitfourchette.forms.reposettingsdialog import RepoSettingsDialog
 from gitfourchette.forms.repostub import RepoStub
 from gitfourchette.forms.textinputdialog import TextInputDialog
 from gitfourchette.graphview.commitlogmodel import SpecialRow, CommitLogModel
+from gitfourchette.ipc.ipcprotocol import GFIpcProtocol
 from gitfourchette.nav import NavLocator
 from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.repowidget import RepoWidget
@@ -929,11 +929,10 @@ def testRaiseExistingInstance(tempDir, mainWindow):
     socketPath = GFApplication.instance().singleInstanceSocket.socketPath
 
     wd = unpackRepo(tempDir)
-    handshake = {"paths": shlex.join([wd]), "_protocol": APP_VERSION}
-    handshakeBlob = json.dumps(handshake).encode("utf-8")
+    handshake = GFIpcProtocol.Handshake(args=[wd])
 
     socket = QLocalSocket()
-    socket.connected.connect(lambda: socket.write(handshakeBlob))
+    socket.connected.connect(lambda: GFIpcProtocol.writeMessage(socket, handshake))
 
     assert mainWindow.tabs.count() == 0
 

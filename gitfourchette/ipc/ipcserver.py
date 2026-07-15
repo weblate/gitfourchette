@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class GFIpcServer(QLocalServer):
-    clientConnected = Signal(dict, QLocalSocket)
+    clientConnected = Signal(GFIpcProtocol.Handshake, QLocalSocket)
     _globalSocketCounter = 0
 
     socketPath: str
@@ -57,7 +57,7 @@ class GFIpcServer(QLocalServer):
         return self.listen(self.socketPath)
 
     def onNewConnection(self):
-        socket: QLocalSocket | None = self.nextPendingConnection()
+        socket = self.nextPendingConnection()
         assert socket is not None
         logger.debug(f"New connection on {socket.fullServerName()}")
         assert socket.isValid()
@@ -72,8 +72,8 @@ class GFIpcServer(QLocalServer):
 
     def onReadyReadGetHandshakeFromClient(self, socket: QLocalSocket):
         try:
-            payload = GFIpcProtocol.readMessage(socket)
-        except ValueError as ex:
+            payload = GFIpcProtocol.readMessage(socket, GFIpcProtocol.Handshake)
+        except (TypeError, ValueError) as ex:
             logger.warning(f"Did not get client handshake: {ex}")
             socket.close()
             return
@@ -98,6 +98,7 @@ class GFIpcServer(QLocalServer):
             launcherScript.chmod(0o500)
 
         if askpass:
+            # Askpass must be a single token without any arguments
             return str(launcherScript)
         else:
             return shlex.join([str(launcherScript), self.socketPath])
