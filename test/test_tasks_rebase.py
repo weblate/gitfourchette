@@ -23,47 +23,45 @@ class _Todo:
 def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
     rw.jump(NavLocator.inCommit(onto, ""))
 
-    with AsynchronousTaskContext(rw.taskRunner):
-        # Bring up RebaseDialog
-        triggerContextMenuAction(rw.graphView.viewport(), "rebase")
-        rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
+    # Bring up RebaseDialog
+    triggerContextMenuAction(rw.graphView.viewport(), "rebase")
+    rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
 
-        sequenceView = rebaseDialog.ui.sequence
+    sequenceView = rebaseDialog.ui.sequence
 
-        # Apply all operations
-        for todo in todoList:
-            sequenceView.setFocus()
-            waitUntilTrue(sequenceView.hasFocus)
+    # Apply all operations
+    for todo in todoList:
+        sequenceView.setFocus()
+        waitUntilTrue(sequenceView.hasFocus)
 
-            # Select row
-            qlvClickNthRow(sequenceView, todo.row)
+        # Select row
+        qlvClickNthRow(sequenceView, todo.row)
 
-            # Press keyboard shortcut for desired operation
-            QTest.keyClicks(sequenceView.viewport(), RebaseOpLetters[todo.op])
+        # Press keyboard shortcut for desired operation
+        QTest.keyClicks(sequenceView.viewport(), RebaseOpLetters[todo.op])
 
-            itemsSoFar = sequenceView.allRebaseLines()
-            assert itemsSoFar[todo.row].op == todo.op
+        itemsSoFar = sequenceView.allRebaseLines()
+        assert itemsSoFar[todo.row].op == todo.op
 
-            # Apply reworded message, if any
-            if todo.message:
-                assert todo.op.isEditable(), "need editable op to change message"
+        # Apply reworded message, if any
+        if todo.message:
+            assert todo.op.isEditable(), "need editable op to change message"
 
-                # QLineEdit should have been brought up by hotkey
-                lineEdit: QLineEdit = sequenceView.findChild(QLineEdit)
-                assert lineEdit is not None
-                assert lineEdit.hasFocus()
+            # QLineEdit should have been brought up by hotkey
+            lineEdit: QLineEdit = sequenceView.findChild(QLineEdit)
+            assert lineEdit is not None
+            assert lineEdit.hasFocus()
 
-                # Fill it in
-                QTest.keyClicks(lineEdit, todo.message)
+            # Fill it in
+            QTest.keyClicks(lineEdit, todo.message)
 
-                # Warning: in real life, Return commits the current text in the
-                # QLineEdit, but in offscreen mode, this accepts the entire
-                # dialog. Just use tab to commit instead...
-                QTest.keyPress(lineEdit, Qt.Key.Key_Tab)
-                QTest.qWait(0)
+            # Warning: in real life, Return commits the current text in the
+            # QLineEdit, but in offscreen mode, this accepts the entire
+            # dialog. Just use tab to commit instead...
+            QTest.keyPress(lineEdit, Qt.Key.Key_Tab)
+            QTest.qWait(0)
 
-        # Go ahead with the rebase
-        rebaseDialog.accept()
+    return rebaseDialog
 
 
 @pytest.mark.parametrize("withChanges", [False, True], ids=["no changes", "with changes"])
@@ -73,22 +71,17 @@ def testCancelRebaseDialog(tempDir, mainWindow, withChanges):
     rw = mainWindow.openRepo(wd)
     rw.jump(NavLocator.inCommit(Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0"), "a/a1"), check=True)
 
-    with AsynchronousTaskContext(rw.taskRunner):
-        triggerContextMenuAction(rw.graphView.viewport(), "rebase")
-        rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
-        assert rw.repo.state() == RepositoryState.REBASE_INTERACTIVE
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = [_Todo(0, RebaseOp.Edit)] if withChanges else []
 
-        if withChanges:
-            qlvClickNthRow(rebaseDialog.ui.sequence, 0)
-            waitUntilTrue(rebaseDialog.ui.sequence.hasFocus)
-            QTest.keyClicks(rebaseDialog.ui.sequence, RebaseOpLetters[RebaseOp.Edit])
+    rebaseDialog = _driveRebaseDialog(rw, onto, todo)
+    rebaseDialog.reject()
 
-        rebaseDialog.reject()
-
-        if withChanges:
-            qmb = findQMessageBox(rebaseDialog, "really close")
-            button = next(b for b in qmb.buttons() if findTextInWidget(b, "close"))
-            button.click()
+    if withChanges:
+        assert rebaseDialog.isVisible()
+        qmb = findQMessageBox(rebaseDialog, "really close")
+        button = next(b for b in qmb.buttons() if findTextInWidget(b, "close"))
+        button.click()
 
     assert rw.repo.state() == RepositoryState.NONE
 
@@ -101,7 +94,7 @@ def testAbortRebase(tempDir, mainWindow):
 
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
-    _driveRebaseDialog(rw, onto, todo)
+    _driveRebaseDialog(rw, onto, todo).accept()
 
     assert rw.repo.state() == RepositoryState.REBASE_INTERACTIVE
     assert rw.repo.head_commit_id == edit
@@ -128,7 +121,7 @@ def testContinueRebase(tempDir, mainWindow):
 
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
-    _driveRebaseDialog(rw, onto, todo)
+    _driveRebaseDialog(rw, onto, todo).accept()
 
     assert rw.repo.state() == RepositoryState.REBASE_INTERACTIVE
     assert rw.repo.head_commit_id == edit
@@ -161,7 +154,7 @@ def testRebaseReword(tempDir, mainWindow):
 
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
-    _driveRebaseDialog(rw, onto, todo)
+    _driveRebaseDialog(rw, onto, todo).accept()
 
     assert rw.repo.state() == RepositoryState.NONE
     assert rw.repo.head_commit.message.strip() == "rewording newer commit"
@@ -177,7 +170,7 @@ def testRebaseRewordAfterContinue(tempDir, mainWindow):
 
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
-    _driveRebaseDialog(rw, onto, todo)
+    _driveRebaseDialog(rw, onto, todo).accept()
 
     assert rw.repo.state() == RepositoryState.REBASE_INTERACTIVE
     assert rw.mergeBanner.isVisible()
@@ -209,7 +202,7 @@ def testRebaseCausesConflicts(tempDir, mainWindow):
     todo = []
 
     rw = mainWindow.openRepo(wd)
-    _driveRebaseDialog(rw, onto, todo)
+    _driveRebaseDialog(rw, onto, todo).accept()
 
     assert rw.repo.state() == RepositoryState.REBASE_INTERACTIVE
     assert rw.mergeBanner.isVisible()
@@ -247,3 +240,18 @@ def testRebaseCausesConflicts(tempDir, mainWindow):
     assert rw.repo.state() == RepositoryState.NONE
     assert rw.repo.head_commit.message.startswith("modifying master.txt")
     assert rw.repo.head_commit.parents[0].message.startswith("modifying c/c2.txt")
+
+
+def testRebasePlanOutOfSync(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = []
+
+    rw = mainWindow.openRepo(wd)
+    rebaseDialog = _driveRebaseDialog(rw, onto, todo)
+
+    shell("git checkout ce112d0", wd)
+    rw.refreshRepo()
+
+    rebaseDialog.accept()
+    rejectQMessageBox(rw, "cannot apply this rebase plan")

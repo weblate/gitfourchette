@@ -26,8 +26,12 @@ SupportedRebaseOps = {
 class RebaseDialog(QDialog):
     LastGeometry = b""
 
+    initialSequence: TRebaseSequence
+
     def __init__(self, parent: QWidget | None):
         super().__init__(parent)
+
+        self.initialSequence = []
 
         self.ui = Ui_RebaseDialog()
         self.ui.setupUi(self)
@@ -52,6 +56,11 @@ class RebaseDialog(QDialog):
         if not GNOME and RebaseDialog.LastGeometry:
             self.restoreGeometry(RebaseDialog.LastGeometry)
 
+        self.finished.connect(self._onFinishedSaveGeometry)
+
+    def _onFinishedSaveGeometry(self):
+        RebaseDialog.LastGeometry = self.saveGeometry().data()
+
     def reject(self):
         if not self.isWindowModified():
             super().reject()
@@ -73,9 +82,12 @@ class RebaseDialog(QDialog):
         qmb.show()
 
     def setSequence(self, sequence: TRebaseSequence):
+        self.initialSequence = [line.copy() for line in sequence]
+
         self.ui.sequence.clear()
-        for item in sequence:
-            self.ui.sequence.addItem(RebaseLineWrapper(item))
+        for line in self.initialSequence:
+            lineWrapper = RebaseLineWrapper(line)
+            self.ui.sequence.addItem(lineWrapper)
 
     def setCommandOnSelection(self, command: RebaseOp):
         assert command in SupportedRebaseOps, f"rebase op '{command}' not supported yet"

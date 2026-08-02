@@ -4,6 +4,8 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from __future__ import annotations  # TODO: Remove once we can drop support for Python <= 3.13
+
 import base64
 import dataclasses
 import enum
@@ -11,6 +13,7 @@ import re
 from typing import Any
 
 from gitfourchette import colors
+from gitfourchette.porcelain import Oid
 from gitfourchette.qt import *
 
 
@@ -68,6 +71,9 @@ class RebaseLine:
     comment: str = ""
     payload: str = ""
 
+    def copy(self) -> RebaseLine:
+        return dataclasses.replace(self)
+
     def __str__(self) -> str:
         # Note that git strips comment-only lines from .git/rebase-merge/git-rebase-todo,
         # so our payload must fit on the same line as the opcode.
@@ -79,13 +85,25 @@ class RebaseLine:
 
         return f"{self.op} {self.hexHash} {comment}"
 
+
 TRebaseSequence = list[RebaseLine]
+
+
+@dataclasses.dataclass
+class RebasePlan:
+    sequence: TRebaseSequence
+    headName: str
+    origHead: Oid
+    onto: Oid
+
+    def serializeSequence(self) -> str:
+        return "\n".join(str(line) for line in self.sequence)
 
 
 class RebaseLineWrapper(QListWidgetItem):
     def __init__(self, item: RebaseLine):
         super().__init__()
-        self.item = item
+        self.item = item.copy()
         self.updateFlags()
 
     def data(self, role: int):

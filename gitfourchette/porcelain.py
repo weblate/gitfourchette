@@ -141,8 +141,8 @@ class _UnchangedConfigFile(Exception):
 
 @_dataclasses.dataclass
 class RebaseInfo:
-    head_name: str
-    onto: Oid | str
+    head_name: str  # may be "detached HEAD"
+    onto: Oid
     orig_head: Oid
     stopped_sha: Oid | str  # may be empty string
     msgnum: int
@@ -1207,7 +1207,7 @@ class Repo(_VanillaRepository):
             raise NotImplementedError(f"unknown conversion {convert_to}")
 
         head_name   = read_file("head-name")
-        onto        = read_file("onto", "Oid|str")
+        onto        = read_file("onto", "Oid")
         orig_head   = read_file("orig-head", "Oid")
         stopped_sha = read_file("stopped-sha", "Oid|str")
         msgnum      = read_file("msgnum", "int")

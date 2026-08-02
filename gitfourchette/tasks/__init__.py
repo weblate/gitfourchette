@@ -76,6 +76,7 @@ from gitfourchette.tasks.nettasks import (
 from gitfourchette.tasks.rebasetasks import (
     AbortRebase,
     ContinueRebase,
+    ExecuteRebase,
     InteractiveRebase,
 )
 from gitfourchette.tasks.remotetasks import (

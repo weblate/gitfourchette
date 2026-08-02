@@ -54,6 +54,7 @@ class TaskBook:
             tasks.DropStash: _("Delete stash"),
             tasks.EditRemote: _("Edit remote"),
             tasks.EditUpstreamBranch: _("Edit upstream branch"),
+            tasks.ExecuteRebase: _("Execute rebase"),
             tasks.ExportCommitAsPatch: _("Export commit as patch file"),
             tasks.ExportPatchCollection: _("Export patch file"),
             tasks.ExportStashAsPatch: _("Export stash as patch file"),
