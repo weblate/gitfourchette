@@ -242,6 +242,48 @@ def testRebaseCausesConflicts(tempDir, mainWindow):
     assert rw.repo.head_commit.parents[0].message.startswith("modifying c/c2.txt")
 
 
+def testRebaseNoopDud(tempDir, mainWindow):
+    shell("""
+        git init repo -b master
+        cd repo
+        git commit --allow-empty -m 'root commit'
+    """, tempDir.name)
+
+    wd = f"{tempDir.name}/repo"
+    onto = readOidFile(f"{wd}/.git/refs/heads/master")
+
+    rw = mainWindow.openRepo(wd)
+    rw.jump(NavLocator.inCommit(onto, ""), check=True)
+
+    triggerContextMenuAction(rw.graphView.viewport(), "rebase")
+    acceptQMessageBox(rw, "no rebase is necessary")
+    assert rw.repo.branches.local["master"].target == onto
+
+
+def testRebaseNoopReset(tempDir, mainWindow):
+    shell("""
+        git init -b master repo
+        cd repo
+        touch hello.txt
+        git add hello.txt
+        git commit -m 'root commit'
+        echo 'hello' > hello.txt
+        git commit -am 'add some text'
+        git branch rebase-onto-here
+        git commit --amend -m 'add exact same text with a different commit message'
+    """, tempDir.name)
+
+    wd = f"{tempDir.name}/repo"
+    onto = readOidFile(f"{wd}/.git/refs/heads/rebase-onto-here")
+    rw = mainWindow.openRepo(wd)
+    rw.jump(NavLocator.inCommit(onto, "hello.txt"), check=True)
+
+    triggerContextMenuAction(rw.graphView.viewport(), "rebase")
+    acceptQMessageBox(rw, "all commits from.+master.+are already in the other branch")
+    visualPause()
+    assert rw.repo.branches.local["master"].target == onto
+
+
 def testRebasePlanOutOfSync(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")

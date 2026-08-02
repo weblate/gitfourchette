@@ -13,28 +13,41 @@ from gitfourchette.gitdriver import GitDriver
 from gitfourchette.ipc.ipcprotocol import GFIpcProtocol
 from gitfourchette.localization import _
 from gitfourchette.nav import NavLocator, NavFlags
-from gitfourchette.porcelain import Oid, RepositoryState, RebaseInfo
+from gitfourchette.porcelain import *
 from gitfourchette.ipc.ipcserver import GFIpcServer
 from gitfourchette.qt import *
 from gitfourchette.rebase.editmsgautofillserver import EditmsgAutoFillServer
 from gitfourchette.rebase.rebasemodel import parseRebaseTodo, RebasePlan
 from gitfourchette.tasks import TaskPrereqs, TaskEffects
 from gitfourchette.tasks.repotask import RepoTask, AbortTask
-from gitfourchette.toolbox import shortHash, tquoe, paragraphs, bquo
+from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
 
 _StandardRebaseTaskEffects = TaskEffects.Head | TaskEffects.Workdir
 
+# Magic messages passed via git's stderr from the socket callback function to
+# the RepoTask's main coroutine.
+_AbortMagicOK = "InteractiveRebaseAbortMagicOK"
+_AbortMagicNoop = "InteractiveRebaseAbortMagicNoop"
+_AbortMagicToctou = "InteractiveRebaseAbortMagicToctou"
+
 
 class InteractiveRebase(RepoTask):
-    _gracefulAbortMagic = "PrepareRebaseGracefulAbort"
-
     def prereqs(self):
         # TODO: need clean workdir, too
         return TaskPrereqs.NoConflicts | TaskPrereqs.NoUnborn | TaskPrereqs.NoCherrypick
 
-    def flow(self, rootCommit: Oid):
+    def flow(self, ontoCommit: Oid):
+        headName = self.repo.head_branch_shorthand
+        headCommit = self.repo.head_commit_id
+
+        if headCommit == ontoCommit:
+            message = paragraphs(_("No rebase is necessary."),
+                                 _("{0} already points to {1}.")
+                                 ).format(bquo(headName), bquo(shortHash(headCommit)))
+            raise AbortTask(message, icon="information")
+
         sequenceServer = GFIpcServer(self, singleShot=True, startNow=True)
         sequenceServer.clientConnected.connect(self.onClientConnected)
 
@@ -42,19 +55,26 @@ class InteractiveRebase(RepoTask):
 
         driver = yield from self.flowCallGit(
             "-c", "core.abbrev=no",
-            "rebase", "-i", str(rootCommit),
+            "rebase", "-i", str(ontoCommit),
             env={
                 "GIT_SEQUENCE_EDITOR": sequenceServer.clientCommand(),
             },
             autoFail=False)
 
-        # We expect `rebase -i` to fail with our graceful abort message.
-        # If it failed for any other reason, show error message.
-        if driver.exitCode() != 1 or self._gracefulAbortMagic not in driver.stderrScrollback():
+        # Back from onClientConnected.
+        # We expect `rebase -i` to fail with one of our magic strings.
+        # If it failed for any other reason, show Git error message.
+        stderr = driver.stderrScrollback()
+
+        if _AbortMagicOK in stderr:
+            pass
+        elif _AbortMagicNoop in stderr:
+            yield from self.confirmNoopRebase(headName, headCommit, ontoCommit)
+        else:
             raise AbortTask(driver.htmlErrorText(), details=driver.formatCommandLine())
 
     def onClientConnected(self, handshake: GFIpcProtocol.Handshake, socket: QLocalSocket):
-        abort = self._gracefulAbortMagic
+        abortPayload = _AbortMagicOK
 
         try:
             self.hideProcessProgress.emit(True)
@@ -62,6 +82,10 @@ class InteractiveRebase(RepoTask):
             path = handshake.args[0]
             text = Path(path).read_text(encoding="utf-8")
             todo = parseRebaseTodo(text)
+
+            if not todo:
+                abortPayload = _AbortMagicNoop
+                return
 
             info = self.repo.rebase_info(path)
             plan = RebasePlan(todo, headName=info.head_name, origHead=info.orig_head, onto=info.onto)
@@ -73,12 +97,12 @@ class InteractiveRebase(RepoTask):
 
         except Exception as ex:
             # Switch to non-graceful abort
-            abort = f"{self.__class__.__name__} failed: {ex.__class__.__name__}: {ex}"
+            abortPayload = f"{self.__class__.__name__} failed: {ex.__class__.__name__}: {ex}"
 
         finally:
             # Bail from `rebase -i` until the dialog is accepted
             # Exit GIT_SEQUENCE_EDITOR with non-0 return code, causing `git rebase` to fail
-            GFIpcProtocol.respondAndBail(socket, abort=abort)
+            GFIpcProtocol.respondAndBail(socket, abort=abortPayload)
 
     def executeRebase(self, oldPlan: RebasePlan, dialog: RebaseDialog):
         """ Run when RebaseDialog is accepted. """
@@ -86,10 +110,22 @@ class InteractiveRebase(RepoTask):
         newPlan = dataclasses.replace(oldPlan, sequence=newSequence)
         ExecuteRebase.invoke(dialog, oldPlan, newPlan)
 
+    def confirmNoopRebase(self, headName: str, headCommit: Oid, ontoCommit: Oid):
+        message = paragraphs(
+            _("There’s nothing to rebase. All commits from {0} are already in the other branch."),
+            _("If you continue, this will amount to resetting {0} to {1}.")
+        ).format(bquo(headName), bquo(shortHash(ontoCommit)))
+        yield from self.flowConfirm(text=message, verb=_("Continue"))
+
+        # Make sure the head didn't change while user was reading the message
+        if self.repo.head_branch_shorthand != headName or self.repo.head_commit_id != headCommit:
+            raise AbortTask(_toctouErrorText(headName, headCommit))
+
+        driver = yield from self.flowCallGit("rebase", str(ontoCommit))
+        _debriefRebase(self, driver, headName, headCommit, ontoCommit)
+
 
 class ExecuteRebase(RepoTask):
-    rebaseInfoAtStart: RebaseInfo | None
-
     def prereqs(self):
         # TODO: need clean workdir, too
         return TaskPrereqs.NoConflicts | TaskPrereqs.NoUnborn | TaskPrereqs.NoCherrypick
@@ -97,8 +133,6 @@ class ExecuteRebase(RepoTask):
     def flow(self, oldPlan: RebasePlan, newPlan: RebasePlan):
         self.oldPlan = oldPlan
         self.newPlan = newPlan
-        self.rebaseInfoAtStart = None
-        self.failMessage = ""
 
         sequenceServer = GFIpcServer(self, singleShot=True, startNow=True)
         sequenceServer.clientConnected.connect(self.onClientConnected)
@@ -114,15 +148,11 @@ class ExecuteRebase(RepoTask):
             autoFail=False,
         )
 
-        if self.failMessage:
-            raise AbortTask(self.failMessage)
-
-        assert self.rebaseInfoAtStart is not None
-        _debriefRebase(self, driver, self.rebaseInfoAtStart)  # type: ignore[unreachable] # mypy is being dumb here
+        _debriefRebase(self, driver, oldPlan.headShorthand, oldPlan.origHead, oldPlan.onto)
 
     def onClientConnected(self, handshake: GFIpcProtocol.Handshake, socket: QLocalSocket):
-        success = False
         path = handshake.args[0]
+        abortPayload = "Aborting Rebase"
 
         try:
             self.epilog.effects |= TaskEffects.Head
@@ -133,28 +163,16 @@ class ExecuteRebase(RepoTask):
             info = self.repo.rebase_info(path)
             oldPlan2 = RebasePlan(sequence, headName=info.head_name, origHead=info.orig_head, onto=info.onto)
             if oldPlan2 != self.oldPlan:
-                self.failMessage = paragraphs(
-                    _("Cannot apply this rebase plan."),
-                    _("The repository isn’t on the same branch/commit as when you started rebasing."),
-                    _("The plan was made when branch {0} was checked out, and its head was at commit {1}.",
-                      bquo(self.oldPlan.headName),
-                      bquo(shortHash(self.oldPlan.origHead)),
-                      ),
-                )
+                abortPayload = _AbortMagicToctou
                 return
-
-            # Prepare epilog message in case of success.
-            # We'll override it if we're still in a rebase state after the dialog is closed.
-            self.rebaseInfoAtStart = info
 
             # Dump new todo
             sequenceText = self.newPlan.serializeSequence()
             Path(path).write_text(sequenceText, encoding="utf-8")
-            success = True
+            abortPayload = ""  # success
         finally:
             # Close socket, causing rebase to start executing our sequence
-            abort = "" if success else "aborting rebase"
-            GFIpcProtocol.respondAndBail(socket, abort=abort)
+            GFIpcProtocol.respondAndBail(socket, abort=abortPayload)
 
 
 class AbortRebase(RepoTask):
@@ -208,18 +226,33 @@ class ContinueRebase(RepoTask):
             autoFail=False,
         )
 
-        _debriefRebase(self, driver, rebaseInfoAtStart)
+        _debriefRebase(self, driver, rebaseInfoAtStart.head_shorthand, rebaseInfoAtStart.orig_head, rebaseInfoAtStart.onto)
 
 
-def _debriefRebase(task: RepoTask, driver: GitDriver, previousInfo: RebaseInfo):
+def _toctouErrorText(headName: str, headCommit: Oid):
+    return paragraphs(
+        _("Cannot apply this rebase plan."),
+        _("The repository isn’t on the same branch/commit as when you started rebasing."),
+        _("The plan was made when branch {0} was checked out, and its head was at commit {1}.",
+          bquo(headName),
+          bquo(shortHash(headCommit)),
+          ),
+    )
+
+
+def _debriefRebase(task: RepoTask, driver: GitDriver, headName: str, headCommit: Oid, ontoCommit: Oid):
     exitCode = driver.exitCode()
     unknownFailure = exitCode not in [0, 1]
 
     if exitCode == 1:
         stderr = driver.stderrScrollback().strip()
-        if stderr.strip() == "error: nothing to do":
+
+        if stderr == "error: nothing to do":
             # Canceled from dialog, bail quietly
             raise AbortTask()
+
+        if _AbortMagicToctou in stderr:
+            raise AbortTask(_toctouErrorText(headName, headCommit))
 
         stdout = driver.stdoutScrollback()
         logger.debug(f"git rebase stdout: {stdout}")
@@ -236,9 +269,7 @@ def _debriefRebase(task: RepoTask, driver: GitDriver, previousInfo: RebaseInfo):
     state = task.repo.state()
 
     if state == RepositoryState.NONE:
-        status = _("Finished rebasing {0} onto {1}.",
-                   tquoe(previousInfo.head_shorthand),
-                   tquoe(shortHash(previousInfo.onto, maybe=True)))
+        status = _("Finished rebasing {0} onto {1}.", tquoe(headName), tquo(shortHash(ontoCommit)))
     else:
         status = _("Rebase stopped. Your input is needed to continue.")
 

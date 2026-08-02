@@ -13,7 +13,7 @@ import re
 from typing import Any
 
 from gitfourchette import colors
-from gitfourchette.porcelain import Oid
+from gitfourchette.porcelain import Oid, RefPrefix
 from gitfourchette.qt import *
 
 
@@ -99,6 +99,10 @@ class RebasePlan:
     def serializeSequence(self) -> str:
         return "\n".join(str(line) for line in self.sequence)
 
+    @property
+    def headShorthand(self) -> str:
+        return RefPrefix.split(self.headName)[1]
+
 
 class RebaseLineWrapper(QListWidgetItem):
     def __init__(self, item: RebaseLine):
@@ -145,9 +149,13 @@ def parseRebaseTodo(text: str) -> TRebaseSequence:
     sequence: TRebaseSequence = []
     for line in text.splitlines():
         line = line.strip()
-        # TODO: handle noop?
+
         if not line or line.startswith(CommentMarker):
             continue
+
+        if _todoNoopPattern.match(line):
+            continue
+
         match = _todoLinePattern.match(line)
         assert match is not None, f"unsupported todo line: {line}"
         commandName, hexHash, comment = match.groups()
@@ -164,6 +172,7 @@ def parseRebaseTodo(text: str) -> TRebaseSequence:
 
 
 _opsRegex = "|".join(RebaseOp)
+_todoNoopPattern = re.compile(r"^noop\b")
 _todoLinePattern = re.compile(rf"^({_opsRegex})\s+([0-9a-f]+)(?:\s*#\s*|\s+)(.+)$")
 #                                                             ^^^^^^^^^
 # Note: At some point between git 2.43 and 2.54, git rebase started adding
