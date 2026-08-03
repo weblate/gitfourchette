@@ -35,6 +35,16 @@ class RebaseOp(enum.StrEnum):
         return self == "reword" or self == "squash"
 
 
+SupportedRebaseOps = {
+    RebaseOp.Pick,
+    RebaseOp.Reword,
+    RebaseOp.Edit,
+    # RebaseOp.Squash,  # TODO - need message edit support
+    RebaseOp.Fixup,
+    RebaseOp.Drop,
+}
+
+
 RebaseOpLetters: dict[RebaseOp, str] = {
     RebaseOp.Pick       : "p",
     RebaseOp.Reword     : "r",

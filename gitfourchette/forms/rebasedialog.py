@@ -8,19 +8,9 @@ from gitfourchette import trtables
 from gitfourchette.forms.ui_rebasedialog import Ui_RebaseDialog
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemenustyle import RebaseMenuStyle
-from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLineWrapper, RebaseOp, RebaseOpColors, RebaseOpLetters
+from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLineWrapper, RebaseOp, RebaseOpColors, RebaseOpLetters, SupportedRebaseOps
 from gitfourchette.toolbox import asyncMessageBox
 from gitfourchette.localization import *
-
-
-SupportedRebaseOps = {
-    RebaseOp.Pick,
-    RebaseOp.Reword,
-    RebaseOp.Edit,
-    # RebaseOp.Squash,  # TODO - need message edit support
-    RebaseOp.Fixup,
-    RebaseOp.Drop,
-}
 
 
 class RebaseDialog(QDialog):
@@ -36,21 +26,13 @@ class RebaseDialog(QDialog):
         self.ui = Ui_RebaseDialog()
         self.ui.setupUi(self)
         self.ui.sequence.customContextMenuRequested.connect(self.onContextMenuRequested)
+        self.ui.sequence.opShortcut.connect(self.setCommandOnSelection)
 
         # When data changes, flag the sequence as modified so that reject() asks
         # for confirmation before closing.
         listModel = self.ui.sequence.model()
         listModel.rowsMoved.connect(lambda: self.setWindowModified(True))
         listModel.dataChanged.connect(lambda: self.setWindowModified(True))
-
-        # Bind hotkeys
-        for op, hotkey in RebaseOpLetters.items():
-            if op not in SupportedRebaseOps:
-                continue
-            QShortcut(hotkey, self.ui.sequence, lambda c=op: self.setCommandOnSelection(c), context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
-
-        # Reword always accessible via F2
-        QShortcut("F2", self.ui.sequence, lambda: self.setCommandOnSelection(RebaseOp.Reword), context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
 
         # Restore window geometry (TODO: On GNOME, is issue #50 still relevant?)
         if not GNOME and RebaseDialog.LastGeometry:

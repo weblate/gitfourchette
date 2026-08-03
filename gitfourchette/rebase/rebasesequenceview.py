@@ -6,14 +6,19 @@
 
 from gitfourchette.localization import *
 from gitfourchette.qt import *
-from gitfourchette.rebase.rebasemodel import RebaseLine
+from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpLetters, SupportedRebaseOps
 from gitfourchette.rebase.rebasesequencedelegate import RebaseSequenceDelegate
 from gitfourchette.rebase.rebasesequencestyle import RebaseSequenceStyle
 from gitfourchette.toolbox.gitutils import *
 from gitfourchette.toolbox.textutils import *
 
 
+_RebaseOpsByHotkey = {letter: op for op, letter in RebaseOpLetters.items()}
+
+
 class RebaseSequenceView(QListWidget):
+    opShortcut = Signal(RebaseOp)
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -39,6 +44,23 @@ class RebaseSequenceView(QListWidget):
         lines = [wrapper.item for wrapper in self.selectedItems()]  # type: ignore[attr-defined]
         assert all(isinstance(i, RebaseLine) for i in lines)
         return lines
+
+    def keyboardSearch(self, search: str):
+        pass
+
+    def keyPressEvent(self, event: QKeyEvent):
+        op: RebaseOp | None = None
+        text = event.text().lower()
+
+        if text in _RebaseOpsByHotkey:
+            op = _RebaseOpsByHotkey[text]
+        elif event.key() == Qt.Key.Key_F2:
+            op = RebaseOp.Reword
+
+        if op in SupportedRebaseOps:
+            self.opShortcut.emit(op)
+        else:
+            super().keyPressEvent(event)
 
     def supportedDropActions(self) -> Qt.DropAction:
         # Override default MoveAction|CopyAction to prevent copying items by
