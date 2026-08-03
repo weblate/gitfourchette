@@ -6,6 +6,7 @@
 
 import dataclasses
 import logging
+from contextlib import suppress
 from pathlib import Path
 
 from gitfourchette.forms.rebasedialog import RebaseDialog
@@ -17,7 +18,7 @@ from gitfourchette.porcelain import *
 from gitfourchette.ipc.ipcserver import GFIpcServer
 from gitfourchette.qt import *
 from gitfourchette.rebase.editmsgautofillserver import EditmsgAutoFillServer
-from gitfourchette.rebase.rebasemodel import parseRebaseTodo, RebasePlan
+from gitfourchette.rebase.rebasemodel import parseRebaseTodo, RebaseLine, RebasePlan
 from gitfourchette.tasks import TaskPrereqs, TaskEffects
 from gitfourchette.tasks.repotask import RepoTask, AbortTask
 from gitfourchette.toolbox import *
@@ -86,6 +87,14 @@ class InteractiveRebase(RepoTask):
             if not todo:
                 abortPayload = _AbortMagicNoop
                 return
+
+            # Verify lines with "# empty"
+            for item in todo:
+                if item.originalComment.endswith(RebaseLine.EmptyCommitSuffix):
+                    with suppress(ValueError, LookupError):
+                        commit = self.repo[item.hexHash].peel(Commit)
+                        if commit.tree_id == commit.parents[0].tree_id:
+                            item.verifiedEmpty = True
 
             info = self.repo.rebase_info(path)
             plan = RebasePlan(todo, headName=info.head_name, origHead=info.orig_head, onto=info.onto)

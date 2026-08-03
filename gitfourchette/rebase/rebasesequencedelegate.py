@@ -75,8 +75,12 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         messageRole = QPalette.ColorRole.HighlightedText if isSelected else QPalette.ColorRole.WindowText
         messageColor = option.palette.color(colorGroup, messageRole)
         messageFont = QFont(painter.font())
-        message = item.comment
+        message = item.displayMessage()
         hint = ""
+
+        if item.verifiedEmpty:
+            hint = _("Empty commit")
+
         if item.op == RebaseOp.Drop:
             messageFont.setStrikeOut(True)
         elif item.op == RebaseOp.Fixup:
@@ -85,7 +89,6 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             messageColor = mutedColor
         elif item.op.isEditable():
             if item.payload:
-                message = item.payload
                 hint = _("reworded")
             elif MACOS:  # pragma: no cover
                 hint = _("double-click to reword")

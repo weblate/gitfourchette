@@ -10,7 +10,7 @@ import base64
 import dataclasses
 import enum
 import re
-from typing import Any
+from typing import Any, ClassVar
 
 from gitfourchette import colors
 from gitfourchette.porcelain import Oid, RefPrefix
@@ -66,10 +66,24 @@ _PayloadMagicPrefix = "GITFOURCHETTE_REBASE_PAYLOAD="
 
 @dataclasses.dataclass
 class RebaseLine:
+    EmptyCommitSuffix: ClassVar = " # empty"
+
     op: RebaseOp
     hexHash: str
-    comment: str = ""
+    originalComment: str = ""
     payload: str = ""
+
+    verifiedEmpty: bool = dataclasses.field(default=False, compare=False)
+    """ True if we've verified that the commit has no changes w/r/t its first
+    parent. """
+
+    def displayMessage(self, unmodified: bool = False) -> str:
+        if not unmodified and self.op.isEditable() and self.payload:
+            return self.payload
+        elif self.verifiedEmpty:
+            return self.originalComment.removesuffix(RebaseLine.EmptyCommitSuffix)
+        else:
+            return self.originalComment
 
     def copy(self) -> RebaseLine:
         return dataclasses.replace(self)
@@ -81,7 +95,7 @@ class RebaseLine:
             payloadBase64 = base64.b64encode(self.payload.encode("utf-8"))
             comment = "#" + _PayloadMagicPrefix + payloadBase64.decode("ascii")
         else:
-            comment = "# " + self.comment
+            comment = "# " + self.originalComment
 
         return f"{self.op} {self.hexHash} {comment}"
 
@@ -119,7 +133,7 @@ class RebaseLineWrapper(QListWidgetItem):
             return self.item.hexHash
         elif role == Qt.ItemDataRole.EditRole:
             # Message filling in QLineEdit
-            return self.item.payload or self.item.comment or ""
+            return self.item.displayMessage()
         return super().data(role)
 
     def updateFlags(self):
@@ -138,7 +152,7 @@ class RebaseLineWrapper(QListWidgetItem):
         assert isinstance(value, str)
 
         # Don't override if identical to original comment
-        if value == self.item.comment:
+        if value == self.item.displayMessage(unmodified=True):
             value = ""
 
         self.item.payload = value

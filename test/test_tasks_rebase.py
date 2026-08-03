@@ -161,6 +161,32 @@ def testRebaseReword(tempDir, mainWindow):
     assert rw.repo.head_commit.parents[0].message.strip() == "rewording older commit"
 
 
+def testRebaseRewordDisplayMessage(tempDir, mainWindow):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = [
+        _Todo(0, RebaseOp.Reword, "hello rewording"),
+    ]
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    dialog = _driveRebaseDialog(rw, onto, todo)
+
+    def getSelectedMessage():
+        return dialog.ui.sequence.selectedRebaseLines()[0].displayMessage()
+
+    # Switching from 'reword' to 'pick' should revert the old name
+    qlvClickNthRow(dialog.ui.sequence, 0)
+    assert "hello rewording" == getSelectedMessage()
+    QTest.keyClicks(dialog.ui.sequence.viewport(), RebaseOpLetters[RebaseOp.Pick])
+    assert "Rename c/c2.txt => c/c2-2.txt" == getSelectedMessage()
+
+    # Switching back to 'reword' should have saved the message that we entered originally
+    QTest.keyClicks(dialog.ui.sequence.viewport(), RebaseOpLetters[RebaseOp.Reword])
+    assert "hello rewording" == getSelectedMessage()
+
+    dialog.accept()
+
+
 def testRebaseRewordAfterContinue(tempDir, mainWindow):
     onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
     todo = [
@@ -297,3 +323,30 @@ def testRebasePlanOutOfSync(tempDir, mainWindow):
 
     rebaseDialog.accept()
     rejectQMessageBox(rw, "cannot apply this rebase plan")
+
+
+def testRebaseVerifyEmptyCommitsInTodo(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    shell("""
+        git commit --allow-empty -m 'some dummy commit'
+
+        echo 'yoink' > master.txt
+        git commit -am 'gotcha # empty'
+    """, wd)
+
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = []
+
+    rw = mainWindow.openRepo(wd)
+    rebaseDialog = _driveRebaseDialog(rw, onto, todo)
+    seq = rebaseDialog.initialSequence
+
+    assert seq[-2].originalComment == "some dummy commit # empty"
+    assert seq[-2].displayMessage() == "some dummy commit"
+    assert seq[-2].verifiedEmpty
+
+    assert seq[-1].originalComment == "gotcha # empty"
+    assert seq[-1].displayMessage() == "gotcha # empty"
+    assert not seq[-1].verifiedEmpty
+
+    rebaseDialog.reject()
