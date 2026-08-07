@@ -76,7 +76,6 @@ opt/python*/lib/python*/site-packages/PyQt?/QtDesigner*.so
 opt/python*/lib/python*/site-packages/PyQt?/QtHelp*.so
 opt/python*/lib/python*/site-packages/PyQt?/QtLocation*.so
 opt/python*/lib/python*/site-packages/PyQt?/QtMultimedia*.so
-opt/python*/lib/python*/site-packages/PyQt?/QtNetwork*.so
 opt/python*/lib/python*/site-packages/PyQt?/QtNfc*.so
 opt/python*/lib/python*/site-packages/PyQt?/QtOpenGL*.so
 opt/python*/lib/python*/site-packages/PyQt?/QtPdf*.so
@@ -106,7 +105,6 @@ opt/python*/lib/python*/site-packages/PyQt?/Qt?/lib/libQt?Help*
 opt/python*/lib/python*/site-packages/PyQt?/Qt?/lib/libQt?Labs*
 opt/python*/lib/python*/site-packages/PyQt?/Qt?/lib/libQt?Location*
 opt/python*/lib/python*/site-packages/PyQt?/Qt?/lib/libQt?Multimedia*
-opt/python*/lib/python*/site-packages/PyQt?/Qt?/lib/libQt?Network*
 opt/python*/lib/python*/site-packages/PyQt?/Qt?/lib/libQt?Nfc*
 opt/python*/lib/python*/site-packages/PyQt?/Qt?/lib/libQt?OpenGL*
 opt/python*/lib/python*/site-packages/PyQt?/Qt?/lib/libQt?Pdf*

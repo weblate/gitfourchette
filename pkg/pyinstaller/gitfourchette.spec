@@ -37,9 +37,7 @@ EXCLUDES = [
     'PyQt6.QtPdf',
     'PyQt6.QtTest',
     'PyQt6.QtMultimedia',
-    'PyQt6.QtNetwork',  # not effective?
     'PySide6.QtMultimedia',
-    'PySide6.QtNetwork',
     'PySide6.QtOpenGL',
     'PySide6.QtQml',
     'PySide6.QtQuick',
@@ -111,7 +109,7 @@ def filterPath(p: Path):
         return False
     
     # Remove framework bloat
-    bloatLibs = ['QtPdf', 'QtNetwork', 'libqpdf', 'opengl32sw']
+    bloatLibs = ['QtPdf', 'libqpdf', 'opengl32sw']
     if MACOS:
         # Don't force-remove QtDBus on macos; app doesn't start without it
         if any(f'/{lib}.framework' in str(p)
