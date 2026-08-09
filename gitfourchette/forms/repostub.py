@@ -127,7 +127,7 @@ class RepoStub(QWidget):
         return settings.history.getRepoTabName(self.workdir)
 
     def superproject(self):
-        return settings.history.getRepoSuperproject(self.workdir)
+        return settings.history.getRepo(self.workdir).superproject
 
     def isPriming(self):
         from gitfourchette.tasks.loadtasks import PrimeRepo

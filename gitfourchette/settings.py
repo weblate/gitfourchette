@@ -307,14 +307,17 @@ class History(PrefsFile):
 
     _maxSeq = -1
 
-    def addRepo(self, path: str):
-        path = os.path.normpath(path)
+    @staticmethod
+    def normalizeRepoPath(path: str):
+        return os.path.normpath(path)
+
+    def addRepo(self, path: str) -> JsonRepo:
         repo = self.getRepo(path)
         repo.seq = self.drawSequenceNumber()
         return repo
 
     def getRepo(self, path: str) -> JsonRepo:
-        path = os.path.normpath(path)
+        path = self.normalizeRepoPath(path)
         try:
             repo = self.repos[path]
         except KeyError:
@@ -324,33 +327,18 @@ class History(PrefsFile):
 
     def getRepoNickname(self, path: str, strict: bool = False) -> str:
         repo = self.getRepo(path)
-        path = os.path.normpath(path)
         name = repo.nickname
         if not name and not strict:
+            path = self.normalizeRepoPath(path)
             name = os.path.basename(path)
         return name
-
-    def setRepoNickname(self, path: str, nickname: str):
-        self.getRepo(path).nickname = nickname.strip()
-
-    def getRepoNumCommits(self, path: str) -> int:
-        return self.getRepo(path).length
-
-    def setRepoNumCommits(self, path: str, commitCount: int):
-        self.getRepo(path).length = commitCount
-
-    def getRepoSuperproject(self, path: str) -> str:
-        return self.getRepo(path).superproject
-
-    def setRepoSuperproject(self, path: str, superprojectPath: str):
-        self.getRepo(path).superproject = superprojectPath
 
     def getRepoTabName(self, path: str) -> str:
         name = self.getRepoNickname(path)
 
         seen = {path}
         while path:
-            path = self.getRepoSuperproject(path)
+            path = self.getRepo(path).superproject
             if path:
                 if path in seen:
                     logger.warning(f"Circular superproject in {self._filename}! {path}")
@@ -362,13 +350,15 @@ class History(PrefsFile):
         return name
 
     def removeRepo(self, path: str):
-        path = os.path.normpath(path)
+        path = self.normalizeRepoPath(path)
         self.repos.pop(path, None)
         self.invalidateSequenceNumber()
+        self.setDirty()
 
     def clearRepoHistory(self):
         self.repos.clear()
         self.invalidateSequenceNumber()
+        self.setDirty()
 
     def getRecentRepoPaths(self, n: int, newestFirst=True) -> Iterator[str]:
         sortedPaths = (path for path, _ in

@@ -400,8 +400,8 @@ def testTabNameDisambiguationRespectsCustomNickname(tempDir, mainWindow):
     shutil.move(os.path.normpath(wd1), path1)
     shutil.move(os.path.normpath(wd2), path2)
 
-    settings.history.setRepoNickname(path1, "myrepo")
-    settings.history.setRepoNickname(path2, "myrepo")
+    settings.history.getRepo(path1).nickname = "myrepo"
+    settings.history.getRepo(path2).nickname = "myrepo"
 
     mainWindow.openRepo(path1)
     mainWindow.openRepo(path2)
@@ -855,7 +855,7 @@ def testPrefsFileGenericAliases(tempDir, mainWindow):
     assert settings.history.cloneHistory == []
     assert not settings.history.getRepoNickname("/tmp/hello", strict=True)
     settings.history.cloneHistory.append("https://github.com/jorio/gitfourchette")
-    settings.history.setRepoNickname("/tmp/hello", "HelloWorld")
+    settings.history.getRepo("/tmp/hello").nickname = "HelloWorld"
     settings.history.setDirty()
     settings.history.write()
     settings.history.reset()
@@ -889,7 +889,7 @@ def testPrefsFileDontTouchPrivateFields(tempDir, mainWindow):
 def testWindowSizeUnaffectedByLongRepoNames(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     assert not settings.history.repos
-    settings.history.setRepoNickname(wd, "extremely long name " * 200)
+    settings.history.getRepo(wd).nickname = "extremely long name " * 200
 
     desiredSize = QSize(800, 600)
     mainWindow.resize(desiredSize)

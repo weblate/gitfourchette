@@ -57,7 +57,7 @@ class EditRepoSettings(RepoTask):
             repoPrefs.setDirty()
 
         if nickname != settings.history.getRepoNickname(self.repo.workdir, strict=True):
-            settings.history.setRepoNickname(self.repo.workdir, nickname)
+            settings.history.getRepo(self.repo.workdir).nickname = nickname
             settings.history.setDirty()
             self.rw.nameChange.emit()
 

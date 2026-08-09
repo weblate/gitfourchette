@@ -104,7 +104,7 @@ class PrimeRepo(RepoTask):
 
         # Retrieve the number of commits that we loaded last time we opened this repo
         # so we can estimate how long it'll take to load it again
-        numCommitsBallpark = settings.history.getRepoNumCommits(repo.workdir)
+        numCommitsBallpark = settings.history.getRepo(repo.workdir).length
 
         if not numCommitsBallpark:
             repoStub.progressFraction.emit(-1.0)  # Indeterminate progress
@@ -181,13 +181,11 @@ class PrimeRepo(RepoTask):
         yield from self.flowEnterUiThread()
         assert not repoStub.didClose, "unexpectedly continuing PrimeRepo after RepoStub was closed"
 
-        # Save commit count (if not truncated)
-        if not truncatedHistory:
-            settings.history.setRepoNumCommits(repo.workdir, numCommits)
-
         # Bump repo in history
-        settings.history.addRepo(repo.workdir)
-        settings.history.setRepoSuperproject(repo.workdir, repoModel.superproject)
+        historyRepo = settings.history.addRepo(repo.workdir)
+        historyRepo.superproject = repoModel.superproject
+        if not truncatedHistory:  # Save commit count
+            historyRepo.length = numCommits
         settings.history.write()
 
         # Finally, prime the UI: Create RepoWidget

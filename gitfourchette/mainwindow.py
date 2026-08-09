@@ -1245,7 +1245,7 @@ class MainWindow(QMainWindow):
         if isinstance(workdir, str):
             def workdirProxy():
                 return workdir
-            superproject = settings.history.getRepoSuperproject(workdir)
+            superproject = settings.history.getRepo(workdir).superproject
             superprojectEnabled = bool(superproject)
             if superprojectEnabled:
                 superprojectName = settings.history.getRepoTabName(superproject)
@@ -1328,7 +1328,7 @@ class MainWindow(QMainWindow):
         tid.show()
 
     def _repolessSetNicknameImpl(self, workdir: str, nick: str) -> None:
-        settings.history.setRepoNickname(workdir, nick)
+        settings.history.getRepo(workdir).nickname = nick
         settings.history.setDirty()
         tabWidget = self.tabWidgetForWorkdirPath(workdir)
         if isinstance(tabWidget, RepoWidget):
@@ -1344,7 +1344,7 @@ class MainWindow(QMainWindow):
 
     def repolessOpenSuperproject(self, workdir: str, superproject: str | None = None) -> None:
         if superproject is None:
-            superproject = settings.history.getRepoSuperproject(workdir)
+            superproject = settings.history.getRepo(workdir).superproject
 
         if not superproject:
             showInformation(self, _("Open Superproject"), _("This repository does not have a superproject."))

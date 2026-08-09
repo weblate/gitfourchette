@@ -52,7 +52,7 @@ def testTabOverflowSingleTab(tempDir, mainWindow):
     from gitfourchette import settings
 
     wd = unpackRepo(tempDir)
-    settings.history.setRepoNickname(wd, "ridiculously_long_" * 16)
+    settings.history.getRepo(wd).nickname = "ridiculously_long_" * 16
 
     mainWindow.resize(640, 480)  # make sure it's narrow enough for overflow
 
