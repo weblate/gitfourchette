@@ -293,7 +293,7 @@ class NewBranchFromCommit(RepoTask):
 
         forbiddenBranchNames = repo.listall_branches(BranchType.LOCAL)
 
-        commitMessage = repo.get_commit_message(tip)
+        commitMessage = repo[tip].peel(Commit).message
         commitMessage, _junk = messageSummary(commitMessage)
 
         showSubmoduleControls = bool(repo.listall_submodules_fast())
@@ -326,21 +326,18 @@ class NewBranchFromCommit(RepoTask):
         if dlg.ui.upstreamCheckBox.isChecked():
             trackUpstream = dlg.ui.upstreamComboBox.currentText()
 
-        yield from self.flowEnterWorkerThread()
-
         # Create local branch
-        repo.create_branch_from_commit(localName, tip)
         self.epilog.effects |= TaskEffects.Refs | TaskEffects.Upstreams
+        yield from self.flowCallGit("branch", localName, str(tip))
         self.epilog.status = _("Branch {0} created on commit {1}.", tquo(localName), tquo(shortHash(tip)))
 
         # Optionally make it track a remote branch
         if trackUpstream:
-            repo.edit_upstream_branch(localName, trackUpstream)
+            yield from self.flowCallGit("branch", "-u", trackUpstream, localName)
 
         # Switch to it last (if user wants to)
         if switchTo:
             self.epilog.effects |= TaskEffects.Head
-            yield from self.flowEnterUiThread()
             yield from self.flowSubtask(
                 SwitchBranch,
                 localName,
@@ -390,9 +387,11 @@ class EditUpstreamBranch(RepoTask):
         if remoteBranchName == currentUpstreamName:
             raise AbortTask()
 
-        yield from self.flowEnterWorkerThread()
         self.epilog.effects |= TaskEffects.Upstreams
-        self.repo.edit_upstream_branch(localBranchName, remoteBranchName)
+        if not remoteBranchName:
+            yield from self.flowCallGit("branch", "--unset-upstream", localBranchName)
+        else:
+            yield from self.flowCallGit("branch", "-u", remoteBranchName, localBranchName)
         self.repoModel.prefs.setShadowUpstream(localBranchName, "")  # Clear any shadow upstream
 
         if remoteBranchName:
@@ -662,11 +661,10 @@ class RecallCommit(RepoTask):
         dlg.deleteLater()
         needle = dlg.lineEdit.text()
 
-        yield from self.flowEnterWorkerThread()
         self.epilog.effects |= TaskEffects.Refs
         obj = self.repo[needle]
         commit: Commit = obj.peel(Commit)
         branchName = f"recall-{shortHash(commit.id)}"
         branchName = withUniqueSuffix(branchName, self.repo.listall_branches())
-        self.repo.create_branch_from_commit(branchName, commit.id)
+        yield from self.flowCallGit("branch", branchName, str(commit.id))
         self.epilog.jumpTo = NavLocator.inCommit(commit.id)
