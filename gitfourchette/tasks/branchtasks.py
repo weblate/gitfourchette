@@ -106,10 +106,9 @@ class RenameBranch(RepoTask):
         if newBranchName == oldBranchName:
             raise AbortTask()
 
-        yield from self.flowEnterWorkerThread()
         self.epilog.effects |= TaskEffects.Refs
 
-        self.repo.rename_local_branch(oldBranchName, newBranchName)
+        yield from self.flowCallGit("branch", "-m", oldBranchName, newBranchName)
 
         self.epilog.status = _("Branch {0} renamed to {1}.", tquo(oldBranchName), tquo(newBranchName))
 
@@ -172,12 +171,11 @@ class RenameBranchFolder(RepoTask):
             raise AbortTask()
 
         # Perform rename
-        yield from self.flowEnterWorkerThread()
         self.epilog.effects |= TaskEffects.Refs
 
         for oldBranchName in folderBranches:
             newBranchName = transformBranchName(oldBranchName, newFolderName)
-            self.repo.rename_local_branch(oldBranchName, newBranchName)
+            yield from self.flowCallGit("branch", "-m", oldBranchName, newBranchName)
 
         self.epilog.status = (
                 _("Branch folder {0} renamed to {1}.", tquo(oldFolderName), tquo(newFolderName))
