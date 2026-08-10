@@ -204,10 +204,10 @@ class DeleteBranch(RepoTask):
             verb=_("Delete branch"),
             buttonIcon="SP_DialogDiscardButton")
 
-        yield from self.flowEnterWorkerThread()
         target = self.repo.branches[localBranchName].target
         self.epilog.effects |= TaskEffects.Refs
-        self.repo.delete_local_branch(localBranchName)
+
+        yield from self.flowCallGit("branch", "-D", localBranchName)
 
         self.epilog.status = _("Branch {0} deleted (commit at tip was {1}).",
                                tquo(localBranchName), tquo(shortHash(target)))
@@ -242,14 +242,12 @@ class DeleteBranchFolder(RepoTask):
             verb=_("Delete folder"),
             buttonIcon="SP_DialogDiscardButton")
 
-        yield from self.flowEnterWorkerThread()
         self.epilog.effects |= TaskEffects.Refs
 
-        for b in folderBranches:
-            self.repo.delete_local_branch(b)
+        yield from self.flowCallGit("branch", "-D", *folderBranches)
 
         self.epilog.status = _n("{n} branch deleted in folder {name}.",
-                             "{n} branches deleted in folder {name}.",
+                                "{n} branches deleted in folder {name}.",
                                 n=len(folderBranches), name=tquo(folderName))
 
 
