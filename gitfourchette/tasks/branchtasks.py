@@ -451,7 +451,6 @@ class FastForwardBranch(RepoTask):
 
         self.epilog.jumpTo = NavLocator.inRef(RefPrefix.HEADS + localBranchName)
 
-        yield from self.flowEnterUiThread()
         if upToDate:
             message = paragraphs(
                 _("No fast-forwarding necessary."),
@@ -461,30 +460,11 @@ class FastForwardBranch(RepoTask):
             self.epilog.status = stripHtml(message)
             yield from self.flowConfirm(text=message, canCancel=False, dontShowAgainKey="NoFastForwardingNecessary")
 
-    def onError(self, exc):
-        if isinstance(exc, DivergentBranchesError):
-            parentWidget = self.parentWidget()
-
-            lb = exc.local_branch
-            rb = exc.remote_branch
-            text = paragraphs(
-                _("Can’t fast-forward {0} to {1}.", bquo(lb.shorthand), bquo(rb.shorthand)),
-                _("The branches are divergent."))
-            qmb = showWarning(parentWidget, self.name(), text)
-
-            # If it's the checked-out branch, suggest merging
-            if lb.is_checked_out():
-                mergeCaption = _("Merge into {0}", lquoe(lb.shorthand))
-                mergeButton = qmb.addButton(mergeCaption, QMessageBox.ButtonRole.ActionRole)
-                mergeButton.clicked.connect(lambda: MergeBranch.invoke(parentWidget, rb.name))
-        else:
-            super().onError(exc)
-
     def _withGit(self, branch: Branch):
         # Perform merge analysis with libgit2 first
         yield from self.flowEnterWorkerThread()
-        upstream = branch.upstream
         analysis, _mergePref = self.repo.merge_analysis(branch.upstream.target, branch.name)
+        yield from self.flowEnterUiThread()
 
         if analysis & MergeAnalysis.UP_TO_DATE:
             # Local branch is up to date with remote branch, nothing to do.
@@ -494,7 +474,8 @@ class FastForwardBranch(RepoTask):
             pass
         elif analysis == MergeAnalysis.NORMAL:
             # Can't FF. Divergent branches?
-            raise DivergentBranchesError(branch, upstream)
+            self._onDivergentBranches(branch)  # this will abort
+            raise AssertionError("unreachable")
         else:
             # Unborn or something...
             raise NotImplementedError(f"Cannot fast-forward with {analysis!r}.")
@@ -506,13 +487,30 @@ class FastForwardBranch(RepoTask):
         else:
             args = ["push", ".", f"{branch.upstream_name}:{branch.name}"]
 
-        yield from self.flowEnterUiThread()
         driver = yield from self.flowCallGit(*args, autoFail=False)
 
         if driver.exitCode() != 0:
-            raise DivergentBranchesError(branch, branch.upstream)
+            self._onDivergentBranches(branch)  # this will abort
+            raise AssertionError("unreachable")
 
         return False
+
+    def _onDivergentBranches(self, lb: Branch):
+        parentWidget = self.parentWidget()
+        rb = lb.upstream
+
+        text = paragraphs(
+            _("Can’t fast-forward {0} to {1}.", bquo(lb.shorthand), bquo(rb.shorthand)),
+            _("The branches are divergent."))
+        qmb = showWarning(parentWidget, self.name(), text)
+
+        # If it's the checked-out branch, suggest merging
+        if lb.is_checked_out():
+            mergeCaption = _("Merge into {0}", lquoe(lb.shorthand))
+            mergeButton = qmb.addButton(mergeCaption, QMessageBox.ButtonRole.ActionRole)
+            mergeButton.clicked.connect(lambda: MergeBranch.invoke(parentWidget, rb.name))
+
+        raise AbortTask()
 
 
 class MergeBranch(RepoTask):

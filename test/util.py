@@ -301,7 +301,9 @@ def makeBareCopy(
             remote.fetch()
             if not keepOldUpstream:
                 for localBranch in repo.branches.local:
-                    repo.edit_upstream_branch(localBranch, f"{addAsRemote}/{localBranch}")
+                    lb = repo.branches.local[localBranch]
+                    rb = repo.branches.remote[f"{addAsRemote}/{localBranch}"]
+                    lb.upstream = rb
         else:
             assert not keepOldUpstream, "requires preFetch"
 

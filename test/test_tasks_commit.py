@@ -60,9 +60,8 @@ def testCommit(tempDir, mainWindow):
 
     assert len(headCommit.parents) == 1
     diff = rw.repo.diff(headCommit.parents[0], headCommit)
-    patches: list[Patch] = list(diff)
-    assert len(patches) == 1
-    assert patches[0].delta.new_file.path == "a/a1.txt"
+    assert len(diff) == 1
+    assert diff[0].delta.new_file.path == "a/a1.txt"
 
     assert findTextInWidget(mainWindow.statusBar2, rf"commit.+{id7(headCommit)}.+created")
 

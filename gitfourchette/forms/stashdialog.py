@@ -33,6 +33,21 @@ statusPrecedence = {
     FileStatus.WT_TYPECHANGE: 't',
 }
 
+FileStatus_INDEX_MASK = (
+        FileStatus.INDEX_NEW
+        | FileStatus.INDEX_MODIFIED
+        | FileStatus.INDEX_DELETED
+        | FileStatus.INDEX_RENAMED
+        | FileStatus.INDEX_TYPECHANGE)
+
+FileStatus_WT_MASK = (
+        FileStatus.WT_NEW
+        | FileStatus.WT_MODIFIED
+        | FileStatus.WT_DELETED
+        | FileStatus.WT_TYPECHANGE
+        | FileStatus.WT_RENAMED
+        | FileStatus.WT_UNREADABLE)
+
 
 class StashDialog(QDialog):
     def __init__(

@@ -13,21 +13,17 @@ import enum
 import logging as _logging
 import os as _os
 import re as _re
-import shutil as _shutil
 import typing as _typing
 import warnings
 from contextlib import suppress as _suppress
 from os.path import (
-    abspath as _abspath,
     basename as _basename,
     dirname as _dirname,
     exists as _exists,
     isabs as _isabs,
     isdir as _isdir,
-    isfile as _isfile,
     join as _joinpath,
     normpath as _normpath,
-    relpath as _relpath,
 )
 from pathlib import Path as _Path
 
@@ -36,27 +32,18 @@ from pygit2 import settings as _pygit2settings
 from pygit2 import (
     Blob,
     Branch,
-    CheckoutCallbacks,
     Commit,
     Config as GitConfig,
     Diff,
-    DiffDelta,
-    DiffFile,
-    DiffLine,
-    DiffHunk,
     GitError,
-    Keypair,
     IndexEntry,
     InvalidSpecError,
     Object as GitObject,
     Oid,
-    Patch,
     Remote,
-    RemoteCallbacks,
     Repository as _VanillaRepository,
     Signature,
     Stash,
-    StashApplyCallbacks,
     Submodule,
     Tree,
     Walker,
@@ -68,16 +55,11 @@ from pygit2 import (
 from pygit2.enums import (
     ApplyLocation,
     BranchType,
-    CheckoutNotify,
-    CheckoutStrategy,
     ConfigLevel as GitConfigLevel,
-    CredentialType,
     DeltaStatus,
-    DiffFlag,
     DiffOption,
     FileStatus,
     FileMode,
-    FetchPrune,
     MergeAnalysis,
     MergePreference,
     ObjectType,
@@ -87,8 +69,6 @@ from pygit2.enums import (
     ResetMode,
     SortMode,
 )
-
-from pygit2.remotes import TransferProgress
 
 
 _logger = _logging.getLogger(__name__)
@@ -112,21 +92,6 @@ DIFF_HEADER_PATTERN = _re.compile(r"^diff --git (\"?\w/[^\"]+\"?) (\"?\w/[^\"]+\
 
 SUBPROJECT_COMMIT_MINUS_PATTERN = _re.compile(r"^-Subproject commit (.+)$", _re.MULTILINE)
 SUBPROJECT_COMMIT_PLUS_PATTERN = _re.compile(r"^\+Subproject commit (.+)$", _re.MULTILINE)
-
-FileStatus_INDEX_MASK = (
-        FileStatus.INDEX_NEW
-        | FileStatus.INDEX_MODIFIED
-        | FileStatus.INDEX_DELETED
-        | FileStatus.INDEX_RENAMED
-        | FileStatus.INDEX_TYPECHANGE)
-
-FileStatus_WT_MASK = (
-        FileStatus.WT_NEW
-        | FileStatus.WT_MODIFIED
-        | FileStatus.WT_DELETED
-        | FileStatus.WT_TYPECHANGE
-        | FileStatus.WT_RENAMED
-        | FileStatus.WT_UNREADABLE)
 
 
 class RefPrefix:
@@ -160,26 +125,6 @@ class NameValidationError(ValueError):
         self.rule = rule
 
 
-class DivergentBranchesError(Exception):
-    def __init__(self, local_branch: Branch, remote_branch: Branch):
-        super().__init__()
-        self.local_branch = local_branch
-        self.remote_branch = remote_branch
-
-    def __repr__(self):
-        return f"DivergentBranchesError(local: {self.local_branch.shorthand}, remote: {self.remote_branch.shorthand})"
-
-
-class ConflictError(Exception):
-    def __init__(self, conflicts: list[str], description="Conflicts"):
-        super().__init__(description)
-        self.description = description
-        self.conflicts = conflicts
-
-    def __repr__(self):
-        return f"ConflictError({len(self.conflicts)}, {self.description})"
-
-
 class MultiFileError(Exception):
     file_exceptions: dict[str, Exception | None]
 
@@ -200,35 +145,6 @@ class MultiFileError(Exception):
 
 class _UnchangedConfigFile(Exception):
     pass
-
-
-class CheckoutBreakdown(CheckoutCallbacks):
-    status: dict[str, CheckoutNotify]
-
-    def __init__(self):
-        super().__init__()
-        self.status = {}
-
-    def checkout_notify(self, why: CheckoutNotify, path: str, baseline=None, target=None, workdir=None):
-        self.status[path] = why
-
-    def get_conflicts(self):
-        return [path for path in self.status
-                if self.status[path] == CheckoutNotify.CONFLICT]
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if not exc_type:
-            return False
-        if issubclass(exc_type, GitError):
-            message = str(exc_val)
-            if "prevents checkout" in message or "prevent checkout" in message:
-                conflicts = self.get_conflicts()
-                if conflicts:
-                    raise ConflictError(conflicts, "workdir")
-        return False  # let error propagate
 
 
 def version_to_tuple(s: str) -> tuple[int, ...]:
@@ -271,15 +187,6 @@ def pygit2_version_at_least(required_version: str, raise_error=True, feature_nam
         package_name="pygit2",
         required_version_string=required_version,
         current_version_string=PYGIT2_VERSION,
-        raise_error=raise_error,
-        feature_name=feature_name)
-
-
-def libgit2_version_at_least(required_version: str, raise_error=True, feature_name="This feature"):
-    return _version_at_least(
-        package_name="libgit2",
-        required_version_string=required_version,
-        current_version_string=LIBGIT2_VERSION,
         raise_error=raise_error,
         feature_name=feature_name)
 
@@ -452,26 +359,6 @@ def strip_stash_message(stash_message: str) -> str:
     return stash_message.split('\n', maxsplit=1)[0]
 
 
-def parse_submodule_patch(text: str) -> tuple[Oid, Oid, bool]:
-    def parse_subproject_line(match: _re.Match | None):
-        dirty = False
-        if match is None:
-            oid = NULL_OID
-        else:
-            capture = match.group(1)
-            if capture.endswith("-dirty"):
-                capture = capture.removesuffix("-dirty")
-                dirty = True
-            oid = Oid(hex=capture)
-        return oid, dirty
-
-    old_match = SUBPROJECT_COMMIT_MINUS_PATTERN.search(text)
-    new_match = SUBPROJECT_COMMIT_PLUS_PATTERN.search(text)
-    old_id, _dummy = parse_subproject_line(old_match)
-    new_id, new_dirty = parse_subproject_line(new_match)
-    return old_id, new_id, new_dirty
-
-
 class GitConfigHelper:
     # Rough equivalent of git_config_open_default (not available in pygit2 yet)
     default_config_getters: _typing.ClassVar = [
@@ -571,6 +458,13 @@ class GitConfigHelper:
 
     @staticmethod
     def scrub_empty_section(config_path: str, *section_key_tokens: str):
+        """
+        libgit2 leaves behind empty sections in the config file after deleting
+        or renaming a remote or branch. Over time, this litters the config
+        file with empty entries, which slows down operations that parse the
+        config. So, use this function to nip that in the bud.
+        """
+
         num_tokens = len(section_key_tokens)
         if num_tokens == 1:
             section_key = section_key_tokens[0]
@@ -622,37 +516,6 @@ class GitConfigHelper:
         _os.rename(config_path, backup_path)
         _os.rename(temp_path, config_path)
         _os.unlink(backup_path)
-
-    @classmethod
-    def global_identity(cls) -> tuple[str, str, GitConfigLevel]:
-        """
-        Returns the name and email set in the global `.gitconfig` file.
-        If the global identity isn't set, this function returns blank strings.
-        """
-
-        name = ""
-        email = ""
-        level = GitConfigLevel.HIGHEST_LEVEL
-
-        for getter_level, getter in cls.default_config_getters:
-            try:
-                config = getter()
-            except OSError:
-                # "The global file '.gitconfig' doesn't exist: No such file or directory"
-                continue
-
-            with _suppress(KeyError):
-                name = config["user.name"]
-                level = getter_level
-
-            with _suppress(KeyError):
-                email = config["user.email"]
-                level = getter_level
-
-            if name and email:
-                break
-
-        return name, email, level
 
     @classmethod
     def get_default_value(cls, key: str | tuple) -> str:
@@ -796,61 +659,6 @@ class Repo(_VanillaRepository):
         """
         self.index.read(force)
 
-    def get_unstaged_changes(self, update_index: bool = False, show_binary: bool = False, context_lines: int = 3) -> Diff:
-        """
-        Get a Diff of unstaged changes in the working directory.
-
-        In other words, this function compares the workdir to the index.
-        """
-
-        flags = (DiffOption.INCLUDE_UNTRACKED
-                 | DiffOption.RECURSE_UNTRACKED_DIRS
-                 | DiffOption.SHOW_UNTRACKED_CONTENT
-                 | DiffOption.INCLUDE_TYPECHANGE
-                 )
-
-        # Don't attempt to update the index if the repo is locked for writing,
-        # or the index is locked by another program
-        update_index = (update_index
-                        and _os.access(self.path, _os.W_OK)
-                        and not _exists(_joinpath(self.path, "index.lock")))
-
-        # UPDATE_INDEX may improve performance for subsequent diffs if the
-        # index was stale, but this requires the repo to be writable.
-        if update_index:
-            _logger.debug("UPDATE_INDEX")
-            flags |= DiffOption.UPDATE_INDEX
-
-        if show_binary:
-            flags |= DiffOption.SHOW_BINARY
-
-        dirty_diff = self.diff(None, None, flags=flags, context_lines=context_lines)
-        # dirty_diff.find_similar()  #-- it seems that find_similar cannot find renames in unstaged changes, so don't bother
-        return dirty_diff
-
-    def get_staged_changes(self, fast: bool = False, show_binary: bool = False, context_lines: int = 3) -> Diff:
-        """
-        Get a Diff of the staged changes.
-
-        In other words, this function compares the index to HEAD.
-        """
-
-        flags = DiffOption.INCLUDE_TYPECHANGE
-
-        if show_binary:
-            flags |= DiffOption.SHOW_BINARY
-
-        if self.head_is_unborn:  # can't compare against HEAD (empty repo or branch pointing nowhere)
-            index_tree_id = self.index.write_tree()
-            tree = self.peel_tree(index_tree_id)
-            return tree.diff_to_tree(swap=True, flags=flags, context_lines=context_lines)
-        else:
-            # compare HEAD to index
-            stage_diff: Diff = self.diff('HEAD', None, cached=True, flags=flags, context_lines=context_lines)
-            if not fast:
-                stage_diff.find_similar()
-            return stage_diff
-
     @property
     def any_conflicts(self) -> bool:
         """True if there are any conflicts in the index."""
@@ -859,62 +667,21 @@ class Repo(_VanillaRepository):
     @property
     def any_staged_changes(self) -> bool:
         """True if there are any staged changes in the index."""
-        return 0 != len(self.get_staged_changes(fast=True, context_lines=0))
+
+        flags = DiffOption.INCLUDE_TYPECHANGE
+
+        if self.head_is_unborn:  # can't compare against HEAD (empty repo or branch pointing nowhere)
+            index_tree_id = self.index.write_tree()
+            tree = self.peel_tree(index_tree_id)
+            diff = tree.diff_to_tree(swap=True, flags=flags, context_lines=0)
+        else:
+            # compare HEAD to index
+            diff = self.diff('HEAD', None, cached=True, flags=flags, context_lines=0)
+
+        return 0 != len(diff)
         # ---This also works, but it's slower.
         # status = repo.status(untracked_files="no")
         # return any(0 != (flag & FileStatus.INDEX_MASK) for flag in status.values())
-
-    def checkout_local_branch(self, name: str):
-        """Switch to a local branch."""
-        branch = self.branches.local[name]
-        refname = branch.name
-        self.checkout_ref(refname)
-
-    def checkout_ref(self, refname: str):
-        """Enter detached HEAD on the commit pointed to by a ref."""
-        with CheckoutBreakdown() as callbacks:
-            self.checkout(refname, callbacks=callbacks)
-
-    def checkout_commit(self, commit_id: Oid):
-        """Enter detached HEAD on a commit."""
-        commit = self.peel_commit(commit_id)
-        with CheckoutBreakdown() as callbacks:
-            self.checkout_tree(commit.tree, callbacks=callbacks)
-            self.set_head(commit_id)
-
-    def rename_local_branch(self, name: str, new_name: str) -> Branch:
-        """Rename a local branch."""
-        # TODO: if the branch tracks an upstream branch, issue a warning that it won't be renamed on the server
-        branch = self.branches.local[name]
-        branch.rename(new_name)
-        self.scrub_empty_config_section("branch", name)
-        return branch
-
-    def delete_local_branch(self, name: str):
-        """Delete a local branch."""
-        # TODO: if remote-tracking, let user delete upstream too?
-        self.branches.local.delete(name)
-        self.scrub_empty_config_section("branch", name)
-
-    def scrub_empty_config_section(self, *section_key_tokens: str):
-        """
-        libgit2 leaves behind empty sections in the config file after deleting
-        or renaming a remote or branch. Over time, this litters the config
-        file with empty entries, which slows down operations that parse the
-        config. So, use this function to nip that in the bud.
-        """
-        config_path = _joinpath(self.path, "config")
-        GitConfigHelper.scrub_empty_section(config_path, *section_key_tokens)
-
-    def create_branch_on_head(self, name: str) -> Branch:
-        """Create a local branch pointing to the commit at the current HEAD."""
-        return self.create_branch(name, self.head_commit)
-
-    def create_branch_from_commit(self, name: str, commit_id: Oid) -> Branch:
-        """Create a local branch pointing to the given commit id."""
-        commit = self.peel_commit(commit_id)
-        branch = self.create_branch(name, commit)
-        return branch
 
     def listall_remote_branches(self, value_style: _typing.Literal["strip", "shorthand", "refname"] = "strip") -> dict[str, list[str]]:
         names: dict[str, list[str]] = {}
@@ -970,15 +737,6 @@ class Repo(_VanillaRepository):
             if name.startswith(RefPrefix.TAGS)
         ]
 
-    def edit_upstream_branch(self, local_branch_name: str, remote_branch_name: str):
-        local_branch = self.branches.local[local_branch_name]
-        if remote_branch_name:
-            remote_branch = self.branches.remote[remote_branch_name]
-            local_branch.upstream = remote_branch
-        else:
-            if local_branch.upstream is not None:
-                local_branch.upstream = None
-
     def get_remote_skipfetchall(self, remote_name: str) -> bool:
         key = GitConfigHelper.sanitize_key(("remote", remote_name, "skipFetchAll"))
         try:
@@ -999,96 +757,6 @@ class Repo(_VanillaRepository):
     def get_commit_message(self, commit_id: Oid) -> str:
         commit = self.peel_commit(commit_id)
         return commit.message
-
-    def create_commit_on_head(
-            self,
-            message: str,
-            author: Signature | None = None,
-            committer: Signature | None = None
-    ) -> Oid:
-        """
-        Create a commit with the contents of the index tree.
-        Use the commit at HEAD as the new commit's parent.
-        If `author` or `committer` are not overridden, use the repository's default_signature.
-        """
-
-        # Prep ref to update
-        if self.head_is_detached:
-            ref_to_update = "HEAD"
-        else:
-            # Get the ref name pointed to by HEAD, but DON'T use repo.head! It won't work if HEAD is unborn.
-            # Both git and libgit2 store a default branch name in .git/HEAD when they init a repo,
-            # so we should always have a ref name, even though it might not point to anything.
-            target = self.lookup_reference("HEAD").target
-            assert isinstance(target, str), "HEAD isn't a symbolic reference!"
-            ref_to_update = target
-
-        # Prep parent list
-        if self.head_is_unborn:
-            parents = []
-        else:
-            # Always take HEAD commit as 1st parent
-            parents = [self.head_commit_id]
-
-        # If a merge was in progress, add merge heads to parent list
-        parents += self.listall_mergeheads()
-        assert len(set(parents)) == len(parents), "duplicate heads!"
-
-        # Get id of index tree
-        index_tree_id = self.index.write_tree()
-
-        # Take default signature now to prevent any timestamp diff between
-        # author and committer. Note that there may not be a fallback signature
-        # if the system's git config isn't set up.
-        try:
-            fallback_signature = self.default_signature
-        except KeyError:
-            fallback_signature = None
-            assert author is not None, "fallback signature missing - author signature must be provided"
-            assert committer is not None, "fallback signature missing - committer signature must be provided"
-
-        # Create the commit
-        new_commit_id = self.create_commit(
-            ref_to_update,
-            author or fallback_signature,
-            committer or fallback_signature,
-            message,
-            index_tree_id,
-            parents
-        )
-
-        # Clear repository state to conclude a merge/cherrypick operation
-        self.state_cleanup()
-
-        # Repository.create_commit flushes the staged changes from the in-memory index.
-        # Write the index to disk so that other applications can pick up the updated staging area.
-        self.index.write()
-
-        assert not self.head_is_unborn, "HEAD is still unborn after we have committed!"
-
-        return new_commit_id
-
-    def amend_commit_on_head(
-            self,
-            message: str,
-            author: Signature | None = None,
-            committer: Signature | None = None
-    ) -> Oid:
-        """
-        Amend the commit at HEAD with the contents of the index tree.
-        If `author` is None, don't replace the original commit's author.
-        If `committer` is None, use default_signature for the committer's signature.
-        """
-        index_tree_id = self.index.write_tree(self)
-        new_commit_id = self.amend_commit(
-            self.head_commit,
-            'HEAD',
-            message=message,
-            author=author,
-            committer=committer or self.default_signature,
-            tree=index_tree_id
-        )
-        return new_commit_id
 
     def commit_id_from_refname(self, refname: str) -> Oid:
         reference = self.references[refname]
@@ -1191,29 +859,6 @@ class Repo(_VanillaRepository):
 
         return refs
 
-    def stage_files(self, patches: list[Patch]):
-        index = self.index
-        error = MultiFileError()
-
-        for patch in patches:
-            path = patch.delta.new_file.path
-            if patch.delta.new_file.mode == FileMode.TREE and path.endswith("/"):
-                path = path.removesuffix("/")
-            try:
-                if patch.delta.status == DeltaStatus.DELETED:
-                    index.remove(path)
-                else:
-                    index.add(path)
-            except GitError as gitError:
-                error.add_file_error(path, gitError)
-            else:
-                error.add_file_success()
-
-        index.write()
-
-        if error:
-            raise error
-
     def discard_mode_changes(self, paths: list[str]):
         """
         Discards mode changes in the given files.
@@ -1271,38 +916,6 @@ class Repo(_VanillaRepository):
         except StopIteration as exc:
             raise KeyError(f"Stash not found: {commit_id}") from exc
 
-    def applies_breakdown(self, patch_data: bytes | str, location=ApplyLocation.WORKDIR) -> Diff:
-        diff = Diff.parse_diff(patch_data)
-        error = MultiFileError()
-
-        # Attempt to apply every patch in the diff separately, so we can report which file an error pertains to
-        for patch in diff:
-            patch_data = patch.data
-
-            # Work around libgit2 bug: If a patch lacks the "index" line (as our partial patches do),
-            # then libgit2 fails to recreate the "---" and "+++" lines. Then it can't parse its own output.
-            patch_lines = patch_data.splitlines(True)
-            if len(patch_lines) >= 2 and patch_lines[0].startswith(b"diff --git ") and patch_lines[1].startswith(b"@@"):
-                header = patch_lines[0].strip().decode("utf-8")
-                match = _re.match(DIFF_HEADER_PATTERN, header)
-                if match:
-                    patch_lines.insert(1, ("--- " + match[1] + "\n").encode("utf-8"))
-                    patch_lines.insert(2, ("+++ " + match[2] + "\n").encode("utf-8"))
-                    patch_data = b"".join(patch_lines)
-
-            patch_diff = Diff.parse_diff(patch_data)  # can we extract a diff from the patch without re-parsing it?
-            try:
-                self.applies(patch_diff, location, raise_error=True)
-            except (GitError, OSError) as exc:
-                error.add_file_error(patch.delta.old_file.path, exc)
-            else:
-                error.add_file_success()
-
-        if error:
-            raise error
-
-        return diff
-
     # Override pygit2.Repository.apply()
     def apply(self,
               patch_data_or_diff: bytes | str | Diff,
@@ -1326,91 +939,8 @@ class Repo(_VanillaRepository):
         path = _joinpath(path, ".git")
         return _exists(path)
 
-    def fast_forward_branch(self, local_branch_name: str, target_branch_name: str = ""):
-        """
-        Fast-forward a local branch to another branch (local or remote).
-        Return True if the local branch was up to date.
-        Raise DivergentBranchesError if fast-forwarding is impossible.
-
-        If target_branch_name is omitted, attempt to fast-forward to the
-        branch's upstream (will not fetch it beforehand).
-        """
-        assert not local_branch_name.startswith("refs/")
-        lb = self.branches.local[local_branch_name]
-
-        if not target_branch_name:
-            rb = lb.upstream
-            if not rb:
-                raise ValueError("Local branch does not track a remote branch")
-        else:
-            assert isinstance(target_branch_name, str)
-            target_prefix, target_shorthand = RefPrefix.split(target_branch_name)
-            if target_prefix == RefPrefix.REMOTES:
-                rb = self.branches.remote[target_shorthand]
-            elif target_prefix == RefPrefix.HEADS:
-                rb = self.branches.local[target_shorthand]
-            else:
-                rb = self.branches[target_shorthand]
-
-        merge_analysis, merge_pref = self.merge_analysis(rb.target, RefPrefix.HEADS + local_branch_name)
-        _logger.debug(f"Merge analysis: {merge_analysis!r}. Merge preference: {merge_pref!r}.")
-
-        if merge_analysis & MergeAnalysis.UP_TO_DATE:
-            # Local branch is up to date with remote branch, nothing to do.
-            return True
-
-        elif merge_analysis == (MergeAnalysis.NORMAL | MergeAnalysis.FASTFORWARD):
-            # Go ahead and fast-forward.
-
-            # First, we need to check out the tree pointed to by the remote branch. This step is necessary,
-            # otherwise the contents of the commits we're pulling will spill into the unstaged area.
-            # Note: checkout_tree defaults to a safe checkout, so it'll raise GitError if any uncommitted changes
-            # affect any of the files that are involved in the pull.
-            if lb.is_checked_out():
-                with CheckoutBreakdown() as callbacks:
-                    self.checkout_tree(rb.peel(Tree), callbacks=callbacks)
-
-            # Then make the local branch point to the same commit as the remote branch.
-            lb.set_target(rb.target)
-
-        elif merge_analysis == MergeAnalysis.NORMAL:
-            # Can't FF. Divergent branches?
-            raise DivergentBranchesError(lb, rb)
-
-        else:
-            # Unborn or something...
-            raise NotImplementedError(f"Cannot fast-forward with {merge_analysis!r}.")
-
     def repo_name(self):
         return _basename(_normpath(self.workdir))
-
-    def get_local_identity(self) -> tuple[str, str]:
-        """
-        Return the name and email set in the repository's local config.
-        If an identity isn't set specifically for this repo, this function returns blank strings.
-        """
-
-        config = self.config_snapshot
-        local = {}
-        for key in ["user.name", "user.email"]:
-            with _suppress(KeyError):
-                entry = config._get_entry(key)
-                if GitConfigLevel.LOCAL <= entry.level:  # <= GitConfigLevel.WORKTREE: -----requires pygit2 1.15
-                    local[key] = entry.value
-
-        name = local.get("user.name", "")
-        email = local.get("user.email", "")
-        return name, email
-
-    def has_local_identity(self):
-        name, email = self.get_local_identity()
-        return bool(name or email)
-
-    def delete_tag(self, tagname: str):
-        assert not tagname.startswith("refs/")
-        refname = RefPrefix.TAGS + tagname
-        assert refname in self.references
-        self.references.delete(refname)
 
     def get_config_value(self, key: str | tuple):
         key = GitConfigHelper.sanitize_key(key)

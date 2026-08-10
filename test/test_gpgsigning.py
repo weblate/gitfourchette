@@ -331,7 +331,7 @@ def testVerifyBadPgpSignature(tempDir, mainWindow, tempGpgHome):
             TEST_SIGNATURE, TEST_SIGNATURE, "BAD PGP SIGNATURE!",
             repo.head_tree.id, [repo.head_commit_id])
         oid = repo.create_commit_with_signature(commitString, aliceRandomSignature)
-        repo.create_branch_from_commit("BadSignature", oid)
+        repo.create_branch("BadSignature", repo[oid].peel(Commit))
 
     rw = mainWindow.openRepo(wd)
     rw.jump(NavLocator.inCommit(oid, ""), check=True)
@@ -365,7 +365,7 @@ def testVerifyBadSshSignature(tempDir, mainWindow, tempGpgHome):
             TEST_SIGNATURE, TEST_SIGNATURE, "BAD SSH SIGNATURE!",
             repo.head_tree.id, [repo.head_commit_id])
         oid = repo.create_commit_with_signature(commitString, randomSignature)
-        repo.create_branch_from_commit("BadSignature", oid)
+        repo.create_branch("BadSignature", repo[oid].peel(Commit))
 
     rw = mainWindow.openRepo(wd)
     rw.jump(NavLocator.inCommit(oid, ""), check=True)

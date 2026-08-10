@@ -194,12 +194,14 @@ def testPartialPatchPreservesExecutableFileMode(tempDir, mainWindow):
     QTest.keyPress(rw.diffView, Qt.Key.Key_Return)  # Stage first modified line
     assert rw.repo.status() == {"master.txt": FileStatus.WT_MODIFIED | FileStatus.INDEX_MODIFIED}
 
-    staged = rw.repo.get_staged_changes()
+    # Get unstaged changes
+    staged = rw.repo.diff("HEAD", None, cached=True)
     delta = next(staged.deltas)
     assert delta.new_file.path == "master.txt"
     assert delta.new_file.mode & 0o777 == 0o755
 
-    unstaged = rw.repo.get_unstaged_changes()
+    # Get unstaged changes
+    unstaged = rw.repo.diff(None, None)
     delta = next(unstaged.deltas)
     assert delta.new_file.path == "master.txt"
     assert delta.new_file.mode & 0o777 == 0o755

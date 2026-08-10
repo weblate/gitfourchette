@@ -20,7 +20,7 @@ from gitfourchette.ipc.ipcserver import GFIpcServer
 from gitfourchette.manualgc import gcHint
 from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator
-from gitfourchette.porcelain import ConflictError, MultiFileError, Repo, RepositoryState
+from gitfourchette.porcelain import MultiFileError, Repo, RepositoryState
 from gitfourchette.qt import *
 from gitfourchette.repomodel import RepoModel
 from gitfourchette.toolbox import *
@@ -29,30 +29,6 @@ if TYPE_CHECKING:
     from gitfourchette.repowidget import RepoWidget
 
 logger = logging.getLogger(__name__)
-
-
-def showConflictErrorMessage(parent: QWidget, exc: ConflictError, opName="Operation"):
-    numConflicts = len(exc.conflicts)
-
-    title = _n("Conflicting file", "{n} conflicting files", numConflicts)
-    nFilesText = _np("operation conflicts with…", "a file", "{n} files", numConflicts)
-    nFilesText = f"<b>{nFilesText}</b>"
-
-    if exc.description == "workdir":
-        message = _("Operation {op} conflicts with {files} in the working directory:")
-    elif exc.description == "HEAD":
-        message = _("Operation {op} conflicts with {files} in the commit at HEAD:")
-    else:
-        message = _("Operation {op} has caused a conflict with {files} ({exc}):")
-    message = message.format(op=bquo(opName), files=nFilesText, exc=exc.description)
-
-    qmb = showWarning(parent, title, message)
-    addULToMessageBox(qmb, exc.conflicts)
-
-    if exc.description == "workdir":
-        dt = qmb.detailedText()
-        dt += _("Before you try again, you should either commit, stash, or discard your changes.")
-        qmb.setDetailedText(dt)
 
 
 def showMultiFileErrorMessage(parent: QWidget, exc: MultiFileError, opName="Operation"):
@@ -357,8 +333,6 @@ class RepoTask(QObject):
         """
         if isinstance(exc, AbortTask):
             pass
-        elif isinstance(exc, ConflictError):
-            showConflictErrorMessage(self.parentWidget(), exc, self.name())
         elif isinstance(exc, MultiFileError):
             showMultiFileErrorMessage(self.parentWidget(), exc, self.name())
         else:
