@@ -9,7 +9,6 @@ from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.signatureform import SignatureForm
 from gitfourchette.forms.ui_reposettingsdialog import Ui_RepoSettingsDialog
 from gitfourchette.localization import *
-from gitfourchette.porcelain import Repo, GitConfigHelper
 from gitfourchette.qt import *
 from gitfourchette.repoprefs import RepoPrefs
 from gitfourchette.toolbox import *
@@ -22,23 +21,32 @@ def validateSigPart(x: str):
 
 
 class RepoSettingsDialog(QDialog):
-    def __init__(self, repo: Repo, repoPrefs: RepoPrefs, parent: QWidget):
+    def __init__(
+            self,
+            repoPath: str,
+            repoPrefs: RepoPrefs,
+            localName: str,
+            localEmail: str,
+            globalName: str,
+            globalEmail: str,
+            parent: QWidget,
+    ):
         super().__init__(parent)
         ui = Ui_RepoSettingsDialog()
         ui.setupUi(self)
         self.ui = ui
 
-        self.setWindowTitle(self.windowTitle().format(repo=tquoe(settings.history.getRepoNickname(repo.workdir))))
+        repoName = settings.history.getRepoNickname(repoPath)
+        repoNick = settings.history.getRepoNickname(repoPath, strict=True)
 
-        currentNickname = settings.history.getRepoNickname(repo.workdir, strict=True)
-        ui.nicknameEdit.setText(currentNickname)
+        self.setWindowTitle(self.windowTitle().format(repo=tquoe(repoName)))
+
+        ui.nicknameEdit.setText(repoNick)
         ui.nicknameEdit.setToolTip("<p>" + ui.nicknameEdit.toolTip().format(app=qAppName()))
         ui.nicknameLabel.setToolTip(ui.nicknameEdit.toolTip())
 
-        localName, localEmail = repo.get_local_identity()
         useLocalIdentity = bool(localName or localEmail)
 
-        globalName, globalEmail, _globalIdentityLevel = GitConfigHelper.global_identity()
         for text, edit in [(globalName, ui.nameEdit), (globalEmail, ui.emailEdit)]:
             if text:
                 text += " <" + _p("RepoSettingsDialog", "from global config") + ">"
@@ -63,7 +71,7 @@ class RepoSettingsDialog(QDialog):
 
         validator.run()
 
-        convertToBrandedDialog(self, subtitleText=compactPath(repo.workdir))
+        convertToBrandedDialog(self, subtitleText=compactPath(repoPath))
 
     def onLocalIdentityCheckStateChanged(self, state: Qt.CheckState):
         if state == Qt.CheckState.Checked:

@@ -7,7 +7,6 @@
 import logging
 import re
 from collections.abc import Callable
-from contextlib import suppress
 from pathlib import Path
 from typing import ClassVar
 
@@ -23,6 +22,7 @@ from gitfourchette.porcelain import Oid, Signature
 from gitfourchette.qt import *
 from gitfourchette.repomodel import UC_FAKEID, BEGIN_SSH_SIGNATURE, GpgStatus
 from gitfourchette.tasks import TaskEffects
+from gitfourchette.tasks.committasks import SetUpGitIdentity
 from gitfourchette.tasks.repotask import RepoTask, AbortTask
 from gitfourchette.toolbox import *
 
@@ -34,7 +34,16 @@ class EditRepoSettings(RepoTask):
         repo = self.repo
         repoPrefs = self.repoModel.prefs
 
-        dlg = RepoSettingsDialog(repo, repoPrefs, self.parentWidget())
+        localName, localEmail, globalName, globalEmail = yield from SetUpGitIdentity.getLocalAndGlobalIdentities(self)
+
+        dlg = RepoSettingsDialog(
+            repo.workdir,
+            repoPrefs,
+            localName,
+            localEmail,
+            globalName,
+            globalEmail,
+            self.parentWidget())
         dlg.setWindowModality(Qt.WindowModality.WindowModal)
         yield from self.flowDialog(dlg)
 
@@ -43,14 +52,15 @@ class EditRepoSettings(RepoTask):
         customKeyFile = dlg.ui.keyFilePicker.privateKeyPath()
         dlg.deleteLater()
 
-        configObject = repo.config
         for key, value in [("user.name", localName), ("user.email", localEmail)]:
             if value:
-                configObject[key] = value
+                yield from self.flowCallGit("config", "set", "--", key, value)
             else:
-                with suppress(KeyError):
-                    del configObject[key]
-        repo.scrub_empty_config_section("user")
+                driver = yield from self.flowCallGit("config", "unset", key, autoFail=False)
+                # 0: OK
+                # 5: "unset an option which does not exist" (man git-config, DESCRIPTION)
+                if driver.exitCode() not in [0, 5]:
+                    raise AbortTask(driver.htmlErrorText(), details=driver.formatCommandLine())
 
         if customKeyFile != repoPrefs.customKeyFile:
             repoPrefs.customKeyFile = customKeyFile

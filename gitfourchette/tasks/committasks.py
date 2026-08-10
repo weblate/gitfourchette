@@ -8,8 +8,6 @@ import logging
 from contextlib import suppress
 from pathlib import Path
 
-import pygit2
-
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.checkoutcommitdialog import CheckoutCommitDialog
 from gitfourchette.forms.commitdialog import CommitDialog
@@ -18,6 +16,8 @@ from gitfourchette.forms.identitydialog import IdentityDialog
 from gitfourchette.forms.newtagdialog import NewTagDialog
 from gitfourchette.forms.signatureform import SignatureOverride
 from gitfourchette.gitdriver import argsIf
+from gitfourchette.ipc.ipcprotocol import GFIpcProtocol
+from gitfourchette.ipc.ipcserver import GFIpcServer
 from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
@@ -293,20 +293,11 @@ class SetUpGitIdentity(RepoTask):
             except (KeyError, ValueError):
                 pass
 
-        initialName, initialEmail, editLevel = GitConfigHelper.global_identity()
+        localName, localEmail, initialName, initialEmail = yield from self.getLocalAndGlobalIdentities(self)
+        hasLocalIdentity = bool(localName or localEmail)
+        configPath = yield from self._getConfigPath()
 
-        # Fall back to a sensible path if the identity comes from /etc/gitconfig or some other systemwide file
-        if editLevel not in [GitConfigLevel.XDG, GitConfigLevel.GLOBAL]:
-            # Favor XDG path if we can, otherwise use ~/.gitconfig
-            if FREEDESKTOP and pygit2.settings.search_path[GitConfigLevel.XDG]:
-                editLevel = GitConfigLevel.XDG
-            else:
-                editLevel = GitConfigLevel.GLOBAL
-
-        editPath = GitConfigHelper.path_for_level(editLevel, missing_dir_ok=True)
-
-        dlg = IdentityDialog(firstRun, initialName, initialEmail, editPath,
-                             self.repo.has_local_identity(), self.parentWidget())
+        dlg = IdentityDialog(firstRun, initialName, initialEmail, configPath, hasLocalIdentity, self.parentWidget())
 
         if okButtonText:
             proceed = _("Proceed to {0}", englishTitleCase(okButtonText))
@@ -318,14 +309,53 @@ class SetUpGitIdentity(RepoTask):
         name, email = dlg.identity()
         dlg.deleteLater()
 
-        configObject = GitConfigHelper.ensure_file(editLevel)
-        configObject['user.name'] = name
-        configObject['user.email'] = email
+        yield from self.flowCallGit("config", "set", "--global", "--", "user.name", name)
+        yield from self.flowCallGit("config", "set", "--global", "--", "user.email", email)
 
         # An existing repo will automatically pick up the new GLOBAL config file,
         # but apparently not the XDG config file... So add it to be sure.
         with suppress(ValueError):
-            self.repo.config.add_file(editPath, editLevel, force=False)
+            self.repo.config.add_file(configPath, GitConfigLevel.XDG, force=False)
+
+    def _getConfigPath(self):
+        editPath = ""
+
+        def onClientConnected(handshake: GFIpcProtocol.Handshake, socket: QLocalSocket):
+            nonlocal editPath
+            editPath = handshake.args[0]
+            GFIpcProtocol.respondAndBail(socket)
+
+        ipc = GFIpcServer(self, singleShot=True, startNow=True)
+        ipc.clientConnected.connect(onClientConnected)
+        yield from self.flowCallGit("config", "edit", "--global", env={"GIT_EDITOR": ipc.clientCommand()})
+
+        return editPath
+
+    @classmethod
+    def getLocalAndGlobalIdentities(cls, task: RepoTask) -> RepoTask.Flow[tuple[str, str, str, str]]:
+        localName, localEmail = yield from cls._getIdentity(task, "--local")  # TODO: --worktree?
+        globalName, globalEmail = yield from cls._getIdentity(task, "--global", "--system")
+        return localName, localEmail, globalName, globalEmail
+
+    @classmethod
+    def _getIdentity(cls, task: RepoTask, *levels: str) -> RepoTask.Flow[tuple[str, str]]:
+        values = {
+            "user.name": "",
+            "user.email": "",
+        }
+
+        for key in values:
+            for level in levels:
+                driver = yield from task.flowCallGit("config", "get", level, key, autoFail=False)
+                exitCode = driver.exitCode()
+                if exitCode == 0:
+                    values[key] = driver.stdoutScrollback().strip()
+                    break
+                if exitCode != 1:
+                    raise AbortTask(driver.htmlErrorText(), details=driver.formatCommandLine())
+
+        return values["user.name"], values["user.email"]
+
 
 
 class CheckoutCommit(RepoTask):
