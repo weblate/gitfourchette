@@ -36,7 +36,7 @@ def runGit(*args, directory):
 def runGpg(*args, directory):
     # Honor gpg.program config value because the Flatpak's system config sets it to a special script
     try:
-        gpgProgram = runGit("config", "gpg.program", directory=directory).strip()
+        gpgProgram = runGit("config", "get", "gpg.program", directory=directory).strip()
         if FLATPAK and gpgProgram.startswith("/app"):
             gpgProgram = f"flatpak:{gpgProgram}"
     except ChildProcessError:

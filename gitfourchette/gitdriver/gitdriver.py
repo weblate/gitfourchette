@@ -138,6 +138,15 @@ class GitDriver(QProcess):
         return cls.gitVersionTuple() >= (2, 39)
 
     @classmethod
+    def supportsConfigSubcommands(cls) -> bool:
+        """
+        git config's subcommand syntax (list, get, set, unset, edit, etc.)
+        appeared in git 2.46.0 (July 2024).
+        Reference for older syntax: https://git-scm.com/docs/git-config/2.45.3
+        """
+        return cls.gitVersionTuple() >= (2, 46)
+
+    @classmethod
     def parseTable(cls, pattern: str, stdout: str, linesep="\n", strict=True) -> list:
         table = []
 
@@ -161,7 +170,18 @@ class GitDriver(QProcess):
 
         self.setObjectName("GitDriver")
 
-        tokens = GitDriver._commandStem + list(args)
+        tokens = list(args)
+
+        # Patch "git config" commands for the older syntax of git <= 2.45
+        if tokens[0] == "config" and not self.supportsConfigSubcommands():
+            if tokens[1] in ["get", "set"]:
+                tokens.pop(1)
+            elif tokens[1] in ["unset", "edit", "rename-section", "remove-section", "list"]:
+                tokens[1] = f"--{tokens[1]}"
+            else:
+                raise NotImplementedError(f"unsupported git config subcommand {tokens[1]}")
+
+        tokens = GitDriver._commandStem + tokens
         self.setProgram(tokens[0])
         self.setArguments(tokens[1:])
 
