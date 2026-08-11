@@ -5,10 +5,7 @@
 # -----------------------------------------------------------------------------
 
 import logging
-import os
 import shlex
-import sys
-from contextlib import suppress
 from pathlib import Path
 
 from gitfourchette import settings
@@ -92,8 +89,21 @@ class GFIpcServer(QLocalServer):
         fileName = f"ipc{infix1}{infix2}.sh"
         launcherScript = Path(qTempDir(), fileName)
 
+        # Generate kicker script
         if not launcherScript.exists():
-            scriptText = self._clientScript(sandbox, askpass)
+            tokens, env = ToolCommands.spawnNewInstance(GFIpcProtocol.__module__, sandbox=sandbox)
+
+            # Askpass: embed socket path inside script
+            if askpass:
+                tokens += ["--askpass", self.socketPath, "--"]
+
+            scriptText = "\n".join([
+                "#!/usr/bin/env bash",
+                *(f"export {shlex.quote(k + '=' + v)}" for k, v in env.items()),
+                f'exec {shlex.join(tokens)} "$@"',
+                "",
+            ])
+
             launcherScript.write_text(scriptText, "utf-8")
             launcherScript.chmod(0o500)
 
@@ -101,26 +111,5 @@ class GFIpcServer(QLocalServer):
             # Askpass must be a single token without any arguments
             return str(launcherScript)
         else:
+            # Non-askpass: pass socket path on command line
             return shlex.join([str(launcherScript), self.socketPath])
-
-    def _clientScript(self, sandbox: bool, askpass: bool) -> str:
-        module = GFIpcProtocol.__module__
-        tokens = ToolCommands.spawnNewInstance(module, sandbox=sandbox)
-
-        # Using sys.path instead of PYTHONPATH because the latter may be empty in unit tests
-        paths = sys.path[:]
-        with suppress(ValueError):
-            paths.remove("")  # disallow empty path (current working directory)
-        pythonpath = shlex.quote(os.pathsep.join(paths))
-
-        inargs = []
-        if askpass:
-            inargs.append("--askpass")
-            inargs.append(shlex.quote(self.socketPath))
-            inargs.append("--")
-
-        return (
-            '#!/usr/bin/env bash\n'
-            f'export PYTHONPATH={pythonpath}\n'
-            f'exec {shlex.join(tokens)} {" ".join(inargs)} "$@"\n'
-        )

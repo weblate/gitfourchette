@@ -112,18 +112,27 @@ class MountManager(QObject):
             pathObj.mkdir(parents=True)
         path = str(pathObj)
 
-        tokens = ToolCommands.spawnNewInstance(gitfourchette.mount.treemount.__name__, sandbox=True)
+        tokens, env = ToolCommands.spawnNewInstance(
+            gitfourchette.mount.treemount.__name__,
+            sandbox=True,
+            extraImports=[gitfourchette.mount.treemount.fuse.__name__],  # mfusepy
+        )
         tokens += [workdir, str(oid), path]
         logger.info(f"Starting: {shlex.join(tokens)}")
 
         fuseProcess = QProcess(self)
         fuseProcess.setProgram(tokens[0])
         fuseProcess.setArguments(tokens[1:])
+        ToolCommands.setQProcessEnvironment(fuseProcess, env)
 
         mc = MountedCommit(workdir, oid, path, fuseProcess)
         self.mountedCommits[oid] = mc
 
         fuseProcess.started.connect(lambda: self.onProcessStarted(mc))
+
+        if APP_DEBUG:
+            fuseProcess.setProcessChannelMode(QProcess.ProcessChannelMode.ForwardedChannels)
+
         fuseProcess.start()
         logger.info(f"PID {fuseProcess.processId()}, mountpoint {path}")
 

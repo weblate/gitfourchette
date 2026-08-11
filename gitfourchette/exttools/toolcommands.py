@@ -4,6 +4,7 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+import importlib.util
 import itertools
 import logging
 import os
@@ -25,6 +26,8 @@ _logger = logging.getLogger(__name__)
 _placeholderPattern = re.compile(r"\$[_a-zA-Z0-9]+")
 
 _whichPath = None
+
+_pythonpathCoreImports = ["gitfourchette", "pygit2", QT_BINDING]
 
 
 class ToolCommands:
@@ -321,51 +324,77 @@ class ToolCommands:
         return str(path)
 
     @classmethod
-    def spawnNewInstance(cls, module: str, sandbox: bool = True) -> list[str]:
+    def spawnNewInstance(
+            cls,
+            module: str,
+            sandbox: bool = True,
+            extraImports: list[str] | None = None,
+    ) -> tuple[list[str], dict[str, str]]:
         """
         Prepare a command to spawn another instance of this application.
+        Return the command (list of tokens) and environment variables (dict).
         """
         assert module.startswith("gitfourchette"), module
 
+        # The new instance is supposed to be a child process, so it inherits
+        # the current process's environment variables. We don't need to copy
+        # them to 'env' explicitly. An exception to this is PYTHONPATH, which is
+        # sanitized by our restrictive interpreter options. In the case of a
+        # non-frozen install, we'll forward a minimal PYTHONPATH so the core
+        # dependencies can be found in the user's site-packages.
+        env = {}
+
         # -B: Don't write .pyc files on import
         # -P: Don't prepend potentially unsafe path to sys.path (Python 3.11+)
-        # -s: Don't add user site directory to sys.path (only in frozen distributions)
+        # -s: Don't add user site directory to sys.path
         # -m: Module name
-        interpreterOptions = "-B"
-        if APP_FREEZE_COMMIT:
-            # Add -Ps only in frozen distributions, because these may cause
-            # issues resolving user-installed pip dependencies.
-            interpreterOptions += "Ps"
-        interpreterOptions += "m" + module
+        interpreterOptions = f"-BPsm{module}"
 
         if FLATPAK and not sandbox:
             # Command to be called by host system's git, which lives outside the
             # flatpak sandbox. Spawn another instance of our flatpak.
             tokens = ["flatpak", "run", "--command=python", FLATPAK_ID, interpreterOptions]
-        elif "APPIMAGE" in INITIAL_ENVIRONMENT:
+        elif APPIMAGE:
             # AVOID "sys.executable" (path to .AppImage file) to spawn a child,
             # may cause SIGTTIN in parent process!
             python = sys.orig_argv[0]  # python in AppImage tmpfs mount
             tokens = [python, interpreterOptions]
         elif PYINSTALLER_MEIPASS:
             # App bundle: special case in our __main__.py
+            # (Note: core env vars that child will inherit from us:
+            # APPIMAGE, APPDIR, ARGV0, SSL_CERT_FILE)
             tokens = [sys.executable, f"--start-module={module}"]
         else:
-            # Just spawn another Python interpreter.
+            # Spawn another Python interpreter. Forward a minimal PYTHONPATH so
+            # our core dependencies can be found even with -s.
+            env["PYTHONPATH"] = cls._minimalPythonpath(_pythonpathCoreImports + (extraImports or []))
             tokens = [sys.executable, interpreterOptions]
 
-        # The new instance is supposed to be a child process, so it will inherit
-        # the environment variables of the current process. We don't need to
-        # explicitly copy them to 'env'. For reference, some of the relevant
-        # variables for a successful child process include:
-        # - PYTHONPATH (os.pathsep.join(sys.path)), though this may be empty
-        #   e.g. in unit tests
-        # - For AppImage only: APPIMAGE, APPDIR, ARGV0, SSL_CERT_FILE
-        # Without these, askpass.sh may fail to start unless it's a child
-        # process of a GitFourchette instance.
-
         assert tokens
-        return tokens
+        return tokens, env
+
+    @classmethod
+    def _minimalPythonpath(cls, moduleNames: list[str]) -> str:
+        paths: set[str] = set()
+
+        for name in moduleNames:
+            spec = importlib.util.find_spec(name)
+            if spec.origin is None:
+                raise ImportError(f"Missing module import path: {spec.origin}")
+
+            p = Path(spec.origin)
+            if p.name == "__init__.py":
+                # Example: /home/u/.local/lib/python3.14/site-packages/mfusepy.py
+                # -------> /home/u/.local/lib/python3.14/site-packages
+                p = p.parent.parent
+            elif p.suffix == ".py":
+                # Example: /usr/lib/python3.14/site-packages/pygit2/__init__.py
+                # -------> /usr/lib/python3.14/site-packages
+                p = p.parent
+
+            paths.add(str(p))
+
+        return os.pathsep.join(paths)
 
     @classmethod
     def terminatePlus(cls, process: QProcess | None):
@@ -382,11 +411,12 @@ class ToolCommands:
         process.terminate()
 
         if WINDOWS:
-            tokens = ToolCommands.spawnNewInstance(gitfourchette.exttools.win32ctrlc.__name__)
+            tokens, env = ToolCommands.spawnNewInstance(gitfourchette.exttools.win32ctrlc.__name__)
             tokens.append(str(process.processId()))
 
             ctrlC = QProcess(None)
             ctrlC.setObjectName("win32ctrlc")
             ctrlC.setProgram(tokens[0])
             ctrlC.setArguments(tokens[1:])
+            cls.setQProcessEnvironment(ctrlC, env)
             ctrlC.startDetached()

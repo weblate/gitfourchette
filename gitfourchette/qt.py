@@ -140,6 +140,7 @@ XDG_RUNTIME_DIR = _os.environ.get("XDG_RUNTIME_DIR", "")
 GNOME = "GNOME" in _os.environ.get("XDG_CURRENT_DESKTOP", "").upper().split(":")  # e.g. "ubuntu:GNOME"
 KDE = "KDE" in _os.environ.get("XDG_CURRENT_DESKTOP", "").upper().split(":")
 OFFSCREEN = _os.environ.get("QT_QPA_PLATFORM", "").upper() == "OFFSCREEN"
+APPIMAGE = _os.environ.get("APPIMAGE", "")
 
 # Capture environment variables that were set on boot.
 # These values will not be forwarded explicitly to subprocess environments.
