@@ -57,8 +57,19 @@ requiresFuse = pytest.mark.skipif(
     reason="Requires FUSE (test.py --with-fuse)")
 
 
-def pause(seconds: int = 3):
-    QTest.qWait(seconds * 1000)
+def pause(seconds: float = 1.0):
+    """
+    Pause the current test.
+    """
+    QTest.qWait(int(seconds * 1000))
+
+
+def visualPause(seconds: float = 1.0):
+    """
+    Pause the current test in visual mode only (non-offscreen).
+    """
+    if not OFFSCREEN:
+        pause(seconds)
 
 
 def pauseDialog(message="Click OK to continue"):
@@ -393,6 +404,14 @@ def qlvFindRow(view: QListView, data: str, role=Qt.ItemDataRole.DisplayRole):
         if index.data(role) == data:
             return row
     raise IndexError(f"didn't find a row containing '{data}'")
+
+
+def qlvVisualRect(view: QListView, n: int) -> QRect:
+    index = view.model().index(n, 0)
+    assert index.isValid()
+    view.scrollTo(index)
+    rect = view.visualRect(index)
+    return rect
 
 
 def qlvClickNthRow(
@@ -795,7 +814,7 @@ def postMouseWheelEvent(target: QWidget, angleDelta: int, point=QPoint_zero, mod
     QApplication.instance().postEvent(target, fakeWheelEvent)
 
 
-def summonContextMenu(target: QWidget, localPoint=QPoint_zero):
+def summonContextMenu(target: QWidget, localPoint=QPoint_zero) -> QMenu:
     def getVisibleContextMenu():
         for tlw in QApplication.topLevelWidgets():
             if isinstance(tlw, QMenu) and tlw.isVisible():
@@ -894,3 +913,22 @@ def shell(script: str, directory: str, authorSig=TEST_SIGNATURE, committerSig=TE
         scriptCommand.insert(0, str(bash))
 
     ToolCommands.runSync(*scriptCommand, directory=directory, strict=True)
+
+
+class CallSpy:
+    completeCalls: int
+
+    def __init__(self, monkeypatch, obj, attr: str):
+        self.completeCalls = 0
+        func = getattr(obj, attr)
+
+        def proxy(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            finally:
+                self.completeCalls += 1
+
+        monkeypatch.setattr(obj, attr, proxy)
+
+    def __bool__(self):
+        return self.completeCalls >= 1

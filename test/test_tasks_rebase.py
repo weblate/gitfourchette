@@ -9,7 +9,10 @@ import dataclasses
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.rebasedialog import RebaseDialog
 from gitfourchette.nav import NavLocator
+from gitfourchette.rebase.rebasemenustyle import RebaseMenuStyle
 from gitfourchette.rebase.rebasemodel import RebaseOp, RebaseOpLetters
+from gitfourchette.rebase.rebasesequencestyle import RebaseSequenceStyle
+from gitfourchette.rebase.rebasesequenceview import RebaseSequenceView
 from .util import *
 
 
@@ -350,3 +353,135 @@ def testRebaseVerifyEmptyCommitsInTodo(tempDir, mainWindow):
     assert not seq[-1].verifiedEmpty
 
     rebaseDialog.reject()
+
+
+def testRebaseSequenceStyleDropIndicator(tempDir, mainWindow, monkeypatch):
+    """
+    Coverage test for the custom drop indicator painting code in
+    RebaseSequenceStyle.
+
+    QDragEnterEvent/QDragMoveEvent/QDropEvent work with MIME data, but Qt won't
+    preserve our QListWidgetItem subclass (RebaseLineWrapper) via MIME drag-and-
+    drop. To avoid corrupting the list, we don't actually complete the drop in
+    this coverage test (QDragLeaveEvent instead of QDropEvent).
+    """
+
+    callSpy = CallSpy(monkeypatch, RebaseSequenceStyle, "drawDropIndicator")
+
+    wd = unpackRepo(tempDir)
+    onto = Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
+
+    rw = mainWindow.openRepo(wd)
+
+    # Bring up RebaseDialog
+    rw.jump(NavLocator.inCommit(onto, ""))
+    triggerContextMenuAction(rw.graphView.viewport(), "rebase")
+    rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
+
+    view: RebaseSequenceView = rebaseDialog.ui.sequence
+    LMB = Qt.MouseButton.LeftButton
+    MOD = Qt.KeyboardModifier.NoModifier
+    ps = qlvVisualRect(view, 4).center()
+    pd = qlvVisualRect(view, 0).center()
+
+    qlvClickNthRow(view, 4)
+    mime = view.model().mimeData(view.selectedIndexes())
+
+    events = [
+        QDragEnterEvent(ps, Qt.DropAction.MoveAction, mime, LMB, MOD),
+        QDragMoveEvent(pd, Qt.DropAction.MoveAction, mime, LMB, MOD),
+        QDragLeaveEvent(),  # leave instead of drop to avoid corrupting the list (see docstring)
+    ]
+    for e in events:
+        QApplication.sendEvent(view.viewport(), e)
+        QTest.qWait(0)
+        assert e.isAccepted()
+        visualPause(.5)
+
+    assert callSpy.completeCalls >= 1
+
+    rebaseDialog.reject()
+
+
+@pytest.mark.skipif(QT5, reason="Qt 5 (deprecated) is finicky with this test, but Qt 6 is fine")
+def testRebaseSequenceViewQDrag(tempDir, mainWindow, monkeypatch):
+    """
+    Coverage test for the custom QDrag in RebaseSequenceView.
+    NOTE: Flaky on Wayland in non-offscreen mode.
+    """
+
+    callSpyMakeQDrag = CallSpy(monkeypatch, RebaseSequenceView, "makeQDrag")
+    callSpyStartDrag = CallSpy(monkeypatch, RebaseSequenceView, "startDrag")
+
+    wd = unpackRepo(tempDir)
+    onto = Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
+
+    rw = mainWindow.openRepo(wd)
+
+    # Bring up RebaseDialog
+    rw.jump(NavLocator.inCommit(onto, ""))
+    triggerContextMenuAction(rw.graphView.viewport(), "rebase")
+    rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
+
+    view = rebaseDialog.ui.sequence
+    LMB = Qt.MouseButton.LeftButton
+    ps = qlvVisualRect(view, 4).center()  # "On master again"
+
+    # In offscreen mode, startDrag() returns immediately, so we can't actually
+    # complete a move this way.
+    allowActualMove = not OFFSCREEN
+    if allowActualMove:
+        pd = QPoint(ps.x(), 2)  # move to the top
+    else:
+        pd = ps + QPoint(100, 0)  # stay on same row
+
+    clickTarget = view.viewport()
+
+    QCursor.setPos(clickTarget.mapToGlobal(ps))
+    QTest.mousePress(clickTarget, LMB, pos=ps)
+    QCursor.setPos(clickTarget.mapToGlobal(pd))
+    # In non-offscreen mode, startDrag() blocks the event loop, so schedule move
+    # and release for later.
+    QTimer.singleShot(0, lambda: QTest.mouseMove(clickTarget, pos=pd))
+    QTimer.singleShot(500, lambda: QTest.mouseRelease(clickTarget, LMB, pos=pd))
+
+    pause(1)
+    assert callSpyMakeQDrag.completeCalls == 1
+    assert callSpyStartDrag.completeCalls == 1
+
+    rebaseDialog.reject()
+
+    # If we did complete the move, RebaseDialog wants us to confirm closing a
+    # modified rebase plan.
+    if allowActualMove:
+        assert rebaseDialog.ui.sequence.allRebaseLines()[0].displayMessage() == "On master again"
+        qmb = findQMessageBox(rebaseDialog, "really close this rebase plan")
+        button = next(b for b in qmb.buttons() if findTextInWidget(b, "close"))
+        button.click()
+
+
+def testRebaseMenuStyle(tempDir, mainWindow, monkeypatch):
+    """
+    Coverage test for RebaseMenuStyle (colored labels).
+    """
+
+    callSpy = CallSpy(monkeypatch, RebaseMenuStyle, "drawControl")
+
+    wd = unpackRepo(tempDir)
+    onto = Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
+
+    rw = mainWindow.openRepo(wd)
+
+    # Bring up RebaseDialog
+    rw.jump(NavLocator.inCommit(onto, ""))
+    triggerContextMenuAction(rw.graphView.viewport(), "rebase")
+    rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
+
+    rebaseDialog.ui.sequence.setFocus()
+    qlvClickNthRow(rebaseDialog.ui.sequence, 1)
+    menu = summonContextMenu(rebaseDialog.ui.sequence.viewport(), QPoint(8, 8))
+    menu.close()
+
+    assert callSpy.completeCalls > 0
+
+    rebaseDialog.close()

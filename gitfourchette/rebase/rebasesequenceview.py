@@ -78,7 +78,7 @@ class RebaseSequenceView(QListWidget):
         delegate.ignoreMouseOverState = True
         self.viewport().update()
 
-        drag = self._makeQDrag()
+        drag = self.makeQDrag()
 
         try:
             drag.exec(supportedActions)
@@ -86,7 +86,7 @@ class RebaseSequenceView(QListWidget):
             delegate.ignoreMouseOverState = False
             self.viewport().update()
 
-    def _makeQDrag(self):
+    def makeQDrag(self) -> QDrag:
         # Set custom floating drag indicator
         selectedRebaseLines = self.selectedRebaseLines()
         mimeData = self.model().mimeData(self.selectedIndexes())
