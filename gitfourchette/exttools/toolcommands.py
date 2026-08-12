@@ -29,6 +29,8 @@ _whichPath = None
 
 _pythonpathCoreImports = ["gitfourchette", "pygit2", QT_BINDING]
 
+_tamperProofFiles: dict[Path, int] = {}
+
 
 class ToolCommands:
     FlatpakSandboxedCommandPrefix = "flatpak:"
@@ -282,6 +284,28 @@ class ToolCommands:
         return shutil.which(name, path=_whichPath)
 
     @classmethod
+    def writeTamperProofScript(cls, path: Path, contents: str, mode: int = 0o500):
+        b = contents.encode("utf-8")
+        h = hash(b)
+        path.write_bytes(b)
+        path.chmod(mode)
+        _tamperProofFiles[path] = h
+
+    @classmethod
+    def untamperedScriptExists(cls, path: Path) -> bool:
+        try:
+            knownHash = _tamperProofFiles[path]
+            data = path.read_bytes()
+        except (OSError, KeyError):
+            return False
+
+        newHash = hash(data)
+        if knownHash != newHash:
+            raise RuntimeError(f"Internal file altered by another process ({path}). Please restart the application.")
+
+        return True
+
+    @classmethod
     def makeTerminalScript(cls, workdir: str, commandTokens: list[str]) -> str:
         # While we could simply export the parameters as environment variables
         # then run termcmd.sh from the static assets, this approach fails if
@@ -294,9 +318,11 @@ class ToolCommands:
         # So, copy termcmd.sh out of the assets folder before passing it to the
         # external terminal program.
         termcmdPath = Path(qTempDir()) / "termcmd.sh"
-        if not termcmdPath.exists():
+
+        if not cls.untamperedScriptExists(termcmdPath):
             termcmdSourcePath = QFile("assets:termcmd.sh").fileName()
-            shutil.copyfile(termcmdSourcePath, termcmdPath)
+            termcmdText = Path(termcmdSourcePath).read_text("utf-8")
+            cls.writeTamperProofScript(termcmdPath, termcmdText)
 
         yKey = "y"
         nKey = "n"
@@ -316,11 +342,11 @@ class ToolCommands:
             source {shlex.quote(str(termcmdPath))}
         """)
 
-        cacheKey = f"{hash(script):x}"
-        path = Path(qTempDir()) / f"terminal_{cacheKey}.sh"
-        if not path.exists():
-            path.write_text(script, "utf-8")
-            path.chmod(0o755)
+        path = Path(qTempDir(), f"terminal_{hash(script):x}.sh")
+
+        if not cls.untamperedScriptExists(path):
+            cls.writeTamperProofScript(path, script)
+
         return str(path)
 
     @classmethod

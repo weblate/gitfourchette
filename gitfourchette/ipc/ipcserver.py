@@ -90,7 +90,7 @@ class GFIpcServer(QLocalServer):
         launcherScript = Path(qTempDir(), fileName)
 
         # Generate kicker script
-        if not launcherScript.exists():
+        if not ToolCommands.untamperedScriptExists(launcherScript):
             tokens, env = ToolCommands.spawnNewInstance(GFIpcProtocol.__module__, sandbox=sandbox)
 
             # Askpass: embed socket path inside script
@@ -104,8 +104,7 @@ class GFIpcServer(QLocalServer):
                 "",
             ])
 
-            launcherScript.write_text(scriptText, "utf-8")
-            launcherScript.chmod(0o500)
+            ToolCommands.writeTamperProofScript(launcherScript, scriptText)
 
         if askpass:
             # Askpass must be a single token without any arguments

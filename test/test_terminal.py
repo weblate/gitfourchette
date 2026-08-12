@@ -82,3 +82,27 @@ def testTerminalCommandNotFound(tempDir, mainWindow):
     scratchLines = scratchText.splitlines()
     assert scratchLines[0] == "hello world"
     assert scratchLines[1].endswith(".sh")
+
+
+def testKickerScriptTamperProofing(tempDir, mainWindow, qtbot):
+    shim = getTestDataPath("editor-shim.py")
+    scratch = f"{tempDir.name}/terminal scratch file.txt"
+    GFApplication.applyPrefs(terminal=f"'{shim}' '{scratch}' $COMMAND")
+
+    wd = unpackRepo(tempDir)
+    _rw = mainWindow.openRepo(wd)
+
+    triggerMenuAction(mainWindow.menuBar(), "repo/terminal")
+    waitForFile(scratch)
+    scratchText = readTextFile(scratch)
+    scratchLines = scratchText.splitlines()
+
+    scriptPath = Path(scratchLines[0])  # Kicker script
+    assert scriptPath.suffix == ".sh"
+    scriptPath.chmod(0o777)  # it was read-only
+    scriptPath.write_text("# gotcha!")
+
+    with qtbot.captureExceptions() as uncaughtExceptions:
+        triggerMenuAction(mainWindow.menuBar(), "repo/terminal")
+        assert len(uncaughtExceptions) == 1
+        assert "internal file altered by another process" in str(uncaughtExceptions[-1]).lower()
