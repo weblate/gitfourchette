@@ -49,6 +49,9 @@ REFBOXES = [
     RefBox("FAKEREF_COMPAREA", "compare-a", QColor(Qt.GlobalColor.red), iconWidth=48),
     RefBox("FAKEREF_COMPAREB", "compare-b", QColor(Qt.GlobalColor.blue), iconWidth=48),
 
+    # Rebase
+    RefBox("FAKEREF_REBASE"),
+
     # Fallback
     RefBox("", "hint", QColor(Qt.GlobalColor.gray), keepPrefix=True)
 ]
@@ -538,6 +541,8 @@ class CommitLogDelegate(QStyledItemDelegate):
         elif refName == 'HEAD' and self.repoModel.headIsDetached:
             text = _("Detached HEAD")
             font = self.homeRefboxFont
+        elif refName.startswith("FAKEREF_REBASE"):
+            font = self.homeRefboxFont
         else:
             font = self.refboxFont
 
@@ -732,6 +737,11 @@ class CommitLogDelegate(QStyledItemDelegate):
         # ------ Begin refboxes
         painter.save()
         painter.setClipRect(rect)
+
+        # ------ Rebase state
+        rebase = index.data(CommitLogModel.Role.RebaseProgress)
+        if rebase:
+            self._paintRefbox(painter, rect, f"FAKEREF_REBASE{_('Rebase')}{_(':')} {rebase}", forceToolTip=None)
 
         # ------ A/B icon
         abSide = index.data(CommitLogModel.Role.ComparisonSide)

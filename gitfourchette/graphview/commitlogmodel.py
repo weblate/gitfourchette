@@ -60,6 +60,7 @@ class CommitLogModel(QAbstractListModel):
         SpecialRow      = Qt.ItemDataRole.UserRole + 4
         BlameRevision   = Qt.ItemDataRole.UserRole + 5  # for BlameScrubber
         ComparisonSide  = Qt.ItemDataRole.UserRole + 6  # A/B commit diffs
+        RebaseProgress  = Qt.ItemDataRole.UserRole + 7
 
     repoModel: RepoModel
     _extraRow: SpecialRow
@@ -142,6 +143,21 @@ class CommitLogModel(QAbstractListModel):
                 return "AB"[i]
             except (IndexError, AttributeError, ValueError):
                 return ""
+
+        elif role == CommitLogModel.Role.RebaseProgress:
+            rebase = self.repoModel.rebase
+            if not rebase:
+                return ""
+            try:
+                cid = self.repoModel.commitSequence[row].id
+            except (IndexError, AttributeError):
+                return ""
+            if cid == rebase.onto:
+                return _("Start")
+            if cid == rebase.orig_head:
+                return _("End")
+            if cid == rebase.stopped_sha:
+                return _("Stopped here") + " \u2192"
 
         elif role == Qt.ItemDataRole.ToolTipRole:
             tip = ""
