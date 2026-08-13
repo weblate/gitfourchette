@@ -136,6 +136,9 @@ class RepoModel:
     upstreams: dict[str, str]
     "Table of local branch names to upstream shorthand names."
 
+    rebase: RebaseInfo | None
+    "Information about the current rebase (if any)."
+
     aheadBehind: dict[str, tuple[int, int]]
     """Table of local branch names to the number of commits the branch is
     ahead/behind of its upstream."""
@@ -203,6 +206,7 @@ class RepoModel:
         self.initializedSubmodules = set()
         self.remotes = []
         self.upstreams = {}
+        self.rebase = None
         self.aheadBehind = {}  # filled in outside RepoModel (needs git call)
 
         self.hiddenRefs = set()
@@ -229,6 +233,7 @@ class RepoModel:
         self.syncSubmodules()
         self.syncRemotes()
         self.syncUpstreams()
+        self.syncRebaseInfo()
 
     def __del__(self):
         self.commitPathspecFilter.deleteLater()
@@ -319,6 +324,24 @@ class RepoModel:
         if mh != self.mergeheads:
             self.mergeheads = mh
             return True
+        return False
+
+    @benchmark
+    def syncRebaseInfo(self) -> bool:
+        """
+        Refresh cached info about the ongoing rebase (if any).
+        Return true if we detected any change.
+        """
+
+        try:
+            info = self.repo.rebase_info()
+        except (OSError, ValueError):
+            info = None
+
+        if info != self.rebase:
+            self.rebase = info
+            return True
+
         return False
 
     @benchmark

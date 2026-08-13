@@ -782,6 +782,7 @@ class RefreshRepo(RepoTask):
 
             refsChanged = repoModel.syncRefs()
             refsChanged |= repoModel.syncMergeheads()
+            refsChanged |= repoModel.syncRebaseInfo()
             stashesChanged = repoModel.syncStashes()
             homeBranchChanged = oldHeadBranch != repoModel.homeBranch
 

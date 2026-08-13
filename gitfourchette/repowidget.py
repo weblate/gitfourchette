@@ -667,8 +667,16 @@ class RepoWidget(QWidget):
 
             actions[_("Abort revert") + ellipsis] = abortMerge
 
-        elif state == RepositoryState.REBASE_INTERACTIVE:
-            info = self.repo.rebase_info()
+        elif state == RepositoryState.REBASE_INTERACTIVE and not self.repoModel.rebase:
+            title = trtables.enum(state)
+            text = " ".join([
+                _("Failed to collect information about the current rebase."),
+                _("Use {0} on the command line to continue.", "<code>git</code>"),
+            ])
+
+        elif state == RepositoryState.REBASE_INTERACTIVE and self.repoModel.rebase:
+            info = self.repoModel.rebase
+            assert info is not None
 
             title = _("Rebasing {0} onto {1}", tquoe(info.head_shorthand), tquoe(shortHash(info.onto, maybe=True)))
             title = f"({info.msgnum}/{info.end}) {title}"
@@ -701,9 +709,11 @@ class RepoWidget(QWidget):
 
         else:
             title = _("Warning")
-            text = _("The repo is currently in state {state}, which {app} doesn’t support yet. "
-                     "Use <code>git</code> on the command line to continue.",
-                     app=qAppName(), state=bquo(trtables.enum(state)))
+            text = " ".join([
+                _("The repo is currently in state {state}, which {app} doesn’t support yet.",
+                  app=qAppName(), state=bquo(trtables.enum(state))),
+                _("Use {0} on the command line to continue.", "<code>git</code>"),
+            ])
 
         # Set up the banner
         with DisableWidgetUpdatesContext(self.sideSplitter):
