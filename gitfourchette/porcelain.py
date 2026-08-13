@@ -8,13 +8,13 @@ from __future__ import annotations as _annotations
 
 import configparser as _configparser
 import dataclasses as _dataclasses
-import datetime
-import enum
+import datetime as _datetime
+import enum as _enum
 import logging as _logging
 import os as _os
 import re as _re
 import typing as _typing
-import warnings
+import warnings as _warnings
 from contextlib import suppress as _suppress
 from pathlib import Path as _Path
 
@@ -99,7 +99,7 @@ class RefPrefix:
 
 
 class NameValidationError(ValueError):
-    class Rule(enum.IntEnum):
+    class Rule(_enum.IntEnum):
         CANNOT_BE_EMPTY = 0
         ILLEGAL_NAME = 1
         ILLEGAL_PREFIX = 2
@@ -169,7 +169,7 @@ def _version_at_least(
     if raise_error:
         raise NotImplementedError(message)
     else:
-        warnings.warn(message)
+        _warnings.warn(message)
         return False
 
 
@@ -495,7 +495,7 @@ class GitConfigHelper:
         lines = [line for line in lines if line.strip() != evict]
 
         # Write result to disk.
-        timestamp = datetime.datetime.now(datetime.UTC).timestamp()
+        timestamp = _datetime.datetime.now(_datetime.UTC).timestamp()
 
         temp_path = config_path.with_suffix(f".{timestamp}.new.tmp")
         backup_path = config_path.with_suffix(f".{timestamp}.old.tmp")
@@ -1019,7 +1019,7 @@ class Repo(_VanillaRepository):
         Note that if a submodule's name is different from its path,
         SubmoduleCollection[path].name will NOT return the correct name!
         """
-        warnings.warn("Don't use this", DeprecationWarning)
+        _warnings.warn("Don't use this", DeprecationWarning)
         raise DeprecationWarning("Don't use listall_submodules")
 
     def listall_submodules_fast(self) -> list[str]:

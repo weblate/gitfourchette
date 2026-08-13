@@ -9,6 +9,7 @@ import gc
 import logging
 import os
 import re
+import warnings
 from collections.abc import Sequence, Callable
 from contextlib import suppress
 from pathlib import Path

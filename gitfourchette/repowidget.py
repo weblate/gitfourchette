@@ -7,6 +7,7 @@
 import logging
 import os
 import shlex
+import warnings
 from contextlib import suppress
 from typing import ClassVar
 

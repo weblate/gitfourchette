@@ -4,6 +4,8 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+import enum
+
 from gitfourchette import trtables
 from gitfourchette.forms.ui_signatureform import Ui_SignatureForm
 from gitfourchette.porcelain import *

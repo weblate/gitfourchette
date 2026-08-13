@@ -4,6 +4,7 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+import enum
 import re
 from contextlib import suppress
 from typing import Literal
