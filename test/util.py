@@ -16,6 +16,7 @@ from contextlib import contextmanager
 from os import PathLike
 from pathlib import Path
 from typing import Literal
+from collections.abc import Iterable
 
 import pygit2
 import pytest
@@ -783,6 +784,10 @@ def findTextInWidget(
     else:
         text = stripHtml(text)
     return re.search(pattern, text, re.IGNORECASE | re.MULTILINE | re.DOTALL)
+
+
+def findWidgetWithText[T: QWidget](widgets: Iterable[T], pattern: str) -> T:
+    return next(w for w in widgets if findTextInWidget(w, pattern))
 
 
 def mouseSpecialClick(widget: QWidget, clickType: Literal["middle", "double"], pos: QPoint = QPoint_zero):

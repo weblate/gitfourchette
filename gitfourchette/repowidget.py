@@ -22,6 +22,7 @@ from gitfourchette.forms.banner import Banner
 from gitfourchette.forms.processdialog import ProcessDialog
 from gitfourchette.forms.repostub import RepoStub
 from gitfourchette.forms.searchbar import SearchBar
+from gitfourchette.gitdriver import GitStatus
 from gitfourchette.graphview.graphview import GraphView
 from gitfourchette.localization import *
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
@@ -689,8 +690,11 @@ class RepoWidget(QWidget):
             if conflicts:
                 textParts.append(_("Fix conflicts to continue."))
                 actions[_("Continue rebase")] = None
+            elif any(d.status != GitStatus.Untracked for d in self.repoModel.workdirUnstagedDeltas):
+                textParts.append(_("No conflicts. Stage or discard your changes to continue."))
+                actions[_("Continue rebase")] = None
             else:
-                textParts.append(_("No conflicts: you can continue."))
+                textParts.append(_("You can continue."))
                 heeded = True
 
             text = paragraphs(*textParts)

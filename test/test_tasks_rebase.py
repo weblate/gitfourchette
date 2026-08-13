@@ -83,8 +83,7 @@ def testCancelRebaseDialog(tempDir, mainWindow, withChanges):
     if withChanges:
         assert rebaseDialog.isVisible()
         qmb = findQMessageBox(rebaseDialog, "really close")
-        button = next(b for b in qmb.buttons() if findTextInWidget(b, "close"))
-        button.click()
+        findWidgetWithText(qmb.buttons(), "close").click()
 
     assert rw.repo.state() == RepositoryState.NONE
 
@@ -106,9 +105,7 @@ def testAbortRebase(tempDir, mainWindow):
     assert findTextInWidget(rw.mergeBanner.label, "stopped at.+" + str(edit)[:7])
 
     # Abort the rebase
-    abortButton = next(button for button in rw.mergeBanner.buttons
-                       if findTextInWidget(button, "abort rebase"))
-    abortButton.click()
+    findWidgetWithText(rw.mergeBanner.buttons, "abort rebase").click()
     acceptQMessageBox(rw, "abort rebase")
 
     assert rw.repo.state() == RepositoryState.NONE
@@ -139,7 +136,7 @@ def testContinueRebase(tempDir, mainWindow):
     commitDialog.accept()
 
     # Continue rebasing
-    continueButton = next(b for b in rw.mergeBanner.buttons if findTextInWidget(b, "continue rebase"))
+    continueButton = rw.mergeBanner.findButton("continue rebase")
     assert continueButton.isEnabled()
     continueButton.click()
 
@@ -203,7 +200,7 @@ def testRebaseRewordAfterContinue(tempDir, mainWindow):
 
     assert rw.repo.state() == RepositoryState.REBASE_INTERACTIVE
     assert rw.mergeBanner.isVisible()
-    continueButton = next(b for b in rw.mergeBanner.buttons if findTextInWidget(b, "continue rebase"))
+    continueButton = rw.mergeBanner.findButton("continue rebase")
     assert continueButton.isEnabled()
     continueButton.click()
 
@@ -245,7 +242,7 @@ def testRebaseCausesConflicts(tempDir, mainWindow):
         assert findTextInWidget(rw.mergeBanner.label, "fix conflicts to continue")
 
         # Continue button should be grayed out
-        continueButton = next(b for b in rw.mergeBanner.buttons if findTextInWidget(b, "continue rebase"))
+        continueButton = rw.mergeBanner.findButton("continue rebase")
         assert not continueButton.isEnabled()
 
         # Task should auto-jump to 1st conflict
@@ -261,7 +258,7 @@ def testRebaseCausesConflicts(tempDir, mainWindow):
         acceptQMessageBox(rw, "accept their")
 
         # Continue rebase
-        continueButton = next(b for b in rw.mergeBanner.buttons if findTextInWidget(b, "continue rebase"))
+        continueButton = rw.mergeBanner.findButton("continue rebase")
         assert continueButton.isEnabled()
         continueButton.click()
 
@@ -353,6 +350,34 @@ def testRebaseVerifyEmptyCommitsInTodo(tempDir, mainWindow):
     assert not seq[-1].verifiedEmpty
 
     rebaseDialog.reject()
+
+
+def testRebaseBannerCantContinueWithUnstagedChanges(tempDir, mainWindow):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = [_Todo(0, RebaseOp.Edit)]
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    banner = rw.mergeBanner
+    _driveRebaseDialog(rw, onto, todo).accept()
+
+    assert findTextInWidget(banner.label, "you can continue")
+    assert banner.isVisible()
+    assert banner.property("heeded") == "true"
+    assert banner.findButton("continue rebase").isEnabled()
+
+    writeFile(f"{wd}/master.txt", "hello")
+    rw.refreshRepo()
+    assert findTextInWidget(banner.label, "stage.+your changes to continue")
+    assert banner.property("heeded") != "true"
+    assert not banner.findButton("continue rebase").isEnabled()
+
+    rw.jump(NavLocator.inUnstaged("master.txt"), check=True)
+    rw.diffArea.stageButton.click()
+    assert findTextInWidget(banner.label, "you can continue")
+    assert banner.property("heeded") == "true"
+    assert banner.findButton("continue rebase").isEnabled()
+    banner.findButton("continue rebase").click()
 
 
 def testRebaseSequenceStyleDropIndicator(tempDir, mainWindow, monkeypatch):
@@ -456,8 +481,7 @@ def testRebaseSequenceViewQDrag(tempDir, mainWindow, monkeypatch):
     if allowActualMove:
         assert rebaseDialog.ui.sequence.allRebaseLines()[0].displayMessage() == "On master again"
         qmb = findQMessageBox(rebaseDialog, "really close this rebase plan")
-        button = next(b for b in qmb.buttons() if findTextInWidget(b, "close"))
-        button.click()
+        findWidgetWithText(qmb.buttons(), "close").click()
 
 
 def testRebaseMenuStyle(tempDir, mainWindow, monkeypatch):

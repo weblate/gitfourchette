@@ -111,3 +111,9 @@ class Banner(QFrame):
         self.lastWarningWasDismissed = True
         self.hide()
         self.clearButtons()
+
+    def findButton(self, text: str) -> QToolButton:
+        """Unit test helper to find buttons by name.
+        DO NOT USE outside tests, because buttons can be localized!"""
+        return next(button for button in self.buttons
+                    if text in button.text().lower())
