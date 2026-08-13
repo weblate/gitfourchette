@@ -154,9 +154,9 @@ class CommitLogModel(QAbstractListModel):
                 return ""
             if cid == rebase.onto:
                 return _("Start")
-            if cid == rebase.orig_head:
+            if cid == rebase.origHead:
                 return _("End")
-            if cid == rebase.stopped_sha:
+            if cid == rebase.stoppedSha:
                 return _("Stopped here") + " \u2192"
 
         elif role == Qt.ItemDataRole.ToolTipRole:

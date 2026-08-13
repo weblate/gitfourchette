@@ -18,7 +18,7 @@ from gitfourchette.porcelain import *
 from gitfourchette.ipc.ipcserver import GFIpcServer
 from gitfourchette.qt import *
 from gitfourchette.rebase.editmsgautofillserver import EditmsgAutoFillServer
-from gitfourchette.rebase.rebasemodel import parseRebaseTodo, RebaseLine, RebasePlan
+from gitfourchette.rebase.rebasemodel import parseRebaseTodo, RebaseLine, RebasePlan, RebaseInfo
 from gitfourchette.tasks import TaskPrereqs, TaskEffects
 from gitfourchette.tasks.repotask import RepoTask, AbortTask
 from gitfourchette.toolbox import *
@@ -81,6 +81,8 @@ class InteractiveRebase(RepoTask):
             self.hideProcessProgress.emit(True)
 
             path = handshake.args[0]
+            assert Path(path).samefile(self.repo.in_gitdir("rebase-merge/git-rebase-todo"))
+
             text = Path(path).read_text(encoding="utf-8")
             todo = parseRebaseTodo(text)
 
@@ -96,8 +98,8 @@ class InteractiveRebase(RepoTask):
                         if commit.tree_id == commit.parents[0].tree_id:
                             item.verifiedEmpty = True
 
-            info = self.repo.rebase_info(path)
-            plan = RebasePlan(todo, headName=info.head_name, origHead=info.orig_head, onto=info.onto)
+            info = RebaseInfo.parse(self.repo.path)
+            plan = RebasePlan(todo, headName=info.headName, origHead=info.origHead, onto=info.onto)
 
             dialog = RebaseDialog(self.parentWidget())
             dialog.setSequence(plan.sequence)
@@ -166,11 +168,12 @@ class ExecuteRebase(RepoTask):
         try:
             self.epilog.effects |= TaskEffects.Head
 
+            assert Path(path).samefile(self.repo.in_gitdir("rebase-merge/git-rebase-todo"))
             text = Path(path).read_text(encoding="utf-8")
             sequence = parseRebaseTodo(text)
 
-            info = self.repo.rebase_info(path)
-            oldPlan2 = RebasePlan(sequence, headName=info.head_name, origHead=info.orig_head, onto=info.onto)
+            info = RebaseInfo.parse(self.repo.path)
+            oldPlan2 = RebasePlan(sequence, headName=info.headName, origHead=info.origHead, onto=info.onto)
             if oldPlan2 != self.oldPlan:
                 abortPayload = _AbortMagicToctou
                 return
@@ -192,18 +195,18 @@ class AbortRebase(RepoTask):
             RepositoryState.REBASE_MERGE,
         ], f"attempting to abort non-rebase state {self.repo.state()}"
 
-        info = self.repo.rebase_info()
+        info = RebaseInfo.parse(self.repo.path)
 
         yield from self.flowConfirm(
             text=paragraphs(
                 _("Do you want to abort the ongoing rebase of {0} onto {1}?",
-                  tquoe(info.head_shorthand),
+                  tquoe(info.headShorthand),
                   tquoe(shortHash(info.onto, maybe=True)),
                   ),
 
                 _("Aborting will <b>clear all changes in the working directory</b>, and branch {0} will move back to {1}.",
-                  tquoe(info.head_shorthand),
-                  tquoe(shortHash(info.orig_head, maybe=True)),
+                  tquoe(info.headShorthand),
+                  tquoe(shortHash(info.origHead, maybe=True)),
                   ),
             ),
         )
@@ -219,7 +222,7 @@ class ContinueRebase(RepoTask):
         assert self.repo.state() == RepositoryState.REBASE_INTERACTIVE, \
             f"attempting to continue from state {self.repo.state()}"
 
-        rebaseInfoAtStart = self.repo.rebase_info()
+        rebaseInfoAtStart = RebaseInfo.parse(self.repo.path)
 
         self.epilog.effects |= _StandardRebaseTaskEffects
 
@@ -235,7 +238,7 @@ class ContinueRebase(RepoTask):
             autoFail=False,
         )
 
-        _debriefRebase(self, driver, rebaseInfoAtStart.head_shorthand, rebaseInfoAtStart.orig_head, rebaseInfoAtStart.onto)
+        _debriefRebase(self, driver, rebaseInfoAtStart.headShorthand, rebaseInfoAtStart.origHead, rebaseInfoAtStart.onto)
 
 
 def _toctouErrorText(headName: str, headCommit: Oid):

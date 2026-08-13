@@ -17,7 +17,6 @@ import typing as _typing
 import warnings as _warnings
 from contextlib import suppress as _suppress
 from pathlib import Path as _Path
-from types import UnionType
 
 from pygit2 import settings as _pygit2settings
 
@@ -137,21 +136,6 @@ class MultiFileError(Exception):
 
 class _UnchangedConfigFile(Exception):
     pass
-
-
-@_dataclasses.dataclass
-class RebaseInfo:
-    head_name: str  # may be "detached HEAD"
-    onto: Oid
-    orig_head: Oid
-    stopped_sha: Oid | str  # may be empty string
-    msgnum: int
-    end: int
-
-    @property
-    def head_shorthand(self):
-        _dummy, ref = RefPrefix.split(self.head_name)
-        return ref
 
 
 def version_to_tuple(s: str) -> tuple[int, ...]:
@@ -1171,57 +1155,6 @@ class Repo(_VanillaRepository):
         else:
             # Apply filters in a buffer
             return filters.apply_to_file(self, path)
-
-    def rebase_info(self, todo_path: str = "") -> RebaseInfo:
-        # I attempted to expose the corresponding libgit2 functions in pygit2,
-        # but libgit2 refuses to parse info about an ongoing interactive rebase.
-
-        if not todo_path:
-            todo_path = self.in_gitdir("rebase-merge/git-rebase-todo")
-
-        def read_file(name: str, convert_to: _typing.Literal["str", "int", "Oid|str", "Oid"] = "str"):
-            try:
-                path_obj = _Path(todo_path).with_name(name)
-                text = path_obj.read_text("utf-8").strip()
-            except OSError:
-                text = ""
-
-            if convert_to == "str":
-                return text
-
-            if convert_to == "int":
-                try:
-                    return int(text)
-                except ValueError:
-                    return 0  # rebase numbers are 1-indexed, so 0 in case of failure is fine
-
-            if convert_to == "Oid|str":
-                if len(text) == 40 and all(c in "0123456789abcdef" for c in text):
-                    return Oid(hex=text)
-                else:
-                    return text
-
-            if convert_to == "Oid":
-                return Oid(hex=text)
-
-            raise NotImplementedError(f"unknown conversion {convert_to}")
-
-        head_name   = read_file("head-name")
-        onto        = read_file("onto", "Oid")
-        orig_head   = read_file("orig-head", "Oid")
-        stopped_sha = read_file("stopped-sha", "Oid|str")
-        msgnum      = read_file("msgnum", "int")
-        end         = read_file("end", "int")
-
-        return RebaseInfo(
-            head_name=head_name,
-            onto=onto,
-            orig_head=orig_head,
-            stopped_sha=stopped_sha,
-            msgnum=msgnum,
-            end=end,
-        )
-
 
 class RepoContext:
     def __init__(self, repo_or_path: Repo | str | _Path, flags=RepositoryOpenFlag.DEFAULT, write_index=False):

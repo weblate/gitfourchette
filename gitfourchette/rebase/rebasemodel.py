@@ -10,7 +10,8 @@ import base64
 import dataclasses
 import enum
 import re
-from typing import Any, ClassVar
+from pathlib import Path
+from typing import Any, ClassVar, Literal
 
 from gitfourchette import colors
 from gitfourchette.porcelain import Oid, RefPrefix
@@ -72,6 +73,73 @@ RebaseOpColors: dict[RebaseOp, QColor] = {
 
 
 _PayloadMagicPrefix = "GITFOURCHETTE_REBASE_PAYLOAD="
+
+
+@dataclasses.dataclass
+class RebaseInfo:
+    headName: str  # may be "detached HEAD"
+    onto: Oid
+    origHead: Oid
+    stoppedSha: Oid | str  # may be empty string
+    msgnum: int
+    end: int
+
+    @property
+    def headShorthand(self):
+        _dummy, ref = RefPrefix.split(self.headName)
+        return ref
+
+    @classmethod
+    def parse(cls, gitdir: str) -> RebaseInfo:
+        # I attempted to expose the corresponding libgit2 functions in pygit2,
+        # but libgit2 refuses to parse info about an ongoing interactive rebase.
+
+        rebaseMerge = Path(gitdir, "rebase-merge")
+        if not rebaseMerge.exists():
+            raise FileNotFoundError("no .git/rebase-merge directory")
+
+        headName = cls._readFile(rebaseMerge / "head-name")
+        onto = cls._readFile(rebaseMerge / "onto", "Oid")
+        origHead = cls._readFile(rebaseMerge / "orig-head", "Oid")
+        stoppedSha = cls._readFile(rebaseMerge / "stopped-sha", "Oid|str")
+        msgnum = cls._readFile(rebaseMerge / "msgnum", "int")
+        end = cls._readFile(rebaseMerge / "end", "int")
+
+        return cls(
+            headName=headName,
+            onto=onto,
+            origHead=origHead,
+            stoppedSha=stoppedSha,
+            msgnum=msgnum,
+            end=end,
+        )
+
+    @classmethod
+    def _readFile(cls, path: Path, convert_to: Literal["str", "int", "Oid|str", "Oid"] = "str"):
+        try:
+            text = path.read_text("utf-8").strip()
+        except OSError:
+            text = ""
+
+        if convert_to == "str":
+            return text
+
+        if convert_to == "int":
+            try:
+                return int(text)
+            except ValueError:
+                return 0  # rebase numbers are 1-indexed, so 0 in case of failure is fine
+
+        if convert_to == "Oid|str":
+            if len(text) == 40 and all(c in "0123456789abcdef" for c in text):
+                return Oid(hex=text)
+            else:
+                return text
+
+        if convert_to == "Oid":
+            return Oid(hex=text)
+
+        raise NotImplementedError(f"unknown conversion {convert_to}")
 
 
 @dataclasses.dataclass

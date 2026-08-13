@@ -678,13 +678,13 @@ class RepoWidget(QWidget):
             info = self.repoModel.rebase
             assert info is not None
 
-            title = _("Rebasing {0} onto {1}", tquoe(info.head_shorthand), tquoe(shortHash(info.onto, maybe=True)))
+            title = _("Rebasing {0} onto {1}", tquoe(info.headShorthand), tquoe(shortHash(info.onto, maybe=True)))
             title = f"({info.msgnum}/{info.end}) {title}"
 
-            textParts = [_("Stopped at {commit}", commit=tquoe(shortHash(info.stopped_sha, maybe=True) or "???"))]
+            textParts = [_("Stopped at {commit}", commit=tquoe(shortHash(info.stoppedSha, maybe=True) or "???"))]
 
             try:
-                preview = self.repo[info.stopped_sha].peel(Commit).message
+                preview = self.repo[info.stoppedSha].peel(Commit).message
                 preview, _dummy = messageSummary(preview)
                 preview = elide(preview, Qt.TextElideMode.ElideRight, 30)
                 preview = escape(tquo(preview))

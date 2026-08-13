@@ -16,6 +16,7 @@ from gitfourchette.graph import Graph, GraphSpliceLoop, MockCommit
 from gitfourchette.graph.graphbuilder import CommitTraits
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.rebase.rebasemodel import RebaseInfo
 from gitfourchette.repoprefs import RepoPrefs
 from gitfourchette.toolbox import *
 
@@ -334,7 +335,7 @@ class RepoModel:
         """
 
         try:
-            info = self.repo.rebase_info()
+            info = RebaseInfo.parse(self.repo.path)
         except (OSError, ValueError):
             info = None
 
