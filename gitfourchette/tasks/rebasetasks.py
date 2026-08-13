@@ -18,7 +18,7 @@ from gitfourchette.porcelain import *
 from gitfourchette.ipc.ipcserver import GFIpcServer
 from gitfourchette.qt import *
 from gitfourchette.rebase.editmsgautofillserver import EditmsgAutoFillServer
-from gitfourchette.rebase.rebasemodel import parseRebaseTodo, RebaseLine, RebasePlan, RebaseInfo
+from gitfourchette.rebase.rebasemodel import RebaseLine, RebasePlan, RebaseInfo
 from gitfourchette.tasks import TaskPrereqs, TaskEffects
 from gitfourchette.tasks.repotask import RepoTask, AbortTask
 from gitfourchette.toolbox import *
@@ -83,23 +83,21 @@ class InteractiveRebase(RepoTask):
             path = handshake.args[0]
             assert Path(path).samefile(self.repo.in_gitdir("rebase-merge/git-rebase-todo"))
 
-            text = Path(path).read_text(encoding="utf-8")
-            todo = parseRebaseTodo(text)
+            info = RebaseInfo.parse(self.repo.path)
 
-            if not todo:
+            if not info.todoSeq:
                 abortPayload = _AbortMagicNoop
                 return
 
             # Verify lines with "# empty"
-            for item in todo:
+            for item in info.todoSeq:
                 if item.originalComment.endswith(RebaseLine.EmptyCommitSuffix):
                     with suppress(ValueError, LookupError):
                         commit = self.repo[item.hexHash].peel(Commit)
                         if commit.tree_id == commit.parents[0].tree_id:
                             item.verifiedEmpty = True
 
-            info = RebaseInfo.parse(self.repo.path)
-            plan = RebasePlan(todo, headName=info.headName, origHead=info.origHead, onto=info.onto)
+            plan = RebasePlan(info.todoSeq, headName=info.headName, origHead=info.origHead, onto=info.onto)
 
             dialog = RebaseDialog(self.parentWidget())
             dialog.setSequence(plan.sequence)
@@ -169,11 +167,9 @@ class ExecuteRebase(RepoTask):
             self.epilog.effects |= TaskEffects.Head
 
             assert Path(path).samefile(self.repo.in_gitdir("rebase-merge/git-rebase-todo"))
-            text = Path(path).read_text(encoding="utf-8")
-            sequence = parseRebaseTodo(text)
 
             info = RebaseInfo.parse(self.repo.path)
-            oldPlan2 = RebasePlan(sequence, headName=info.headName, origHead=info.origHead, onto=info.onto)
+            oldPlan2 = RebasePlan(info.todoSeq, headName=info.headName, origHead=info.origHead, onto=info.onto)
             if oldPlan2 != self.oldPlan:
                 abortPayload = _AbortMagicToctou
                 return

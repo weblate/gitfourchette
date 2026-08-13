@@ -11,7 +11,7 @@ import dataclasses
 import enum
 import re
 from pathlib import Path
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar
 
 from gitfourchette import colors
 from gitfourchette.porcelain import Oid, RefPrefix
@@ -83,6 +83,8 @@ class RebaseInfo:
     stoppedSha: Oid | str  # may be empty string
     msgnum: int
     end: int
+    todoSeq: TRebaseSequence
+    doneSeq: TRebaseSequence
 
     @property
     def headShorthand(self):
@@ -98,48 +100,33 @@ class RebaseInfo:
         if not rebaseMerge.exists():
             raise FileNotFoundError("no .git/rebase-merge directory")
 
-        headName = cls._readFile(rebaseMerge / "head-name")
-        onto = cls._readFile(rebaseMerge / "onto", "Oid")
-        origHead = cls._readFile(rebaseMerge / "orig-head", "Oid")
-        stoppedSha = cls._readFile(rebaseMerge / "stopped-sha", "Oid|str")
-        msgnum = cls._readFile(rebaseMerge / "msgnum", "int")
-        end = cls._readFile(rebaseMerge / "end", "int")
-
-        return cls(
-            headName=headName,
-            onto=onto,
-            origHead=origHead,
-            stoppedSha=stoppedSha,
-            msgnum=msgnum,
-            end=end,
-        )
-
-    @classmethod
-    def _readFile(cls, path: Path, convert_to: Literal["str", "int", "Oid|str", "Oid"] = "str"):
-        try:
-            text = path.read_text("utf-8").strip()
-        except OSError:
-            text = ""
-
-        if convert_to == "str":
-            return text
-
-        if convert_to == "int":
+        def readFile(n) -> str:
             try:
-                return int(text)
+                return (rebaseMerge / n).read_text("utf-8").strip()
+            except OSError:
+                return ""
+
+        text = {
+            fileName: readFile(fileName)
+            for fileName in ["head-name", "onto", "orig-head", "stopped-sha", "msgnum", "end", "git-rebase-todo", "done"]
+        }
+
+        def intOrZero(s):  # rebase numbers are 1-indexed, so 0 in case of failure is fine
+            try:
+                return int(s)
             except ValueError:
-                return 0  # rebase numbers are 1-indexed, so 0 in case of failure is fine
+                return 0
 
-        if convert_to == "Oid|str":
-            if len(text) == 40 and all(c in "0123456789abcdef" for c in text):
-                return Oid(hex=text)
-            else:
-                return text
+        headName = text["head-name"]
+        onto = Oid(hex=text["onto"])
+        origHead = Oid(hex=text["orig-head"])
+        stoppedSha = Oid(hex=text["stopped-sha"]) if text["stopped-sha"] else ""
+        msgnum = intOrZero(text["msgnum"])
+        end = intOrZero(text["end"])
+        todoSeq = parseRebaseTodo(text["git-rebase-todo"])
+        doneSeq = parseRebaseTodo(text["done"])
 
-        if convert_to == "Oid":
-            return Oid(hex=text)
-
-        raise NotImplementedError(f"unknown conversion {convert_to}")
+        return cls(headName, onto, origHead, stoppedSha, msgnum, end, todoSeq, doneSeq)
 
 
 @dataclasses.dataclass

@@ -10,7 +10,7 @@ from pathlib import Path
 from gitfourchette.ipc.ipcprotocol import GFIpcProtocol
 from gitfourchette.ipc.ipcserver import GFIpcServer
 from gitfourchette.qt import *
-from gitfourchette.rebase.rebasemodel import parseRebaseTodo
+from gitfourchette.rebase.rebasemodel import RebaseInfo
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +36,8 @@ class EditmsgAutoFillServer(GFIpcServer):
         editmsgPath = Path(handshake.args[0])
         assert editmsgPath.name == "COMMIT_EDITMSG"
 
-        donePath = Path(editmsgPath.parent, "rebase-merge/done")
-        doneText = donePath.read_text("utf-8")
-        doneSequence = parseRebaseTodo(doneText)
-        doneLast = doneSequence[-1]
+        rebaseInfo = RebaseInfo.parse(str(editmsgPath.parent))
+        doneLast = rebaseInfo.doneSeq[-1]
 
         # If we stopped on a reword, dump the message
         if doneLast.op.isEditable():
