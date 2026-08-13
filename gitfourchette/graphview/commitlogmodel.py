@@ -15,7 +15,7 @@ from gitfourchette.graph.graph import CommitTraits
 from gitfourchette.localization import *
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.repomodel import UC_FAKEID, RepoModel, GpgStatus
+from gitfourchette.repomodel import RepoModel, GpgStatus, UC_FAKEID
 from gitfourchette.toolbox import *
 
 
@@ -60,7 +60,6 @@ class CommitLogModel(QAbstractListModel):
         SpecialRow      = Qt.ItemDataRole.UserRole + 4
         BlameRevision   = Qt.ItemDataRole.UserRole + 5  # for BlameScrubber
         ComparisonSide  = Qt.ItemDataRole.UserRole + 6  # A/B commit diffs
-        RebaseProgress  = Qt.ItemDataRole.UserRole + 7
 
     repoModel: RepoModel
     _extraRow: SpecialRow
@@ -144,21 +143,6 @@ class CommitLogModel(QAbstractListModel):
             except (IndexError, AttributeError, ValueError):
                 return ""
 
-        elif role == CommitLogModel.Role.RebaseProgress:
-            rebase = self.repoModel.rebase
-            if not rebase:
-                return ""
-            try:
-                cid = self.repoModel.commitSequence[row].id
-            except (IndexError, AttributeError):
-                return ""
-            if cid == rebase.onto:
-                return _("Start")
-            if cid == rebase.origHead:
-                return _("End")
-            if cid == rebase.stoppedSha:
-                return _("Stopped here") + " \u2192"
-
         elif role == Qt.ItemDataRole.ToolTipRole:
             tip = ""
 
@@ -206,7 +190,7 @@ class CommitLogModel(QAbstractListModel):
 
             if value:
                 # Bump row to end of keys (dicts keep key insertion order since Python 3.7)
-                self._toolTipZones[row] = value
+                self._toolTipZones[row] = sorted(value, key=lambda z: z.left)
 
                 # Nuke old entries if the dict grew beyond the threshold
                 trimCacheDict(self._toolTipZones, CommitLogModel.ToolTipCacheSize)

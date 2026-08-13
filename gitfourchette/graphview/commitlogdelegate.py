@@ -18,6 +18,8 @@ from gitfourchette.graphview.graphpaint import paintGraphFrame
 from gitfourchette.localization import *
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.rebase.rebasemodel import RebaseOp
+from gitfourchette.rebase.rebasesequencedelegate import RebaseSequenceDelegate
 from gitfourchette.repomodel import UC_FAKEID, UC_FAKEREF, RepoModel, GpgStatus
 from gitfourchette.toolbox import *
 
@@ -48,9 +50,6 @@ REFBOXES = [
     # Commit comparison
     RefBox("FAKEREF_COMPAREA", "compare-a", QColor(Qt.GlobalColor.red), iconWidth=48),
     RefBox("FAKEREF_COMPAREB", "compare-b", QColor(Qt.GlobalColor.blue), iconWidth=48),
-
-    # Rebase
-    RefBox("FAKEREF_REBASE"),
 
     # Fallback
     RefBox("", "hint", QColor(Qt.GlobalColor.gray), keepPrefix=True)
@@ -228,6 +227,10 @@ class CommitLogDelegate(QStyledItemDelegate):
             painter.setFont(self.uncommittedFont)
 
         # ...Left-to-right zones...
+
+        # Rebase state
+        if self.repoModel.rebase:
+            self._paintRebase(painter, rect, oid)
 
         # Hash
         if settings.prefs.hashesBesideGraph:
@@ -541,8 +544,6 @@ class CommitLogDelegate(QStyledItemDelegate):
         elif refName == 'HEAD' and self.repoModel.headIsDetached:
             text = _("Detached HEAD")
             font = self.homeRefboxFont
-        elif refName.startswith("FAKEREF_REBASE"):
-            font = self.homeRefboxFont
         else:
             font = self.refboxFont
 
@@ -715,6 +716,42 @@ class CommitLogDelegate(QStyledItemDelegate):
             summaryText += f" – {draftIntro} {tquo(draftMessage)}"
         return summaryText
 
+    def _paintRebase(self, painter: QPainter, rect: QRect, oid: Oid | None):
+        rebase = self.repoModel.rebase
+        assert rebase is not None
+
+        op: RebaseOp | None = None
+        tip: str = ""
+
+        if oid == rebase.onto:
+            op = RebaseOp.FakeStart
+            tip = _("Rebase: You initiated a rebase onto this commit.")
+        elif oid == rebase.stoppedSha:
+            op = RebaseOp.FakeStop
+            tip = _("Rebase: Currently stopped at this commit.")
+        elif any(oid == line.hexHash for line in rebase.doneSeq):
+            op = RebaseOp.FakeDone
+            tip = _("Rebase: This commit has already been processed.")
+        else:
+            try:
+                line = next(line for line in rebase.todoSeq if oid == line.hexHash)
+                op = line.op
+                tip = _("Rebase: This commit remains to be processed.")
+            except StopIteration:
+                pass
+
+        width = 72
+
+        if op is not None:
+            zone = CommitToolTipZone(rect.left(), rect.left() + width, "ref", tip)
+            self.newToolTipZone(zone)
+
+            RebaseSequenceDelegate.drawPill(painter, rect, op, showDanglingErrors=False, width=width)
+        else:
+            rect.adjust(width, 0, 0, 0)
+
+        rect.adjust(8, 0, 0, 0)
+
     def paintPrivate(
             self,
             painter: QPainter,
@@ -737,11 +774,6 @@ class CommitLogDelegate(QStyledItemDelegate):
         # ------ Begin refboxes
         painter.save()
         painter.setClipRect(rect)
-
-        # ------ Rebase state
-        rebase = index.data(CommitLogModel.Role.RebaseProgress)
-        if rebase:
-            self._paintRefbox(painter, rect, f"FAKEREF_REBASE{_('Rebase')}{_(':')} {rebase}", forceToolTip=None)
 
         # ------ A/B icon
         abSide = index.data(CommitLogModel.Role.ComparisonSide)

@@ -31,6 +31,9 @@ class RebaseOp(enum.StrEnum):
     Reset       = "reset"
     Merge       = "merge"
     UpdateRef   = "update-ref"
+    FakeDone    = "__done"
+    FakeStop    = "__stop"
+    FakeStart   = "__start"
 
     def isEditable(self):
         return self == "reword" or self == "squash"
@@ -69,6 +72,9 @@ RebaseOpColors: dict[RebaseOp, QColor] = {
     RebaseOp.Squash    : colors.blue,
     RebaseOp.Fixup     : colors.teal,
     RebaseOp.Drop      : colors.red,
+    RebaseOp.FakeDone  : colors.gray,
+    RebaseOp.FakeStop  : colors.black,
+    RebaseOp.FakeStart : colors.gray,
 }
 
 
@@ -250,7 +256,7 @@ def parseRebaseTodo(text: str) -> TRebaseSequence:
     return sequence
 
 
-_opsRegex = "|".join(RebaseOp)
+_opsRegex = "|".join(op for op in RebaseOp if not op.startswith("_"))
 _todoNoopPattern = re.compile(r"^noop\b")
 _todoLinePattern = re.compile(rf"^({_opsRegex})\s+([0-9a-f]+)(?:\s*#\s*|\s+)(.+)$")
 #                                                             ^^^^^^^^^

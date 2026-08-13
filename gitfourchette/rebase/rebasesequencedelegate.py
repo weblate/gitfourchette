@@ -122,8 +122,10 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             painter: QPainter,
             rect: QRect,
             op: RebaseOp,
-            opAbove: RebaseOp | None,
-            opBelow: RebaseOp | None,
+            opAbove: RebaseOp | None = None,
+            opBelow: RebaseOp | None = None,
+            showDanglingErrors: bool = True,
+            width: int = 0,
     ):
         painter.save()
 
@@ -133,7 +135,8 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
 
         vMargin = max(0, math.ceil((rect.height() - 16) / 4))  # Vertical margin
         rrRadius = rect.height() // 2
-        width = painter.fontMetrics().horizontalAdvance("ooooo") + 2 * rrRadius
+        if not width:
+            width = painter.fontMetrics().horizontalAdvance("oooooi") + 2 * rrRadius
 
         textRect = QRectF(rect)
         textRect.adjust(0, vMargin, 0, -vMargin)
@@ -164,9 +167,16 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
 
         # Op name
         # Add question mark if attempting to fixup nothing
-        opText = str(op)
-        if not opAbove and (op == RebaseOp.Fixup or op == RebaseOp.Squash):
-            opText = f"¿{opText}?"
+        if op == RebaseOp.FakeStop:
+            opText = _("stop") + " 🞂🞂🞂"
+        elif op == RebaseOp.FakeStart:
+            opText = _("start")
+        elif op == RebaseOp.FakeDone:
+            opText = "\u2713"
+        else:
+            opText = str(op)
+            if showDanglingErrors and not opAbove and (op == RebaseOp.Fixup or op == RebaseOp.Squash):
+                opText = f"¿{opText}?"
 
         # Paint
         painter.setClipRect(rect)  # confine drawing to row
