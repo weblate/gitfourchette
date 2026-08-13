@@ -16,15 +16,6 @@ import re as _re
 import typing as _typing
 import warnings
 from contextlib import suppress as _suppress
-from os.path import (
-    basename as _basename,
-    dirname as _dirname,
-    exists as _exists,
-    isabs as _isabs,
-    isdir as _isdir,
-    join as _joinpath,
-    normpath as _normpath,
-)
 from pathlib import Path as _Path
 
 from pygit2 import settings as _pygit2settings
@@ -392,14 +383,14 @@ class GitConfigHelper:
         # Several paths may be concatenated with GIT_PATH_LIST_SEPARATOR,
         # which git2/common.h defines as ":" (or ";" on Windows).
         # pygit2 doesn't expose this, but it appears to match os.pathsep.
-        search_paths = _pygit2settings.search_path[level].split(_os.pathsep)
-        search_paths = [path for path in search_paths if path]  # filter out any empty paths
+        search_paths_orig = _pygit2settings.search_path[level].split(_os.pathsep)
+        search_paths = [_Path(p) for p in search_paths_orig if p]  # filter out any empty paths
 
         if not search_paths:
             raise KeyError(f"no search path is set up for git config level {level}")
 
         try:
-            path = next(path for path in search_paths if _isdir(path))
+            path = next(p for p in search_paths if p.is_dir())
         except StopIteration as exc:
             if not missing_dir_ok:
                 raise FileNotFoundError(f"no parent dir exists for git config level {level}") from exc
@@ -413,8 +404,7 @@ class GitConfigHelper:
         else:
             filename = "config"
 
-        path = _joinpath(path, filename)
-        return path
+        return str(path / filename)
 
     @staticmethod
     def ensure_file(level: GitConfigLevel = GitConfigLevel.GLOBAL) -> GitConfig:
@@ -430,13 +420,12 @@ class GitConfigHelper:
         except OSError:
             # Last resort, create file
             path = GitConfigHelper.path_for_level(level, missing_dir_ok=True)
-            _os.makedirs(_dirname(path), exist_ok=True)
+            _Path(path).parent.mkdir(parents=True, exist_ok=True)
             return GitConfig(path)
 
     @staticmethod
     def is_empty(config_path: str):
-        with open(config_path, encoding="utf-8") as f:
-            data = f.read()
+        data = _Path(config_path).read_text("utf-8")
         return not data or data.isspace()
 
     @staticmethod
@@ -457,13 +446,15 @@ class GitConfigHelper:
         return bool(to_delete)
 
     @staticmethod
-    def scrub_empty_section(config_path: str, *section_key_tokens: str):
+    def scrub_empty_section(config_path_str: str, *section_key_tokens: str):
         """
         libgit2 leaves behind empty sections in the config file after deleting
         or renaming a remote or branch. Over time, this litters the config
         file with empty entries, which slows down operations that parse the
         config. So, use this function to nip that in the bud.
         """
+
+        config_path = _Path(config_path_str)
 
         num_tokens = len(section_key_tokens)
         if num_tokens == 1:
@@ -499,23 +490,20 @@ class GitConfigHelper:
         # to disk, but this destroys the file's formatting. So, remove the
         # offending lines surgically. There may be multiple lines to remove if
         # the config file is fragmented (several remnants of empty sections).
-        with open(config_path, encoding="utf-8") as f:
-            lines = f.readlines()
-        evict = f"[{section_key}]\n"
-        lines = [line for line in lines if line != evict]
+        lines = config_path.read_text("utf-8").splitlines(keepends=True)
+        evict = f"[{section_key}]"
+        lines = [line for line in lines if line.strip() != evict]
 
         # Write result to disk.
         timestamp = datetime.datetime.now(datetime.UTC).timestamp()
 
-        temp_path = config_path + f".{timestamp}.new.tmp"
-        backup_path = config_path + f".{timestamp}.old.tmp"
+        temp_path = config_path.with_suffix(f".{timestamp}.new.tmp")
+        backup_path = config_path.with_suffix(f".{timestamp}.old.tmp")
 
-        with open(temp_path, "w", encoding="utf-8") as f:
-            f.writelines(lines)
-
-        _os.rename(config_path, backup_path)
-        _os.rename(temp_path, config_path)
-        _os.unlink(backup_path)
+        temp_path.write_text("".join(lines))
+        config_path.rename(backup_path)
+        temp_path.rename(config_path)
+        backup_path.unlink()
 
     @classmethod
     def get_default_value(cls, key: str | tuple) -> str:
@@ -596,16 +584,16 @@ class Repo(_VanillaRepository):
 
     def in_workdir(self, path: str) -> str:
         """Return an absolutized version of `path` within this repo's workdir."""
-        assert not _isabs(path)
-        p = _joinpath(self.workdir, path)
-        if not p.startswith(self.workdir):
+        assert not _Path(path).is_absolute()
+        p = _Path(self.workdir, path)
+        if not p.is_relative_to(self.workdir):
             raise ValueError("Won't create absolute path outside workdir")
-        return p
+        return str(p)
 
     def is_in_workdir(self, path: str, include_gitdir: bool = False) -> bool:
-        path_obj = _Path(path)
-        return (path_obj.is_relative_to(self.workdir)
-                and (include_gitdir or not path_obj.is_relative_to(self.path)))
+        p = _Path(path)
+        return (p.is_relative_to(self.workdir)
+                and (include_gitdir or not p.is_relative_to(self.path)))
 
     @property
     def commondir(self) -> str:
@@ -638,7 +626,7 @@ class Repo(_VanillaRepository):
 
         The `common` argument has no effect if this repo isn't a worktree.
         """
-        assert not _isabs(path)
+        assert not _Path(path).is_absolute()
 
         parent = self.commondir if common else self.path
         parent_resolved = _Path(parent).resolve()
@@ -936,11 +924,10 @@ class Repo(_VanillaRepository):
 
     def submodule_dotgit_present(self, submo_path: str) -> bool:
         path = self.in_workdir(submo_path)
-        path = _joinpath(path, ".git")
-        return _exists(path)
+        return _Path(path, ".git").exists()
 
-    def repo_name(self):
-        return _basename(_normpath(self.workdir))
+    def repo_name(self) -> str:
+        return _Path(self.workdir).resolve().name
 
     def get_config_value(self, key: str | tuple):
         key = GitConfigHelper.sanitize_key(key)
@@ -986,8 +973,7 @@ class Repo(_VanillaRepository):
         return clean_message.strip()
 
     def set_message(self, message: str):
-        with open(_joinpath(self.path, "MERGE_MSG"), "w") as mergemsg:
-            mergemsg.write(message)
+        _Path(self.path, "MERGE_MSG").write_text(message, "utf-8")
 
     # -------------------------------------------------------------------------
     # Config parsers ("listall" APIs)
