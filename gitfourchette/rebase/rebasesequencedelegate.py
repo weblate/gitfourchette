@@ -9,7 +9,7 @@ import math
 from gitfourchette import settings
 from gitfourchette.localization import *
 from gitfourchette.qt import *
-from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpColors
+from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpColors, RebaseOpLetters
 from gitfourchette.toolbox import shortHash, mixColors
 
 _ItemRole = Qt.ItemDataRole.UserRole
@@ -127,16 +127,16 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             showDanglingErrors: bool = True,
             width: int = 0,
     ):
-        painter.save()
+        isNarrow = 0 < width <= 50
+        isCramped = 0 < width <= 40
 
         font = QFont(painter.font())
-        font.setBold(True)
-        painter.setFont(font)
+        font.setBold(not isNarrow)
 
         vMargin = max(0, math.ceil((rect.height() - 16) / 4))  # Vertical margin
         rrRadius = rect.height() // 2
         if not width:
-            width = painter.fontMetrics().horizontalAdvance("oooooi") + 2 * rrRadius
+            width = QFontMetrics(font).horizontalAdvance("oooooi") + 2 * rrRadius
 
         textRect = QRectF(rect)
         textRect.adjust(0, vMargin, 0, -vMargin)
@@ -168,21 +168,32 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         # Op name
         # Add question mark if attempting to fixup nothing
         if op == RebaseOp.FakeStop:
-            opText = _("stop") + " 🞂🞂🞂"
+            chevron = "🞂" if not MACOS else "▶"
+            opText = chevron*3 if isNarrow else (_("stop") + " " + chevron*3)
         elif op == RebaseOp.FakeStart:
-            opText = _("start")
+            opText = "★" if isNarrow else _("start")
         elif op == RebaseOp.FakeDone:
             opText = "\u2713"
+        elif op == RebaseOp.FakeDoneRW:
+            opText = "\u2713*"
+        elif op == RebaseOp.FakeRewrite:
+            opText = "*" + _("rewrite")
+            font.setPointSize(min(8, font.pointSize()))
+            font.setBold(False)
         else:
-            opText = str(op)
-            if showDanglingErrors and not opAbove and (op == RebaseOp.Fixup or op == RebaseOp.Squash):
-                opText = f"¿{opText}?"
+            opText = str(op) if not isCramped else RebaseOpLetters[op]
+
+        if showDanglingErrors and not opAbove and (op == RebaseOp.Fixup or op == RebaseOp.Squash):
+            opText = f"¿{opText}?"
 
         # Paint
+        painter.save()
+        painter.setFont(font)
         painter.setClipRect(rect)  # confine drawing to row
-        painter.setPen(Qt.GlobalColor.white)
-        painter.fillPath(pillPath, gradient)
-        painter.drawPath(pillPath)
+        if op != RebaseOp.FakeRewrite and op != RebaseOp.FakeDone and op != RebaseOp.FakeDoneRW:
+            painter.setPen(Qt.GlobalColor.white)
+            painter.fillPath(pillPath, gradient)
+            painter.drawPath(pillPath)
         painter.drawText(textRect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter, opText)
         painter.restore()
 

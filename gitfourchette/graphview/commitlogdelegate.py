@@ -95,6 +95,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         self.uncommittedFont = QFont()
         self.refboxFont = QFont()
         self.homeRefboxFont = QFont()
+        self.rebaseNumberFont = QFont()
 
         self.mounts = GFApplication.instance().mountManager
 
@@ -134,6 +135,9 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         self.homeRefboxFont = QFont(self.refboxFont)
         self.homeRefboxFont.setWeight(QFont.Weight.Bold)
+
+        self.rebaseNumberFont = QFont(option.font)
+        self.rebaseNumberFont.setPointSize(min(9, self.rebaseNumberFont.pointSize()))
 
         wideDate = QDateTime.fromString("2999-12-25T23:59:59.999", Qt.DateFormat.ISODate)
         dateText = option.locale.toString(wideDate, settings.prefs.shortTimeFormat)
@@ -720,37 +724,69 @@ class CommitLogDelegate(QStyledItemDelegate):
         rebase = self.repoModel.rebase
         assert rebase is not None
 
+        seqNumDigits = len(str(rebase.end))
+
+        left = rect.left()
+        seqNumWidth = QFontMetrics(self.rebaseNumberFont).horizontalAdvance("0" * seqNumDigits)
+        pillWidth = 50
+        spacing = 4
+        advanceTo = left + seqNumWidth + spacing + pillWidth + spacing*2
+
         op: RebaseOp | None = None
         tip: str = ""
+        seqNum, done = rebase.sequenceIndexOf(oid)
 
-        if oid == rebase.onto:
+        if seqNum < 0 and (rewriters := rebase.rewriters.get(oid)):
+            op = RebaseOp.FakeRewrite
+            minStep, maxStep = 0xFFFFFFFF, 0
+            for rewrittenOid in rewriters:
+                j, _dummy = rebase.sequenceIndexOf(rewrittenOid)
+                minStep = min(j, minStep)
+                maxStep = max(j, maxStep)
+            if minStep == maxStep:
+                tip = _("Rewrite of step {0}", minStep)
+            else:
+                tip = _("Rewrite of steps {0}-{1}", minStep, maxStep)
+        elif seqNum < 0:
+            op = None
+        elif oid == rebase.onto:
             op = RebaseOp.FakeStart
-            tip = _("Rebase: You initiated a rebase onto this commit.")
+            tip = _("Rebase initiated onto this commit")
         elif oid == rebase.stoppedSha:
             op = RebaseOp.FakeStop
-            tip = _("Rebase: Currently stopped at this commit.")
-        elif any(oid == line.hexHash for line in rebase.doneSeq):
-            op = RebaseOp.FakeDone
-            tip = _("Rebase: This commit has already been processed.")
+            tip = _("Rebase stopped here")
+        elif not done:
+            op = rebase.sequenceLine(seqNum).op
+            tip = _("To do")
+        elif (rebasedAs := rebase.rewritten.get(oid, oid)) != oid:
+            op = RebaseOp.FakeDoneRW
+            line = rebase.sequenceLine(seqNum)
+            tip = _("Rebased as {0} ({1})", "*" + shortHash(rebasedAs), line.op)
         else:
-            try:
-                line = next(line for line in rebase.todoSeq if oid == line.hexHash)
-                op = line.op
-                tip = _("Rebase: This commit remains to be processed.")
-            except StopIteration:
-                pass
+            op = RebaseOp.FakeDone
+            line = rebase.sequenceLine(seqNum)
+            tip = _("Rebased as-is ({0})", line.op)
 
-        width = 72
+        if seqNum >= 1:
+            numRect = QRect(rect)
+            numRect.setWidth(seqNumWidth)
+            painter.save()
+            if done and oid != rebase.stoppedSha:
+                painter.setOpacity(.33)
+            painter.setFont(self.rebaseNumberFont)
+            painter.drawText(numRect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, str(seqNum))
+            painter.restore()
+            rect.adjust(seqNumWidth + spacing, 0, 0, 0)
+        else:
+            pillWidth += seqNumWidth + spacing
 
         if op is not None:
-            zone = CommitToolTipZone(rect.left(), rect.left() + width, "ref", tip)
+            RebaseSequenceDelegate.drawPill(painter, rect, op, showDanglingErrors=False, width=pillWidth)
+
+            zone = CommitToolTipZone(left, rect.left(), "ref", tip)
             self.newToolTipZone(zone)
 
-            RebaseSequenceDelegate.drawPill(painter, rect, op, showDanglingErrors=False, width=width)
-        else:
-            rect.adjust(width, 0, 0, 0)
-
-        rect.adjust(8, 0, 0, 0)
+        rect.setLeft(advanceTo)
 
     def paintPrivate(
             self,

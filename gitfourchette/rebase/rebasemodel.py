@@ -7,6 +7,7 @@
 from __future__ import annotations  # TODO: Remove once we can drop support for Python <= 3.13
 
 import base64
+import collections
 import dataclasses
 import enum
 import re
@@ -32,8 +33,10 @@ class RebaseOp(enum.StrEnum):
     Merge       = "merge"
     UpdateRef   = "update-ref"
     FakeDone    = "__done"
+    FakeDoneRW  = "__donerewritten"
     FakeStop    = "__stop"
     FakeStart   = "__start"
+    FakeRewrite = "__rewrite"
 
     def isEditable(self):
         return self == "reword" or self == "squash"
@@ -75,6 +78,7 @@ RebaseOpColors: dict[RebaseOp, QColor] = {
     RebaseOp.FakeDone  : colors.gray,
     RebaseOp.FakeStop  : colors.black,
     RebaseOp.FakeStart : colors.gray,
+    RebaseOp.FakeRewrite: QColor(Qt.GlobalColor.transparent),
 }
 
 
@@ -91,6 +95,10 @@ class RebaseInfo:
     end: int
     todoSeq: TRebaseSequence
     doneSeq: TRebaseSequence
+    rewritten: dict[Oid, Oid]
+    todoSet: set[Oid]
+    doneSet: set[Oid]
+    rewriters: dict[Oid, list[Oid]]
 
     @property
     def headShorthand(self):
@@ -114,7 +122,7 @@ class RebaseInfo:
 
         text = {
             fileName: readFile(fileName)
-            for fileName in ["head-name", "onto", "orig-head", "stopped-sha", "msgnum", "end", "git-rebase-todo", "done"]
+            for fileName in ["head-name", "onto", "orig-head", "stopped-sha", "msgnum", "end", "git-rebase-todo", "done", "rewritten-list"]
         }
 
         def intOrZero(s):  # rebase numbers are 1-indexed, so 0 in case of failure is fine
@@ -131,8 +139,42 @@ class RebaseInfo:
         end = intOrZero(text["end"])
         todoSeq = parseRebaseTodo(text["git-rebase-todo"])
         doneSeq = parseRebaseTodo(text["done"])
+        rewritten = parseRebaseRewrittenList(text["rewritten-list"])
 
-        return cls(headName, onto, origHead, stoppedSha, msgnum, end, todoSeq, doneSeq)
+        rewriters = collections.defaultdict(list)
+        for k, v in rewritten.items():
+            rewriters[v].append(k)
+
+        return cls(headName, onto, origHead, stoppedSha, msgnum, end, todoSeq, doneSeq, rewritten,
+                   {s.oid for s in todoSeq},
+                   {s.oid for s in doneSeq},
+                   rewriters)
+
+    def sequenceIndexOf(self, oid: Oid | None) -> tuple[int, bool]:
+        if oid is None:
+            return -1, False
+
+        if oid == self.onto:
+            return 0, True
+
+        if oid in self.doneSet:
+            num = next(i for i, entry in enumerate(self.doneSeq) if entry.oid == oid)
+            return 1 + num, True
+
+        if oid in self.todoSet:
+            num = next(i for i, entry in enumerate(self.todoSeq) if entry.oid == oid)
+            return 1 + num + len(self.doneSeq), False
+
+        return -1, False
+
+    def sequenceLine(self, i: int) -> RebaseLine:
+        i -= 1
+        if i < 0:
+            raise IndexError()
+        if i < len(self.doneSeq):
+            return self.doneSeq[i]
+        i -= len(self.doneSeq)
+        return self.todoSeq[i]
 
 
 @dataclasses.dataclass
@@ -158,6 +200,10 @@ class RebaseLine:
 
     def copy(self) -> RebaseLine:
         return dataclasses.replace(self)
+
+    @property
+    def oid(self) -> Oid:
+        return Oid(hex=self.hexHash)
 
     def __str__(self) -> str:
         # Note that git strips comment-only lines from .git/rebase-merge/git-rebase-todo,
@@ -256,9 +302,22 @@ def parseRebaseTodo(text: str) -> TRebaseSequence:
     return sequence
 
 
+def parseRebaseRewrittenList(text: str) -> dict[Oid, Oid]:
+    rewritten = {}
+    for line in text.splitlines():
+        match = _rewrittenListPattern.match(line)
+        if not match:
+            continue
+        h1 = Oid(hex=match.group(1))
+        h2 = Oid(hex=match.group(2))
+        rewritten[h1] = h2
+    return rewritten
+
+
 _opsRegex = "|".join(op for op in RebaseOp if not op.startswith("_"))
 _todoNoopPattern = re.compile(r"^noop\b")
 _todoLinePattern = re.compile(rf"^({_opsRegex})\s+([0-9a-f]+)(?:\s*#\s*|\s+)(.+)$")
 #                                                             ^^^^^^^^^
 # Note: At some point between git 2.43 and 2.54, git rebase started adding
 # comment marks in todo lines. We're treating those as optional for now.
+_rewrittenListPattern = re.compile(r"^([0-9a-f]+)\s+([0-9a-f]+)")
