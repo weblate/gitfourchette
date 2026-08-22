@@ -14,6 +14,7 @@ import base64
 import dataclasses
 import enum
 import json
+import logging
 import typing
 from types import NoneType, UnionType, GenericAlias
 from typing import Any
@@ -26,6 +27,8 @@ _TPrimitive = str | int | float | bool | None
 _TContainer = list | set | dict | tuple
 _TJsonFriendly = dict | list | _TPrimitive
 _versionKey = "_version"
+
+_logger = logging.getLogger(__name__)
 
 
 class JsonTypeMismatch(TypeError):
@@ -67,7 +70,9 @@ def fromJson[T](jsonData: str | bytes | bytearray, targetType: type[T]) -> tuple
 
     version = ""
     if isinstance(data, dict):
-        version = data.pop(_versionKey, "")
+        versionCandidate = data.pop(_versionKey, "")
+        if isinstance(versionCandidate, str):
+            version = versionCandidate
 
     obj = decode(data, targetType)
     return obj, version
@@ -219,7 +224,11 @@ def _decodeDataclass[T](data: _TJsonFriendly, targetType: type[T]) -> T:
             value = decode(fieldValue, fieldType)
         except JsonTypeMismatch as ex:
             ex.fieldName = name
-            raise
+            if field.default_factory is dataclasses.MISSING and field.default is dataclasses.MISSING:
+                raise
+            else:
+                _logger.warning(f"Falling back to default value for '{name}' ({ex})")
+                continue
 
         kwargs[name] = value
 

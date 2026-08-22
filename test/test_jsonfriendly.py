@@ -104,3 +104,18 @@ def testJsonFriendlySerializationTypeMismatchInJsonText():
     # Field is a container
     with pytest.raises(JsonTypeMismatch):
         jsonfriendly.fromJson(text, DeserializeMe3)
+
+
+def testJsonFriendlyPermissiveDeserializationIfDefaultAvailable():
+    @dataclasses.dataclass
+    class DeserializeMe:
+        foo: int
+        bar: int = 1234
+
+    text = '{"foo": 200, "bar": "bad type!", "_version": -999}'
+
+    # Field has a default value: be permissive
+    result, version = jsonfriendly.fromJson(text, DeserializeMe)
+    assert result.foo == 200
+    assert result.bar == 1234
+    assert version == ""
