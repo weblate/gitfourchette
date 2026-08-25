@@ -42,8 +42,10 @@ test = [
     "pytest-qt",
     "pytest-cov",
     "pytest-xdist",
+]
+lint = [
     "ruff",
-    "mypy",
+    "mypy >= 2.3.1",
     "types-Pygments",
 ]
 pyqt6 = ["pyqt6"]

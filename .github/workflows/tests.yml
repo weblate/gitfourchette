@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with: {python-version: 3.14, cache: 'pip'}
-      - run: pip install -e .[test,pyqt6]
+      - run: pip install -e .[lint,pyqt6]
       - run: ruff check
       - run: mypy
         if: '!cancelled()'  # run mypy even if ruff failed above
