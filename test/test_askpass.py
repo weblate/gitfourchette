@@ -68,7 +68,7 @@ def testAskpassDialogCancel(tempDir, mainWindow, capfd, captureExitCode):
 @pytest.mark.parametrize("verifyFingerprint", [False, True])
 def testAskpassDialogAddToKnownHosts(tempDir, mainWindow, capfd, captureExitCode, verifyFingerprint):
     dialog = AskpassDialog.run(
-        "The authenticity of host '[0.0.0.0]:8888 ([0.0.0.0]:8888)' can't be established.\n"
+        "The authenticity of host 'github.com:8888 ([0.0.0.0]:8888)' can't be established.\n"
         "ED25519 key fingerprint is: SHA256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"
         "This key is not known by any other names.\n"
         "Are you sure you want to continue connecting (yes/no/[fingerprint])? ")

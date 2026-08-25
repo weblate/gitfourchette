@@ -16,7 +16,7 @@ from gitfourchette.localization import *
 from gitfourchette.forms.textinputdialog import TextInputDialog
 from gitfourchette.qt import *
 from gitfourchette.sshagent import SshAgent
-from gitfourchette.toolbox import escape, stockIcon, tquo, paragraphs, tweakWidgetFont, QHintButton
+from gitfourchette.toolbox import *
 
 _ClearTextPromptPatterns = [
     # When connecting to an HTTPS remote with user/pass, the username is requested first.
@@ -32,6 +32,9 @@ _ClearTextPromptPatterns = [
 _UnknownHostPrompt = "Are you sure you want to continue connecting (yes/no/[fingerprint])?"
 
 _KeyFingerprintPattern = re.compile(r"key fingerprint is:? (.+?)\.?$", re.MULTILINE)
+
+# Used in verify fingerprint hint, to suggest searching for "(host) ssh fingerprint"
+_CommonHostsPattern = re.compile(r"github|gitlab|codeberg", re.IGNORECASE)
 
 
 class AskpassPrompt(StrEnum):
@@ -121,7 +124,7 @@ class AskpassDialog(TextInputDialog):
         self.finished.connect(self.onFinish)
 
         if self.unknownHostFingerprint:
-            self._setUpUnknownHostUi()
+            self._setUpUnknownHostUi(prompt)
         elif promptKind == AskpassPrompt.Confirm:
             self.okButton.setText(_("Yes"))
             self.cancelButton.setText(_("No"))
@@ -130,45 +133,56 @@ class AskpassDialog(TextInputDialog):
             self.cancelButton.setVisible(False)
             self.lineEdit.setVisible(False)
 
-    def _setUpUnknownHostUi(self):
+        packDialog(self)
+
+    def _setUpUnknownHostUi(self, prompt: str):
         self.okButton.setText(_("Trust"))
+
+        hostTip = ""
+        if hostMatch := _CommonHostsPattern.search(prompt):
+            hostTip = _("(Tip: search for {0})", tquo(f"{hostMatch.group(0)} ssh fingerprint"))
 
         hintParts = [
             _("Check that the host’s key matches one you trust:"),
             "<ol><li><p>",
-            _("Get the host’s fingerprint from a trusted source. "
-              "(Do not use the one shown in this dialog!)"),
+            _("Get the host’s fingerprint from a <b>trusted</b> source. "
+              "Don’t use the one shown in this dialog!") + " " + hostTip,
             "</p></li><li>",
-            _("Paste the trusted fingerprint here. "
-              "If it matches the host’s, you may trust this host and proceed."),
+            _("Tick {0} and paste the trusted fingerprint. "
+              "If it matches, you can safely trust this host.",
+              tquo(stripAccelerators(_("&Verify")))),
             "</p></li></ol>",
             _("This is safer than visually comparing fingerprints because it "
               "prevents “fuzzy fingerprint” attacks, where a malicious "
               "fingerprint is crafted to look like the real one."),
         ]
 
-        checkbox = QCheckBox(_("&Verify fingerprint before trusting (optional)"))
+        checkbox = QCheckBox(_("&Verify"))
         checkbox.setObjectName("VerifyFingerprintQCheckBox")
-        checkbox.toggled.connect(self.onToggleFingerprintCheckbox)
+        checkbox.toggled.connect(self.onToggleFingerprintCheckBox)
+        self.fingerprintCheckBox = checkbox
 
         hint = QHintButton(toolTip="".join(hintParts))
 
         fingerprintWidget = QWidget()
-        layout = QGridLayout(fingerprintWidget)
+        layout = QHBoxLayout(fingerprintWidget)
         layout.setContentsMargins(QMargins(0, 0, 0, 16))
-        layout.addWidget(checkbox,      0, 0)
-        layout.addWidget(hint,          0, 1)
-        layout.addWidget(self.lineEdit, 1, 0, 1, 3)  # yank lineEdit out of its layout and into ours
-        layout.setColumnStretch(2, 1)
-        layout.setVerticalSpacing(0)
-        tweakWidgetFont(fingerprintWidget, 80)
+        layout.addWidget(checkbox)
+        layout.addWidget(self.lineEdit)  # yank lineEdit out of its layout and into ours
+        layout.addWidget(hint)
+        layout.addStretch()
+        checkbox.setMinimumHeight(28)
+        layout.setStretch(1, 100)
 
         self.setExtraWidget(fingerprintWidget)
         self.setValidator(self.validateFingerprint)
 
+        tweakWidgetFont(checkbox, 80)
+        tweakWidgetFont(self.lineEdit, 80)
+
         # Prime unchecked state
-        self.onToggleFingerprintCheckbox(True)
-        self.onToggleFingerprintCheckbox(False)
+        self.onToggleFingerprintCheckBox(True)
+        self.onToggleFingerprintCheckBox(False)
 
     def onToggleEchoMode(self):
         passwordMode = self.lineEdit.echoMode() == QLineEdit.EchoMode.Password
@@ -178,14 +192,17 @@ class AskpassDialog(TextInputDialog):
         self.echoModeAction.setToolTip(_("Reveal passphrase") if passwordMode else _("Hide passphrase"))
         self.echoModeAction.setChecked(not passwordMode)
 
-    def onToggleFingerprintCheckbox(self, checked: bool):
+    def onToggleFingerprintCheckBox(self, checked: bool):
         self.lineEdit.setEnabled(checked)
+        self.lineEdit.setVisible(checked)
         if checked:
+            self.fingerprintCheckBox.setText(_("&Verify") + _(":"))
             self.validator.successText = _("Both fingerprints match")
             self.lineEdit.setPlaceholderText(_("Enter fingerprint from trusted source"))
             if self.isVisible():
                 self.lineEdit.setFocus()
         else:
+            self.fingerprintCheckBox.setText(_("&Verify fingerprint before trusting (optional)"))
             self.validator.successText = ""
             self.lineEdit.setPlaceholderText("")
             self.lineEdit.clear()
