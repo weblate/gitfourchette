@@ -10,8 +10,11 @@ from typing import ClassVar, Any
 
 from gitfourchette import settings
 from gitfourchette.codeview.codeview import CodeView
+from gitfourchette.forms.searchbar import SearchBar
+from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.syntax import LexJobCache, LexerCache, LexJob
+from gitfourchette.toolbox import makeWidgetShortcut
 
 if TYPE_CHECKING:
     from gitfourchette.tasks import RepoTaskRunner
@@ -47,7 +50,6 @@ class CodeWindow(QWidget):
         CodeWindow._liveWindows.append(self)
 
         codeView = codeViewClass(parent=self)
-        codeView.setUpAsDetachedWindow()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(QMargins())
@@ -62,6 +64,29 @@ class CodeWindow(QWidget):
         self.codeView = codeView
         self.uniqueIdentifier = uniqueIdentifier
         self.taskRunner = None
+
+        # Override Escape shortcuts (otherwise our window-wide Escape shortcut
+        # would be "ambiguous")
+        codeView.escapeShortcut.setEnabled(False)
+        codeView.searchBar.escapeShortcut.setEnabled(False)
+
+        # Install Escape/Alt+F4 shortcuts
+        withChildren = Qt.ShortcutContext.WidgetWithChildrenShortcut
+        makeWidgetShortcut(self, self.onEscapeKey, "Escape", context=withChildren)
+        makeWidgetShortcut(self, self.close, QKeySequence.StandardKey.Close, context=withChildren)
+
+        # Forward Ctrl+F/F3 shortcuts. In a detached window, we can't rely on
+        # the main window's menu bar to dispatch those to us (except on macOS,
+        # which has a global main menu).
+        makeWidgetShortcut(self, lambda: codeView.searchBar.popUp(SearchBar.Op.Start), *GlobalShortcuts.find, context=withChildren)
+        makeWidgetShortcut(self, lambda: codeView.searchBar.popUp(SearchBar.Op.Next), *GlobalShortcuts.findNext, context=withChildren)
+        makeWidgetShortcut(self, lambda: codeView.searchBar.popUp(SearchBar.Op.Previous), *GlobalShortcuts.findPrevious, context=withChildren)
+
+    def onEscapeKey(self):
+        if self.codeView.searchBar.isVisible():
+            self.codeView.searchBar.hideOrBeep()
+        else:
+            self.close()
 
     def setPlainText(self, text: str, path: str):
         self.codeView.setPlainText(text)
@@ -79,6 +104,17 @@ class CodeWindow(QWidget):
             return window
         except StopIteration:
             return None
+
+    @staticmethod
+    def activeWindow() -> CodeWindow:
+        activeWindow = QApplication.activeWindow()
+        if not activeWindow:
+            raise KeyError("no active window")
+
+        if not isinstance(activeWindow, CodeWindow):
+            raise KeyError("no detached code view")
+
+        return activeWindow
 
     def _getLexJob(self, text: str, path: str) -> LexJob | None:
         if not settings.prefs.isSyntaxHighlightingEnabled():

@@ -4,6 +4,8 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from __future__ import annotations  # TODO: Remove once we can drop support for Python <= 3.13
+
 from gitfourchette.blameview.blamegutter import BlameGutter
 from gitfourchette.blameview.blamemodel import BlameModel, Revision
 from gitfourchette.codeview.codeview import CodeView
@@ -13,6 +15,9 @@ from gitfourchette.qt import *
 from gitfourchette.tasks import TaskBook, GetCommitInfo
 from gitfourchette.toolbox import *
 
+if TYPE_CHECKING:
+    from gitfourchette.blameview.blamewindow import BlameWindow
+
 
 class BlameTextEdit(CodeView):
     showRevision = Signal(Revision)
@@ -21,10 +26,10 @@ class BlameTextEdit(CodeView):
     model: BlameModel
     gutter: BlameGutter
 
-    def __init__(self, model, parent=None):
+    def __init__(self, parent: BlameWindow):
         super().__init__(gutterClass=BlameGutter, parent=parent)
-        self.model = model
-        self.gutter.model = model
+        self.model = parent.model
+        self.gutter.model = parent.model
 
     def contextMenuActions(self, clickedCursor: QTextCursor):
         lineNumber = clickedCursor.blockNumber() + 1

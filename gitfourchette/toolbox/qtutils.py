@@ -7,6 +7,7 @@
 import itertools
 import math
 import os
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 
@@ -385,6 +386,10 @@ def makeWidgetShortcut(
         shortcut.setKeys(keys)
     shortcut.setContext(context)
     shortcut.activated.connect(callback)
+
+    if APP_DEBUG:
+        shortcut.activatedAmbiguously.connect(lambda: warnings.warn(f"Ambiguous shortcut {keys}: {callback}"))
+
     return shortcut
 
 

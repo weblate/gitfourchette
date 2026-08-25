@@ -6,13 +6,12 @@
 
 from __future__ import annotations  # TODO: Remove once we can drop support for Python <= 3.13
 
-from typing import ClassVar
-
 from gitfourchette.application import GFApplication
+from gitfourchette.blameview.blamebusyspinner import BlameBusySpinner
 from gitfourchette.blameview.blamemodel import BlameModel, Revision
 from gitfourchette.blameview.blamescrubber import BlameScrubber
 from gitfourchette.blameview.blametextedit import BlameTextEdit
-from gitfourchette.blameview.blamebusyspinner import BlameBusySpinner
+from gitfourchette.codeview.codewindow import CodeWindow
 from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator, NavHistory, NavFlags
@@ -21,27 +20,24 @@ from gitfourchette.tasks import RepoTaskRunner
 from gitfourchette.toolbox import *
 
 
-class BlameWindow(QWidget):
+class BlameWindow(CodeWindow):
     exploreCommit = Signal(NavLocator)
 
-    _currentBlameWindows: ClassVar[list[BlameWindow]] = []
-    "Currently open BlameWindows"
+    @property
+    def textEdit(self) -> BlameTextEdit:
+        textEdit = self.codeView
+        assert isinstance(textEdit, BlameTextEdit)
+        return textEdit
 
     def __init__(self, blameModel: BlameModel):
-        # DON'T parent the window so it doesn't sit on top of MainWindow on Wayland
-        super().__init__(None)
+        self.model = blameModel
+        uniqueIdentifier = f"blame-{hash(blameModel.revList.serializeRevisionList())}"
 
-        # Keep reference around to avoid being GC'd instantly
-        BlameWindow._currentBlameWindows.append(self)
-
+        super().__init__(BlameTextEdit, uniqueIdentifier)
         self.setObjectName("BlameWindow")
 
-        self.model = blameModel
         self.taskRunner = RepoTaskRunner(self)
         self.navHistory = NavHistory()
-
-        self.textEdit = BlameTextEdit(blameModel, self)
-        self.textEdit.setUpAsDetachedWindow()
 
         self.scrubber = BlameScrubber(blameModel, self)
         self.scrubber.activated.connect(self.onScrubberActivated)
@@ -88,24 +84,16 @@ class BlameWindow(QWidget):
         topBar.addWidget(self.olderButton)
         topBar.addWidget(self.scrubber)
         topBar.addWidget(self.jumpButton)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(QMargins())
-        layout.addWidget(topBar)
-        layout.addWidget(self.textEdit.searchBar)
-        layout.addWidget(self.textEdit)
-        layout.setSpacing(0)
+
+        layout = self.layout()
+        assert isinstance(layout, QBoxLayout)
+        layout.insertWidget(0, topBar)
 
         self.textEdit.showRevision.connect(self.showRevision)
         self.textEdit.jumpToCommit.connect(self.jumpToCommit)
 
-        self.setWindowModality(Qt.WindowModality.NonModal)
-        self.setWindowFlags(Qt.WindowType.Window)
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-
         self.busySpinner = BlameBusySpinner(self.textEdit)
         self.textEdit.sizeChanged.connect(self.busySpinner.reposition)
-
-        self.resize(self.textEdit.idealDetachedSize())
 
         app = GFApplication.instance()
         app.mouseSideButtonPressed.connect(self.onMouseSideButtonPressed)
@@ -120,9 +108,6 @@ class BlameWindow(QWidget):
         self.goBackOrForwardDelta(delta)
 
     def closeEvent(self, event: QCloseEvent):
-        assert self in self._currentBlameWindows
-        self._currentBlameWindows.remove(self)
-
         self.scrubber.scrubberDelegate.prepareForDeletion()
         self.scrubber.deleteLater()
 

@@ -16,7 +16,6 @@ from gitfourchette.codeview.coderubberband import CodeRubberBand
 from gitfourchette.codeview.codesearch import CodeSearch
 from gitfourchette.diffview.diffdocument import DiffTextFormats
 from gitfourchette.forms.searchbar import SearchBar
-from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator
 from gitfourchette.qt import *
@@ -35,7 +34,10 @@ class CodeView(QPlainTextEdit):
     highlighter: CodeHighlighter
     gutter: CodeGutter
     currentLocator: NavLocator
-    isDetachedWindow: bool
+    searchBar: SearchBar
+    rubberBand: CodeRubberBand
+    rubberBandButtonGroup: QWidget
+    escapeShortcut: QShortcut
 
     FormattingMarkFlags = QTextOption.Flag.ShowTabsAndSpaces
 
@@ -54,7 +56,6 @@ class CodeView(QPlainTextEdit):
         self.customContextMenuRequested.connect(self.onContextMenuRequested)
 
         self.currentLocator = NavLocator()
-        self.isDetachedWindow = False
 
         # Highlighter for search terms
         self.highlighter = highlighterClass(self)
@@ -92,21 +93,7 @@ class CodeView(QPlainTextEdit):
         GFApplication.instance().prefsChanged.connect(self.refreshPrefs)
         self.refreshPrefs()
 
-        makeWidgetShortcut(self, self.onEscapeKey, "Escape")
-
-    def setUpAsDetachedWindow(self):
-        # In a detached window, we can't rely on the main window's menu bar to
-        # dispatch shortcuts to us (except on macOS, which has a global main menu).
-
-        self.isDetachedWindow = True
-
-        bar = self.searchBar
-        makeWidgetShortcut(self, lambda: bar.popUp(SearchBar.Op.Start), *GlobalShortcuts.find)
-        makeWidgetShortcut(self, lambda: bar.popUp(SearchBar.Op.Next), *GlobalShortcuts.findNext)
-        makeWidgetShortcut(self, lambda: bar.popUp(SearchBar.Op.Previous), *GlobalShortcuts.findPrevious)
-
-        makeWidgetShortcut(self, lambda: self.window().close(), QKeySequence.StandardKey.Close,
-                           context=Qt.ShortcutContext.WindowShortcut)
+        self.escapeShortcut = makeWidgetShortcut(self, self.searchBar.hideOrBeep, "Escape")
 
     # ---------------------------------------------
     # Qt events
@@ -157,12 +144,6 @@ class CodeView(QPlainTextEdit):
     def hideEvent(self, event: QHideEvent):
         super().hideEvent(event)
         self.visibilityChanged.emit(False)
-
-    def onEscapeKey(self):
-        if self.isDetachedWindow and not self.searchBar.isVisible():
-            self.window().close()
-        else:
-            self.searchBar.hideOrBeep()
 
     # ---------------------------------------------
     # Document replacement
@@ -486,17 +467,6 @@ class CodeView(QPlainTextEdit):
             cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock, QTextCursor.MoveMode.KeepAnchor)
 
         self.replaceCursor(cursor)
-
-    @staticmethod
-    def currentDetachedCodeView() -> CodeView:
-        activeWindow = QApplication.activeWindow()
-        if not activeWindow:
-            raise KeyError("no active window")
-        detachedCodeView: CodeView = activeWindow.findChild(CodeView)
-        if detachedCodeView is None:
-            raise KeyError("no detached code view")
-        assert detachedCodeView.isDetachedWindow
-        return detachedCodeView
 
     def idealDetachedSize(self) -> QSize:
         windowHeight = int(QApplication.primaryScreen().availableSize().height() * .8)

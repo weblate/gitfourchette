@@ -17,7 +17,7 @@ from typing import Literal
 from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette.application import GFApplication
-from gitfourchette.codeview.codeview import CodeView
+from gitfourchette.codeview.codewindow import CodeWindow
 from gitfourchette.dropzone import DropAction, DropZone
 from gitfourchette.exttools.toolprocess import ToolProcess, setUpToolCommand
 from gitfourchette.exttools.usercommand import UserCommand
@@ -1176,7 +1176,7 @@ class MainWindow(QMainWindow):
         # This is for macOS. Systems without a global main menu (i.e. anything but macOS)
         # take a different path to intercept keyboard shortcuts.
         try:
-            CodeView.currentDetachedCodeView().window().close()
+            CodeWindow.activeWindow().close()
         except KeyError:
             QApplication.beep()
 
@@ -1188,7 +1188,7 @@ class MainWindow(QMainWindow):
         # This is for macOS. Systems without a global main menu (i.e. anything but macOS)
         # take a different path to intercept keyboard shortcuts.
         try:
-            CodeView.currentDetachedCodeView().searchBar.popUp(op)
+            CodeWindow.activeWindow().codeView.searchBar.popUp(op)
         except KeyError:
             QApplication.beep()
 

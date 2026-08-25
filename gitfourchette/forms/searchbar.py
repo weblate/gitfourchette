@@ -59,6 +59,11 @@ class SearchBar(QWidget):
     selection. This flag is reset to True whenever a debounce is rescheduled.
     """
 
+    escapeShortcut: QShortcut
+    """
+    WidgetWithChildrenShortcut bound to the Escape key.
+    """
+
     @property
     def rawSearchTerm(self) -> str:
         return self.lineEdit.text()
@@ -128,7 +133,7 @@ class SearchBar(QWidget):
         withChildren = Qt.ShortcutContext.WidgetWithChildrenShortcut
         makeWidgetShortcut(self, self.onEnterShortcut, "Return", "Enter", context=withChildren)
         makeWidgetShortcut(self, self.onShiftEnterShortcut, "Shift+Return", "Shift+Enter", context=withChildren)
-        makeWidgetShortcut(self, self.bail, "Escape", context=withChildren)
+        self.escapeShortcut = makeWidgetShortcut(self, self.bail, "Escape", context=withChildren)
 
         if SearchBar.MacToolTipQuirks:
             self.trapNextToolTip = False
