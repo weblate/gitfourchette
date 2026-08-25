@@ -109,9 +109,25 @@ QMenu::icon {
 }
 
 QMenu::indicator {
-    margin-left: 8px;
-    width: 13px;
-    height: 13px;
+    margin-left: 6px;
+    width: 12px;
+    height: 12px;
+}
+
+QMenu::indicator:unchecked {
+    image: url(assets:icons/qss-indicator-unchecked${darkSelector}.svg);
+}
+
+QMenu::indicator:checked {
+    image: url(assets:icons/qss-indicator-checked${darkSelector}.svg);
+}
+
+QMenu::indicator:exclusive:unchecked {
+    image: url(assets:icons/qss-indicator-exclusive-unchecked${darkSelector}.svg);
+}
+
+QMenu::indicator:exclusive:checked {
+    image: url(assets:icons/qss-indicator-exclusive-checked${darkSelector}.svg);
 }
 
 /* --------------------------------------------------------------------------
@@ -158,6 +174,25 @@ QPushButton {
     min-width: 56px;
 }
 
+QPushButton:default, QPushButton:focus, QToolButton:focus {
+    border-color: ${accent};
+}
+
+QPushButton:default {
+    background: ${defaultButton};
+}
+
+QPushButton:default:hover {
+    background: ${defaultButtonHover};
+}
+
+QToolButton:disabled,
+QPushButton:disabled {
+    background: ${inputDisabled};
+    color: ${textFaint};
+    border-color: ${border};
+}
+
 QPushButton:flat,
 QToolButton[autoRaise="true"] {
     border-color: transparent;
@@ -180,11 +215,6 @@ QPushButton:pressed {
 
 QToolButton:pressed {
     padding-bottom: 1px;
-}
-
-QToolButton:disabled {
-    background: transparent;
-    color: ${textFaint};
 }
 
 QToolButton[popupMode="1"] { /* MenuButtonPopup */
@@ -219,18 +249,6 @@ QToolButton::menu-arrow {
     image: url('assets:icons/qss-down.svg');
 }
 
-QPushButton:default, QPushButton:focus, QToolButton:focus {
-    border-color: ${accent};
-}
-
-QPushButton:default {
-    background: ${defaultButton};
-}
-
-QPushButton:default:hover {
-    background: ${defaultButtonHover};
-}
-
 QPushButton:default:pressed,
 QPushButton:pressed,
 QToolButton:pressed {
@@ -242,11 +260,6 @@ QToolButton:on {
     background: ${hover};
 }
 
-QPushButton:disabled {
-    background: ${inputDisabled};
-    color: ${textFaint};
-    border-color: ${border};
-}
 
 QPushButton::menu-indicator {
     subcontrol-origin: padding;
@@ -342,6 +355,14 @@ QTabBar {
     background: transparent;
     qproperty-drawBase: 0;
     border-bottom: 1px solid ${border};
+    /* Only the selected tab is actually bold. But by making the widget-wide
+    font bold, tabSizeHint gets "wider" font metrics, which in turn gives
+    adequate room to the selected tab's title. */
+    font-weight: bold;
+}
+
+QTabBar::tab:!selected {
+    font-weight: normal;
 }
 
 QTabBar::tab {
@@ -377,7 +398,6 @@ QTabBar::tab:hover {
 QTabBar::tab:selected {
     border-color: ${border};
     background-color: ${surface};
-    font-weight: bold;
 }
 
 QTabBar::close-button {

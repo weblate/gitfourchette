@@ -79,6 +79,9 @@ class ThemeColors:
     dark: str = "#f0f"
     shadow: str = "#f0f"
 
+    # Asset selectors (e.g. select "@dark" variant of an SVG file)
+    darkSelector: str = ""
+
     # Engine-specific rounded rects
     menuRadius: int = outerRadius
     comboBoxMenuRadius: int = outerRadius
@@ -128,6 +131,8 @@ class ThemeColors:
         self.mid                = QColor(self.button).darker(150).name()
         self.dark               = QColor(self.button).darker(200).name()
         self.shadow             = QColor(self.button).darker(20).name()
+
+        self.darkSelector       = "@dark" if isDarkTheme else ""
 
     @classmethod
     def resolveTheme(cls, styleName: str, accent: QColor | None = None) -> ThemeColors | None:
