@@ -7,9 +7,8 @@
 from gitfourchette import trtables
 from gitfourchette.forms.ui_rebasedialog import Ui_RebaseDialog
 from gitfourchette.qt import *
-from gitfourchette.rebase.rebasemenustyle import RebaseMenuStyle
 from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLineWrapper, RebaseOp, RebaseOpColors, RebaseOpLetters, SupportedRebaseOps
-from gitfourchette.toolbox import asyncMessageBox
+from gitfourchette.toolbox import asyncMessageBox, QRichTextMenu
 from gitfourchette.localization import *
 
 
@@ -101,9 +100,7 @@ class RebaseDialog(QDialog):
         if not selectedOps:
             return None
 
-        proxy = RebaseMenuStyle()
-        menu = QMenu(self)
-        menu.setStyle(proxy)
+        menu = QRichTextMenu(self)
         actionGroup = QActionGroup(menu)
         actionGroup.setExclusionPolicy(QActionGroup.ExclusionPolicy.Exclusive)
 
@@ -117,10 +114,8 @@ class RebaseDialog(QDialog):
             opHelp = trtables.enum(op)
 
             richLabel = f"<span style='color: {opColor.name()}; font-weight: bold;'>{opName}{_(':')}</span> {opHelp}"
-            plainLabel = proxy.prepareRichLabel(richLabel, accelerator=opAccel)
 
-            action = QAction(menu)
-            action.setText(plainLabel)
+            action = menu.addRichTextAction(richLabel, opAccel)
             action.setCheckable(True)
             action.setChecked(op in selectedOps)
             action.setActionGroup(actionGroup)

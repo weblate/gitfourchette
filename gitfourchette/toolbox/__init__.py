@@ -43,6 +43,7 @@ from .qfaintseparator import QFaintSeparator
 from .qfilepickercheckbox import QFilePickerCheckBox
 from .qhintbutton import QHintButton
 from .qlabelexternallinktooltips import QLabelExternalLinkToolTips
+from .qrichtextmenu import QRichTextMenu
 from .qprocessconnection import QProcessConnection
 from .qsignalconnectcontext import QSignalConnectContext
 from .qsignalblockercontext import QSignalBlockerContext

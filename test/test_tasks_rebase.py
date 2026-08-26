@@ -9,10 +9,10 @@ import dataclasses
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.rebasedialog import RebaseDialog
 from gitfourchette.nav import NavLocator
-from gitfourchette.rebase.rebasemenustyle import RebaseMenuStyle
 from gitfourchette.rebase.rebasemodel import RebaseOp, RebaseOpLetters
 from gitfourchette.rebase.rebasesequencestyle import RebaseSequenceStyle
 from gitfourchette.rebase.rebasesequenceview import RebaseSequenceView
+from gitfourchette.toolbox import QRichTextMenu
 from .util import *
 
 
@@ -484,12 +484,12 @@ def testRebaseSequenceViewQDrag(tempDir, mainWindow, monkeypatch):
         findWidgetWithText(qmb.buttons(), "close").click()
 
 
-def testRebaseMenuStyle(tempDir, mainWindow, monkeypatch):
+def testRebaseRichTextMenu(tempDir, mainWindow, monkeypatch):
     """
     Coverage test for RebaseMenuStyle (colored labels).
     """
 
-    callSpy = CallSpy(monkeypatch, RebaseMenuStyle, "drawControl")
+    callSpy = CallSpy(monkeypatch, QRichTextMenu, "paintEvent")
 
     wd = unpackRepo(tempDir)
     onto = Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
@@ -504,6 +504,7 @@ def testRebaseMenuStyle(tempDir, mainWindow, monkeypatch):
     rebaseDialog.ui.sequence.setFocus()
     qlvClickNthRow(rebaseDialog.ui.sequence, 1)
     menu = summonContextMenu(rebaseDialog.ui.sequence.viewport(), QPoint(8, 8))
+    visualPause()
     menu.close()
 
     assert callSpy.completeCalls > 0
