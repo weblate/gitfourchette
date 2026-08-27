@@ -506,11 +506,14 @@ class GFApplication(QApplication):
             self._applyQtStylePref(paletteOnly)
         finally:
             self.restylingGuard -= 1
+            if self.restylingGuard == 0:
+                self.restyle.emit()  # tell other widgets about it
 
     def _applyQtStylePref(self, paletteOnly=False):
         from gitfourchette import settings
         from gitfourchette.syntax.colorscheme import ColorScheme
         from gitfourchette.toolbox import mixColors, iconbank
+        from gitfourchette.toolbox.recolorsvgiconengine import RecolorSvgIconEngine
         from gitfourchette.themes import ThemeColors
 
         stylePref = settings.prefs.qtStyle or self.platformDefaultStyleName
@@ -575,6 +578,7 @@ class GFApplication(QApplication):
         # Force RecolorSvgIconEngine to re-render the icons
         iconbank.clearStockIconCache()
         QPixmapCache.clear()
+        RecolorSvgIconEngine.IconColors.refresh()
 
         # Reset syntax highlighting fallback
         ColorScheme.refreshFallbackScheme()
@@ -659,10 +663,7 @@ class GFApplication(QApplication):
             if not self.restylingGuard:
                 # Save new accent color from environment before tweaking palette (e.g. KDE color change)
                 self.platformStandardAccent = self.palette().accent().color()
-                try:
-                    self.applyQtStylePref(paletteOnly=True)
-                finally:
-                    self.restyle.emit()  # tell other widgets about it
+                self.applyQtStylePref(paletteOnly=True)
 
         elif eventType == QEvent.Type.StatusTip:
             # Eat QStatusTipEvent. The menubar emits those when a menu is hovered;
