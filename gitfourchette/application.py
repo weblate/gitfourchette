@@ -513,19 +513,16 @@ class GFApplication(QApplication):
         from gitfourchette.toolbox import mixColors, iconbank
         from gitfourchette.themes import ThemeColors
 
-        effectiveStyle = settings.prefs.qtStyle
-
-        if not effectiveStyle:
-            effectiveStyle = self.platformDefaultStyleName
+        stylePref = settings.prefs.qtStyle or self.platformDefaultStyleName
 
         # See if it's a custom theme
-        accent = self.platformStandardAccent
-        customTheme = ThemeColors.resolveTheme(effectiveStyle, accent)
-        if customTheme:
-            effectiveStyle = ThemeColors.bestStyleEngine()
+        if customTheme := ThemeColors.resolveTheme(stylePref, self.platformStandardAccent):
+            styleEngine = customTheme.bestStyleEngine()
             palette = customTheme.buildPalette()
         else:
+            styleEngine = stylePref
             palette = QPalette()
+
         # Set custom palette, or reset standard palette
         self.setPalette(palette)
 
@@ -543,30 +540,35 @@ class GFApplication(QApplication):
 
         qss = Template(qssTemplate).substitute({
             "macosOnly": "" if MACOS else "__IGNORE",
-            "macosStyleOnly": "" if MACOS and effectiveStyle.lower() == "macos" else "__IGNORE",
+            "macosStyleOnly": "" if MACOS and styleEngine.lower() == "macos" else "__IGNORE",
             "headerBg": headerBg.name(),
             "headerFg": headerFg.name(),
             "faintSep": faintSep.name(),
         })
 
         # Append our own theme, if any (its rules take precedence over the above)
-        if customTheme is not None:
+        if customTheme:
             qss += customTheme.buildStyleSheet()
-
-        # Install the stylesheet. It's OK to re-evaluate the same stylesheet if
-        # the QSS is identical (needed to react to system palette changes)
-        self.setStyleSheet(qss)
 
         # ----------------------------------------------------------------------
 
         # Set Qt style
-        if effectiveStyle and not paletteOnly:
-            self.setStyle(effectiveStyle)
+        if styleEngine and not paletteOnly:
+            self.setStyle(styleEngine)
+
+        # Install the stylesheet. It's OK to re-evaluate the same stylesheet if
+        # the QSS is identical (needed to react to system palette changes).
+        self.setStyleSheet(qss)
+
+        # Qt creates a new QStyle object under the hood when installing a global stylesheet.
+        # Restore style object name.
+        if not self.style().objectName():
+            self.style().setObjectName(f"applicationstyle({stylePref}@{styleEngine})")
 
         # On macOS, Qt removes icons in all context menus regardless of style.
         # Restore them if our style isn't the macOS native style.
         if MACOS:
-            self.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, effectiveStyle.lower() == "macos")
+            self.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, styleEngine.lower() == "macos")
 
         # ----------------------------------------------------------------------
 
