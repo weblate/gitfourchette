@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# Copyright (C) 2025 Iliyas Jorio.
+# Copyright (C) 2026 Iliyas Jorio.
 # This file is part of GitFourchette, distributed under the GNU GPL v3.
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
@@ -18,7 +18,7 @@ class FontPicker(QWidget):
     assign = Signal(str, int)
 
     def __init__(self, parent):
-        from gitfourchette.settings import qtIsNativeMacosStyle
+        from gitfourchette.settings import prefs
 
         super().__init__(parent)
 
@@ -35,15 +35,12 @@ class FontPicker(QWidget):
         self.sizeEdit = QSpinBox(self)
         self.sizeEdit.setRange(6, 72)
         self.sizeEdit.valueChanged.connect(self.updateSize)
-        if not qtIsNativeMacosStyle():
+        if prefs.qtStyle.lower() != "macos":
             self.sizeEdit.setMinimumHeight(self.familyEdit.height())
         self.sizeEdit.setSuffix(" " + _("pt"))
 
         self.resetButtonIconEnabled = stockIcon("SP_LineEditClearButton")
         self.resetButtonIconDisabled = QIcon()
-        if qtIsNativeMacosStyle():
-            # Mac style QToolButton ignores autoRaise, so never set an empty icon
-            self.resetButtonIconDisabled = self.resetButtonIconEnabled
 
         self.resetButton = QToolButton(self)
         self.resetButton.setIcon(self.resetButtonIconEnabled)

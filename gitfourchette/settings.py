@@ -435,12 +435,6 @@ prefs = Prefs()
 history = History()
 
 
-def qtIsNativeMacosStyle():  # pragma: no cover
-    if not MACOS:
-        return False
-    return prefs.qtStyle.lower() == "macos"
-
-
 def getExternalEditorName():
     genericName = englishTitleCase(_("External editor"))
     return ToolPresets.getCommandName(prefs.externalEditor, genericName, ToolPresets.Editors)

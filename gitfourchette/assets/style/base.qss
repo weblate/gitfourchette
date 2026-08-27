@@ -34,3 +34,16 @@ SignoffButton::menu-indicator,
 GpgButton::menu-indicator { image: none; }
 
 QMenu QLabel.ActionDefSection { font-weight: bold; }
+
+ContextHeader { background-color: ${headerBg}; }
+ContextHeader QLabel { color: ${headerFg}; }
+QFaintSeparator { background: ${faintSep}; color: transparent; }
+
+/* Strip all-bold styling that Qt forces on all QMessageBoxes on macOS */
+${macosOnly}QMessageBox QLabel {font-weight: normal;}
+
+/* Fix square autoRaised QToolButtons in macOS native style */
+${macosStyleOnly}QToolButton[autoRaise="true"] {background: transparent;}
+${macosStyleOnly}QToolButton[autoRaise="true"]:hover,
+${macosStyleOnly}QToolButton[autoRaise="true"]:on,
+${macosStyleOnly}QToolButton[autoRaise="true"]:checked {background: normal;}

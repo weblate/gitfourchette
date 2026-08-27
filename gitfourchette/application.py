@@ -10,8 +10,8 @@ import gc
 import logging
 import os
 import sys
-import textwrap
 from pathlib import Path
+from string import Template
 from typing import Any
 
 # Import as few internal modules as possible here to avoid premature initialization
@@ -532,7 +532,7 @@ class GFApplication(QApplication):
         # ----------------------------------------------------------------------
         # Build stylesheet
 
-        qss = Path(QFile("assets:style/base.qss").fileName()).read_text()
+        qssTemplate = Path(QFile("assets:style/base.qss").fileName()).read_text()
 
         # Palette-dependent styling
         windowColor = self.palette().color(QPalette.ColorRole.Window)
@@ -540,14 +540,14 @@ class GFApplication(QApplication):
         headerBg = mixColors(windowColor, textColor, .07)
         headerFg = mixColors(windowColor, textColor, .82)
         faintSep = mixColors(windowColor, textColor, .18)
-        qss += textwrap.dedent(f"""
-            ContextHeader {{ background-color: {headerBg.name()}; }}
-            ContextHeader QLabel {{ color: {headerFg.name()}; }}
-            QFaintSeparator {{ background: {faintSep.name()}; color: transparent; }}
-        """)
 
-        if MACOS:  # Strip iOS-y QMessageBox styling (all bold)
-            qss += "QMessageBox QLabel {font-weight: normal;}"
+        qss = Template(qssTemplate).substitute({
+            "macosOnly": "" if MACOS else "__IGNORE",
+            "macosStyleOnly": "" if MACOS and effectiveStyle.lower() == "macos" else "__IGNORE",
+            "headerBg": headerBg.name(),
+            "headerFg": headerFg.name(),
+            "faintSep": faintSep.name(),
+        })
 
         # Append our own theme, if any (its rules take precedence over the above)
         if customTheme is not None:
@@ -563,8 +563,10 @@ class GFApplication(QApplication):
         if effectiveStyle and not paletteOnly:
             self.setStyle(effectiveStyle)
 
+        # On macOS, Qt removes icons in all context menus regardless of style.
+        # Restore them if our style isn't the macOS native style.
         if MACOS:
-            self.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, settings.qtIsNativeMacosStyle())
+            self.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, effectiveStyle.lower() == "macos")
 
         # ----------------------------------------------------------------------
 
