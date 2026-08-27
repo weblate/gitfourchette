@@ -69,6 +69,7 @@ languageRemap = {  # Weblate language codes to Qt codes
 }
 supportedLanguages = {mo.stem for mo in (ROOT / 'gitfourchette/assets/lang').glob("*.mo")}
 supportedLanguages = {languageRemap.get(code, code) for code in supportedLanguages}
+supportedLanguages.add("en")  # English doesn't have an .mo file, but we must ship qt_en.mo
 
 # Contents/Resources/empty.lproj:
 # If macOS sees this file, AND the system's preferred language matches the language of
