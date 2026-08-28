@@ -134,11 +134,12 @@ class SidebarDelegate(QStyledItemDelegate):
         option.rect.adjust(PADDING, 0, -PADDING, 0)
 
         # Set highlighted text color if this item is selected
-        iconMode = QIcon.Mode.Normal
+        iconColors = ""
         if isSelected:
             penColor = option.palette.color(colorGroup, QPalette.ColorRole.HighlightedText)
-            iconMode = QIcon.Mode.Selected if isActive else QIcon.Mode.SelectedInactive  # type: ignore[attr-defined]
+            iconColors = f"gray={penColor.name()}"
         elif not node.parent.parent and node.kind != SidebarItem.UncommittedChanges:
+            # Headings
             penColor = option.palette.color(colorGroup, QPalette.ColorRole.WindowText)
             penColor.setAlphaF(.66)
         else:
@@ -151,8 +152,8 @@ class SidebarDelegate(QStyledItemDelegate):
         if iconKey:
             r = QRect(option.rect)
             r.setWidth(iconWidth)
-            icon = stockIcon(iconKey)
-            icon.paint(painter, r, option.decorationAlignment, mode=iconMode)
+            icon = stockIcon(iconKey, colorTable=iconColors)
+            icon.paint(painter, r, option.decorationAlignment)
             option.rect.adjust(r.width() + PADDING*150//100, 0, 0, 0)
 
         # Prepare text
@@ -173,8 +174,7 @@ class SidebarDelegate(QStyledItemDelegate):
         elif missingUpstream:
             r = QRect(option.rect)
             r.setLeft(textRect.right() - EYE_WIDTH)
-            unpluggedIcon = stockIcon("git-upstream-missing")
-            unpluggedIcon.paint(painter, r, mode=iconMode)
+            stockIcon("git-upstream-missing", iconColors).paint(painter, r)
             # Clip rect
             textRect.setRight(r.left())
 
@@ -227,7 +227,6 @@ class SidebarDelegate(QStyledItemDelegate):
                 eyeIconName = "view-hidden-indirect"
             else:
                 eyeIconName = "view-visible"
-            unpluggedIcon = stockIcon(eyeIconName)
-            unpluggedIcon.paint(painter, r, mode=iconMode)
+            stockIcon(eyeIconName, iconColors).paint(painter, r)
 
         painter.restore()

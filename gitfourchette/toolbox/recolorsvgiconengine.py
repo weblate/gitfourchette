@@ -92,7 +92,6 @@ class RecolorSvgIconEngine(QIconEngine):
             QIcon.Mode.Normal: self._recolor(IC.mainColor),
             QIcon.Mode.Disabled: self._recolor(IC.mainColor, opacity=.33),
             QIcon.Mode.Selected: self._recolor(IC.highlight),
-            QIcon.Mode.SelectedInactive: self._recolor(IC.foreground),  # type: ignore[attr-defined]
         }
         self.referenceSize = self.renderers[QIcon.Mode.Normal].defaultSize()
 

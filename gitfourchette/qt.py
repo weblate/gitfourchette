@@ -256,9 +256,6 @@ def _QTextBlock_fragments(block: QTextBlock) -> _collections_abc.Iterator[QTextF
 
 QTextBlock.fragments = _QTextBlock_fragments  # type: ignore[attr-defined]
 
-# Custom "selected, no focus" icon mode.
-QIcon.Mode.SelectedInactive = QIcon.Mode(4)  # type: ignore[attr-defined]
-
 
 # -----------------------------------------------------------------------------
 # Verbose QObject destructors
