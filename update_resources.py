@@ -430,6 +430,7 @@ def writeFreezeFile(qtApi: str):
         ####################################
         # Do not commit these changes!
         ####################################
+        0  # intentionally trip ruff so CI fails if this block is committed
 
         APP_FREEZE_COMMIT = "{headCommit}"
         APP_FREEZE_DATE = "{buildDate}"
