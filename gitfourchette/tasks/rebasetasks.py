@@ -102,6 +102,7 @@ class InteractiveRebase(RepoTask):
             dialog = RebaseDialog(self.parentWidget())
             dialog.setSequence(plan.sequence)
             dialog.accepted.connect(lambda: self.executeRebase(plan, dialog))
+            dialog.exploreCommit.connect(self.rw.jump)
             dialog.show()
 
         except Exception as ex:

@@ -6,14 +6,18 @@
 
 from gitfourchette import trtables
 from gitfourchette.forms.ui_rebasedialog import Ui_RebaseDialog
+from gitfourchette.localization import *
+from gitfourchette.nav import NavLocator, NavFlags
+from gitfourchette.porcelain import Oid
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLineWrapper, RebaseOp, RebaseOpColors, RebaseOpLetters, SupportedRebaseOps
-from gitfourchette.toolbox import asyncMessageBox, QRichTextMenu
-from gitfourchette.localization import *
+from gitfourchette.toolbox import *
 
 
 class RebaseDialog(QDialog):
     LastGeometry = b""
+
+    exploreCommit = Signal(NavLocator)
 
     initialSequence: TRebaseSequence
 
@@ -96,7 +100,8 @@ class RebaseDialog(QDialog):
             menu.popup(self.mapToGlobal(point))
 
     def makeContextMenu(self):
-        selectedOps = {item.op for item in self.ui.sequence.selectedRebaseLines()}
+        selectedLines = self.ui.sequence.selectedRebaseLines()
+        selectedOps = {item.op for item in selectedLines}
         if not selectedOps:
             return None
 
@@ -122,8 +127,20 @@ class RebaseDialog(QDialog):
             action.triggered.connect(lambda _checked, c=op: self.setCommandOnSelection(c))
             menu.addAction(action)
 
+        menu.addSeparator()
+
+        jumpAction = menu.addAction(_("&View Commit in Repo"))
+        jumpAction.setIcon(stockIcon("go-window"))
+        jumpAction.setEnabled(len(selectedLines) == 1)
+        jumpAction.triggered.connect(lambda: self.jumpToCommit(selectedLines[0].oid))
+
         return menu
 
     def serializeSequence(self):
         text = "\n".join(str(i) for i in self.ui.sequence.allRebaseLines())
         return text
+
+    def jumpToCommit(self, oid: Oid):
+        locator = NavLocator.inCommit(oid)
+        locator = locator.withExtraFlags(NavFlags.ActivateWindow)
+        self.exploreCommit.emit(locator)

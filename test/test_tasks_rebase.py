@@ -510,3 +510,26 @@ def testRebaseRichTextMenu(tempDir, mainWindow, monkeypatch):
     assert callSpy.completeCalls > 0
 
     rebaseDialog.close()
+
+
+def testRebaseJumpToCommit(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    onto = Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
+    head = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+
+    rw = mainWindow.openRepo(wd)
+
+    # Bring up RebaseDialog
+    rw.jump(NavLocator.inCommit(onto, ""))
+    triggerContextMenuAction(rw.graphView.viewport(), "rebase")
+    rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
+
+    rebaseDialog.ui.sequence.setFocus()
+    qlvClickNthRow(rebaseDialog.ui.sequence, rebaseDialog.ui.sequence.count() - 1)
+    triggerContextMenuAction(rebaseDialog.ui.sequence.viewport(), "view commit in repo")
+
+    visualPause()
+    assert NavLocator.inCommit(head, "c/c2-2.txt").isSimilarEnoughTo(rw.navLocator)
+
+    rebaseDialog.close()
+
