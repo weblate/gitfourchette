@@ -359,6 +359,7 @@ class BlameRevision(RepoTask):
         blameWindow.textEdit.setPlainText(text)
         blameWindow.textEdit.currentLocator = newLocator
         blameWindow.textEdit.restorePosition(newLocator)
+        blameWindow.textEdit.gutter.refreshMetrics()
         blameWindow.textEdit.syncViewportMarginsWithGutter()
 
         title = _("Blame {path} @ {commit} (Revision {rev}/{total})",

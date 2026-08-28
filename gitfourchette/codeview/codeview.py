@@ -65,8 +65,6 @@ class CodeView(QPlainTextEdit):
         self.gutter = gutterClass(self)
         self.gutter.customContextMenuRequested.connect(self.onContextMenuRequestedFromGutter)
         self.updateRequest.connect(self.gutter.onParentUpdateRequest)
-        # self.blockCountChanged.connect(self.updateGutterWidth)
-        self.syncViewportMarginsWithGutter()
 
         self.cursorPositionChanged.connect(self.updateRubberBand)
         self.selectionChanged.connect(self.updateRubberBand)
@@ -100,8 +98,15 @@ class CodeView(QPlainTextEdit):
 
     def resizeEvent(self, event: QResizeEvent):
         super().resizeEvent(event)
-        self.resizeGutter()
+
+        # Adjust gutter height
+        gutterGeo = self.contentsRect()
+        gutterGeo.setWidth(self.gutter.width())
+        self.gutter.setGeometry(gutterGeo)
+
+        # Adjust rubberband
         self.updateRubberBand()
+
         self.sizeChanged.emit()
 
     def wheelEvent(self, event: QWheelEvent):
@@ -374,14 +379,8 @@ class CodeView(QPlainTextEdit):
     # ---------------------------------------------
     # Gutter
 
-    def resizeGutter(self):
-        cr: QRect = self.contentsRect()
-        cr.setWidth(self.gutter.calcWidth())
-        self.gutter.setGeometry(cr)
-
     def syncViewportMarginsWithGutter(self):
-        self.gutter.refreshMetrics()
-        gutterWidth = self.gutter.calcWidth()
+        gutterWidth = self.gutter.width()
 
         # Prevent Qt freeze if margin width exceeds widget width, e.g. when window is very narrow
         # (especially prevalent with word wrap?)
@@ -470,7 +469,7 @@ class CodeView(QPlainTextEdit):
 
     def idealDetachedSize(self) -> QSize:
         windowHeight = int(QApplication.primaryScreen().availableSize().height() * .8)
-        windowWidth = (self.gutter.calcWidth()
+        windowWidth = (self.gutter.width()#preferredWidth#calcWidth()
                        + self.fontMetrics().horizontalAdvance("M" * 81)
                        + self.verticalScrollBar().width())
         return QSize(windowWidth, windowHeight)

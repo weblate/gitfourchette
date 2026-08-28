@@ -19,18 +19,16 @@ class DiffGutter(CodeGutter):
     def __init__(self, parent):
         super().__init__(parent)
         self.maxLine = 0
-        self.paddingString = "0 0"
 
-    def refreshMetrics(self):
+    def _refreshMetricsImpl(self) -> int:
         lineNumber = self.maxLine
         if lineNumber == 0:
             maxDigits = 0
         else:
             maxDigits = len(str(lineNumber))
-        self.paddingString = "0" * (2 * maxDigits + 2)
-
-    def calcWidth(self) -> int:
-        return self.fontMetrics().horizontalAdvance(self.paddingString)
+        paddingString = "0" * (2 * maxDigits + 2)
+        width = self.fontMetrics().horizontalAdvance(paddingString)
+        return width
 
     def paintEvent(self, event: QPaintEvent):
         diffView = self.codeView

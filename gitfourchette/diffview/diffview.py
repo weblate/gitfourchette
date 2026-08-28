@@ -154,6 +154,7 @@ class DiffView(CodeView):
         self.refreshPrefs(changeColorScheme=False)
 
         self.gutter.maxLine = newDoc.maxLine
+        self.gutter.refreshMetrics()
         self.syncViewportMarginsWithGutter()
 
         buttonMask = 0

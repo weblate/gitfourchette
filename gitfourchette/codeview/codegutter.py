@@ -22,10 +22,12 @@ class CodeGutter(QWidget):
     selectionMiddleClicked = Signal()
 
     codeView: QPlainTextEdit
+    preferredWidth: int
 
     def __init__(self, parent: QPlainTextEdit):
         super().__init__(parent)
         self.codeView = parent
+        self.preferredWidth = 0  # filled in by _refreshMetricsImpl
 
         cursorDpr = 1 if (FREEDESKTOP and not WAYLAND) else 4  # Qt doesn't seem to support cursor DPR on X11
         cursorPix = QPixmap(f"assets:icons/right_ptr@{cursorDpr}x")
@@ -40,13 +42,22 @@ class CodeGutter(QWidget):
         self.setFont(codeFont)
 
     def refreshMetrics(self):
+        oldWidth = self.preferredWidth
+        newWidth = self._refreshMetricsImpl()
+
+        if oldWidth == newWidth:
+            return
+
+        geo = self.geometry()
+        geo.setWidth(newWidth)
+        self.setGeometry(geo)
+        self.preferredWidth = newWidth
+
+    def _refreshMetricsImpl(self) -> int:
         if type(self) is not CodeGutter:  # pragma: no cover
             raise NotImplementedError("CodeGutter subclasses must override this function")
 
-    def calcWidth(self) -> int:
-        if type(self) is not CodeGutter:  # pragma: no cover
-            raise NotImplementedError("CodeGutter subclasses must override this function")
-
+        # Return new width
         return 0
 
     def onParentUpdateRequest(self, rect: QRect, dy: int):
@@ -56,7 +67,7 @@ class CodeGutter(QWidget):
             self.update(0, rect.y(), self.width(), rect.height())
 
     def sizeHint(self) -> QSize:
-        return QSize(self.calcWidth(), 0)
+        return QSize(self.preferredWidth, 0)
 
     def wheelEvent(self, event: QWheelEvent):
         # Forward mouse wheel to parent widget

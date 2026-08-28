@@ -44,7 +44,7 @@ class BlameGutter(CodeGutter):
         self.heatColor = QColor()
         self.unknownColor = QColor()
 
-        self.refreshMetrics()
+        self._refreshMetricsImpl()
 
     def syncFont(self, codeFont: QFont):
         pointSize = codeFont.pointSizeF()
@@ -53,7 +53,7 @@ class BlameGutter(CodeGutter):
         self.boldFont.setPointSizeF(pointSize)
         super().syncFont(codeFont)
 
-    def refreshMetrics(self):
+    def _refreshMetricsImpl(self) -> int:
         fontMetrics = self.fontMetrics()
 
         maxLineNumber = self.codeView.blockCount()
@@ -64,11 +64,11 @@ class BlameGutter(CodeGutter):
 
         self.columnMetrics = []
         x = 2
-        for w in (dateWidth, authorWidth, lnWidth):
-            self.columnMetrics.append((x, w))
-            x += w
+        for columnWidth in (dateWidth, authorWidth, lnWidth):
+            self.columnMetrics.append((x, columnWidth))
+            x += columnWidth
         x += 3
-        self.preferredWidth = x
+        preferredWidth = x
 
         self.lineHeight = max(fontMetrics.height(), self.codeView.fontMetrics().height())
 
@@ -86,8 +86,7 @@ class BlameGutter(CodeGutter):
         self.unknownColor = QColor(colors.fuchsia)
         self.unknownColor.setAlphaF(.4 if isDarkTheme(self.palette()) else .6)
 
-    def calcWidth(self) -> int:
-        return self.preferredWidth
+        return preferredWidth
 
     def eventFilter(self, watched, event: QEvent):
         if event.type() == QEvent.Type.ToolTip and isinstance(event, QHelpEvent):
