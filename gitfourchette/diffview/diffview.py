@@ -155,7 +155,6 @@ class DiffView(CodeView):
 
         self.gutter.maxLine = newDoc.maxLine
         self.gutter.refreshMetrics()
-        self.syncViewportMarginsWithGutter()
 
         buttonMask = 0
         if locator.context == NavContext.UNSTAGED:

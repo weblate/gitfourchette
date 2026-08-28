@@ -357,10 +357,9 @@ class BlameRevision(RepoTask):
         blameWindow.navHistory.push(newLocator)  # this should update in place
 
         blameWindow.textEdit.setPlainText(text)
+        blameWindow.textEdit.gutter.refreshMetrics()
         blameWindow.textEdit.currentLocator = newLocator
         blameWindow.textEdit.restorePosition(newLocator)
-        blameWindow.textEdit.gutter.refreshMetrics()
-        blameWindow.textEdit.syncViewportMarginsWithGutter()
 
         title = _("Blame {path} @ {commit} (Revision {rev}/{total})",
                   path=tquo(revision.path),

@@ -20,6 +20,7 @@ class CodeGutter(QWidget):
     lineShiftClicked = Signal(QPoint)
     lineDoubleClicked = Signal(QPoint)
     selectionMiddleClicked = Signal()
+    widthChanged = Signal(int)
 
     codeView: QPlainTextEdit
     preferredWidth: int
@@ -27,7 +28,7 @@ class CodeGutter(QWidget):
     def __init__(self, parent: QPlainTextEdit):
         super().__init__(parent)
         self.codeView = parent
-        self.preferredWidth = 0  # filled in by _refreshMetricsImpl
+        self.preferredWidth = 0  # filled in by refreshMetrics
 
         cursorDpr = 1 if (FREEDESKTOP and not WAYLAND) else 4  # Qt doesn't seem to support cursor DPR on X11
         cursorPix = QPixmap(f"assets:icons/right_ptr@{cursorDpr}x")
@@ -40,8 +41,13 @@ class CodeGutter(QWidget):
 
     def syncFont(self, codeFont: QFont):
         self.setFont(codeFont)
+        self.refreshMetrics()
 
     def refreshMetrics(self):
+        """
+        Update the gutter's preferred width after changes in the font,
+        document, or both.
+        """
         oldWidth = self.preferredWidth
         newWidth = self._refreshMetricsImpl()
 
@@ -52,12 +58,16 @@ class CodeGutter(QWidget):
         geo.setWidth(newWidth)
         self.setGeometry(geo)
         self.preferredWidth = newWidth
+        self.widthChanged.emit(newWidth)
 
     def _refreshMetricsImpl(self) -> int:
+        """
+        Compute and return the gutter's new preferred width, per the current
+        font and document. The base implementation returns 0 (no gutter);
+        subclasses must override this function.
+        """
         if type(self) is not CodeGutter:  # pragma: no cover
             raise NotImplementedError("CodeGutter subclasses must override this function")
-
-        # Return new width
         return 0
 
     def onParentUpdateRequest(self, rect: QRect, dy: int):

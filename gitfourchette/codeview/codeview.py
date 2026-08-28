@@ -64,6 +64,7 @@ class CodeView(QPlainTextEdit):
 
         self.gutter = gutterClass(self)
         self.gutter.customContextMenuRequested.connect(self.onContextMenuRequestedFromGutter)
+        self.gutter.widthChanged.connect(self.onGutterWidthChanged)
         self.updateRequest.connect(self.gutter.onParentUpdateRequest)
 
         self.cursorPositionChanged.connect(self.updateRubberBand)
@@ -131,7 +132,6 @@ class CodeView(QPlainTextEdit):
         font.setPointSizeF(newSize)
         self.setFont(font)
         self.gutter.syncFont(font)
-        self.syncViewportMarginsWithGutter()
         self.updateRubberBand()
 
     def focusInEvent(self, event: QFocusEvent):
@@ -278,7 +278,6 @@ class CodeView(QPlainTextEdit):
         self.setCursorWidth(2)
 
         self.gutter.syncFont(monoFont)
-        self.syncViewportMarginsWithGutter()
 
         if changeColorScheme:
             scheme = settings.prefs.syntaxHighlightingScheme()
@@ -379,9 +378,7 @@ class CodeView(QPlainTextEdit):
     # ---------------------------------------------
     # Gutter
 
-    def syncViewportMarginsWithGutter(self):
-        gutterWidth = self.gutter.width()
-
+    def onGutterWidthChanged(self, gutterWidth: int):
         # Prevent Qt freeze if margin width exceeds widget width, e.g. when window is very narrow
         # (especially prevalent with word wrap?)
         self.setMinimumWidth(gutterWidth * 2)
