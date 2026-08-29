@@ -270,6 +270,7 @@ class PrefEffects:
         "renderSvg",
         "lfsAware",
         "syntaxHighlighting",
+        "qtStyle",
     }
     "Pref keys that trigger a reload of the current diff."
 
