@@ -49,7 +49,11 @@ def _iconOverrideTable() -> dict[str, str]:
     return overrides
 
 
-def stockIcon(iconId: str, colorTable="") -> QIcon:
+def stockIcon(
+        iconId: str,
+        colorTable: str = "",
+        flags: RecolorSvgIconEngine.Flags = RecolorSvgIconEngine.Flags.NoFlags
+) -> QIcon:
     # Special cases
     if not _overrideIconIds:
         _overrideIconIds.update(_iconOverrideTable())
@@ -61,7 +65,7 @@ def stockIcon(iconId: str, colorTable="") -> QIcon:
         colorTable = "white=#000 black=#fff"
 
     # Compute cache key
-    key = hash(iconId) ^ hash(colorTable)
+    key = hash((iconId, colorTable, flags))
 
     # Attempt to get cached icon
     try:
@@ -80,7 +84,7 @@ def stockIcon(iconId: str, colorTable="") -> QIcon:
     # Create QIcon
     if iconPath.endswith(".svg"):
         # Dynamic SVG icon
-        engine = RecolorSvgIconEngine(iconPath, colorTable)
+        engine = RecolorSvgIconEngine(iconPath, colorTable, flags)
         icon = QIcon(engine)
     elif iconPath:
         # Bitmap file
@@ -118,7 +122,7 @@ def stockIconImgTag(iconId: str, dpr: float = 0) -> str:
             # system is set up for 1.25 frac scaling)
             dpr = app.devicePixelRatio()  # type: ignore[attr-defined]  # incomplete stubs
 
-    key = hash(iconId) ^ hash(dpr)
+    key = hash((iconId, dpr))
 
     try:
         return _stockIconHtmlCache[key]

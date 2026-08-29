@@ -4,6 +4,7 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+import enum
 from pathlib import Path
 
 from gitfourchette.qt import *
@@ -22,6 +23,10 @@ class RecolorSvgIconEngine(QIconEngine):
     based on the global color palette, active/disabled/selected icon modes, and
     an optional color remapping table.
     """
+
+    class Flags(enum.Flag):
+        NoFlags = 0
+        HighlightActiveMode = enum.auto()
 
     class IconColors:
         background = QColor(0xFFFFFF)
@@ -43,7 +48,7 @@ class RecolorSvgIconEngine(QIconEngine):
             cls.systemFont = QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont).family()
             cls.initialized = True
 
-    def __init__(self, iconPathStr: str, colorTable: str = ""):
+    def __init__(self, iconPathStr: str, colorTable: str = "", flags: Flags = Flags.NoFlags):
         super().__init__()
 
         # Initialize color scheme
@@ -77,9 +82,10 @@ class RecolorSvgIconEngine(QIconEngine):
 
         self.svg = svg
         self.informalIconName = iconPath.name  # for debugging
-        self.basePixmapKey = hash(svg)
+        self.basePixmapKey = hash((svg, flags))
         self.renderers: dict[QIcon.Mode, QSvgRenderer] = {}
         self.referenceSize = QSize(0, 0)
+        self.flags = flags
 
         self.initVariants()
 
@@ -88,12 +94,21 @@ class RecolorSvgIconEngine(QIconEngine):
 
     def initVariants(self):
         IC = RecolorSvgIconEngine.IconColors
+        F = RecolorSvgIconEngine.Flags
+
+        normal = self._recolor(IC.mainColor)
+        disabled = self._recolor(IC.mainColor, opacity=.33)
+        selected = self._recolor(IC.highlight)
+        active = selected if (self.flags & F.HighlightActiveMode) else normal
+
         self.renderers = {
-            QIcon.Mode.Normal: self._recolor(IC.mainColor),
-            QIcon.Mode.Disabled: self._recolor(IC.mainColor, opacity=.33),
-            QIcon.Mode.Selected: self._recolor(IC.highlight),
+            QIcon.Mode.Normal: normal,
+            QIcon.Mode.Disabled: disabled,
+            QIcon.Mode.Selected: selected,
+            QIcon.Mode.Active: active,
         }
-        self.referenceSize = self.renderers[QIcon.Mode.Normal].defaultSize()
+
+        self.referenceSize = normal.defaultSize()
 
     def iconName(self):
         return self.informalIconName

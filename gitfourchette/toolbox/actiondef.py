@@ -14,6 +14,7 @@ from typing import ClassVar
 from gitfourchette.qt import *
 from gitfourchette.toolbox.iconbank import stockIcon
 from gitfourchette.toolbox.qtutils import MultiShortcut, ShortcutKeys, appendShortcutToToolTipText
+from gitfourchette.toolbox.recolorsvgiconengine import RecolorSvgIconEngine
 
 
 @dataclasses.dataclass
@@ -63,7 +64,11 @@ class ActionDef:
             action.triggered.connect(lambda: cb())
 
         if self.icon:
-            action.setIcon(stockIcon(self.icon))
+            iconFlags = RecolorSvgIconEngine.Flags.NoFlags
+            if isinstance(parent, QMenu):
+                iconFlags |= RecolorSvgIconEngine.Flags.HighlightActiveMode
+            icon = stockIcon(self.icon, flags=iconFlags)
+            action.setIcon(icon)
 
         if self.checkState != 0:
             action.setCheckable(True)
