@@ -28,6 +28,7 @@ from gitfourchette.forms.repostub import RepoStub
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.textinputdialog import TextInputDialog
 from gitfourchette.forms.welcomewidget import WelcomeWidget
+from gitfourchette.forms.whatsnewbutton import WhatsNewButton
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
@@ -119,6 +120,21 @@ class MainWindow(QMainWindow):
 
         self.dropZone = DropZone(self)
         self.dropZone.setVisible(False)
+
+        self.checkUpgradedFromOldVersion()
+
+    def checkUpgradedFromOldVersion(self):
+        if WhatsNewButton.__name__ in settings.prefs.dontShowAgain:
+            return
+
+        v1 = version_to_tuple(settings.history._fileVersion)
+        v2 = version_to_tuple(APP_VERSION)
+        if not v1 or v1 >= v2:
+            return
+
+        whatsNewButton = WhatsNewButton(self.statusBar2)
+        whatsNewButton.showChangelog.connect(lambda: AboutDialog.popUp(self, page=2))
+        self.statusBar2.addPermanentWidget(whatsNewButton)
 
     # -------------------------------------------------------------------------
     # RepoTask
@@ -390,6 +406,10 @@ class MainWindow(QMainWindow):
                 lambda: AboutDialog.popUp(self),
                 icon="gitfourchette",
                 menuRole=QAction.MenuRole.AboutRole,),
+
+            ActionDef(
+                _("What’s New in {version}", version="v" + APP_VERSION),
+                lambda: AboutDialog.popUp(self, page=2)),
 
             ActionDef(
                 _("{0} User’s Guide", qAppName()),

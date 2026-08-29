@@ -9,13 +9,16 @@ Test events scheduled at the start of a session. ("Session" here loosely means
 a start/stop cycle.)
 """
 
+import json
 import os.path
 from collections import defaultdict
 from typing import ClassVar
 
 from gitfourchette.application import GFApplication
+from gitfourchette.forms.aboutdialog import AboutDialog
 from gitfourchette.forms.donateprompt import DonatePrompt
 from gitfourchette.forms.textinputdialog import TextInputDialog
+from gitfourchette.forms.whatsnewbutton import WhatsNewButton
 from gitfourchette.mainwindow import MainWindow
 from gitfourchette.sidebar.sidebarmodel import SidebarItem
 from .util import *
@@ -209,3 +212,83 @@ def testDonatePrompt(mainWindow):
         assert not window.findChild(DonatePrompt)
         assert settings.prefs.donatePrompt < 0  # permanently disabled
 
+
+def testWhatsNewNotificationAfterUpgrade(mainWindow):
+    from gitfourchette import settings
+
+    # One bogus session just to get any pref writing out of the way
+    with SessionContext() as window:
+        assert not window.statusBar().findChild(WhatsNewButton)
+        settings.prefs.maxCommits += 1
+        settings.prefs.setDirty()
+
+    def setPreviousVersion(version="1.10.0"):
+        pathStr = settings.history._getFullPath(False)
+        assert pathStr
+        path = Path(pathStr)
+        jsonObj = json.loads(path.read_text(encoding="utf-8"))
+        assert jsonObj["_version"] == APP_VERSION
+        jsonObj["_version"] = version
+        path.write_text(json.dumps(jsonObj), encoding="utf-8")
+
+    # -------------------------------------------------------------------------
+    # Notification must show up at most once after an upgrade
+
+    setPreviousVersion()
+
+    with SessionContext() as window:
+        whatsNewButton = window.statusBar().findChild(WhatsNewButton)
+        assert whatsNewButton.isVisible()
+        assert findTextInWidget(whatsNewButton, rf"updated to v{APP_VERSION}")
+    with SessionContext() as window:
+        assert not window.statusBar().findChild(WhatsNewButton)
+
+    # -------------------------------------------------------------------------
+    # Test Changelog
+
+    setPreviousVersion()
+
+    with SessionContext() as window:
+        whatsNewButton = window.statusBar().findChild(WhatsNewButton)
+        triggerMenuAction(whatsNewButton.menu(), rf"what.s new in v{APP_VERSION}")
+        aboutDialog = findQDialog(window, "About", t=AboutDialog)
+        tabs = aboutDialog.ui.tabWidget
+        assert tabs.tabText(tabs.currentIndex()) == "News"
+        assert findTextInWidget(tabs.currentWidget().findChild(QLabel), "first public release")
+        aboutDialog.accept()
+        QTest.qWait(0)
+
+        # Dismiss it
+        whatsNewButton = window.statusBar().findChild(WhatsNewButton)
+        triggerMenuAction(whatsNewButton.menu(), r"dismiss")
+        QTest.qWait(0)
+        assert not window.statusBar().findChild(WhatsNewButton)
+
+    with SessionContext() as window:
+        assert not window.statusBar().findChild(WhatsNewButton)
+
+    # -------------------------------------------------------------------------
+    # Test "Don't show again"
+
+    setPreviousVersion()
+
+    with SessionContext(end=False) as window:
+        whatsNewButton = window.statusBar().findChild(WhatsNewButton)
+        triggerMenuAction(whatsNewButton.menu(), r"show.+next update")
+        triggerMenuAction(whatsNewButton.menu(), r"dismiss")
+        QTest.qWait(0)
+        assert not window.statusBar().findChild(WhatsNewButton)
+
+    with SessionContext() as window:
+        assert not window.statusBar().findChild(WhatsNewButton)
+
+    setPreviousVersion()
+
+    with SessionContext() as window:
+        assert not window.statusBar().findChild(WhatsNewButton)
+
+    # -------------------------------------------------------------------------
+    # One bogus session to let mainWindow fixture clean up
+
+    with SessionContext(end=False):
+        pass

@@ -560,6 +560,15 @@ def testAboutDialog(mainWindow):
     dlg.accept()
 
 
+def testWhatsNewFromHelpMenu(mainWindow):
+    triggerMenuAction(mainWindow.menuBar(), rf"help/what.s new in v{APP_VERSION}")
+    aboutDialog = findQDialog(mainWindow, "About", t=AboutDialog)
+    tabs = aboutDialog.ui.tabWidget
+    assert tabs.tabText(tabs.currentIndex()) == "News"
+    assert findTextInWidget(tabs.currentWidget().findChild(QLabel), "first public release")
+    aboutDialog.accept()
+
+
 def testAllTaskNamesTranslated(mainWindow):
     from gitfourchette import tasks
     for key, type in vars(tasks).items():

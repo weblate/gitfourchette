@@ -226,8 +226,10 @@ class AboutDialog(QDialog):
         QDesktopServices.openUrl(QUrl(USERS_GUIDE_URL))
 
     @staticmethod
-    def popUp(parent: QWidget):
+    def popUp(parent: QWidget, page: int = -1):
         dialog = AboutDialog(parent)
         dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        if page >= 0:
+            dialog.ui.tabWidget.setCurrentIndex(page)
         dialog.show()
         return dialog
