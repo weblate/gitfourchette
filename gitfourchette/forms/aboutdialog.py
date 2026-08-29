@@ -6,7 +6,6 @@
 
 import json
 import sys
-from pathlib import Path
 from textwrap import dedent
 
 import pygit2
@@ -25,14 +24,6 @@ DONATE_URL = "https://ko-fi.com/jorio"
 TRANSLATE_URL = "https://gitfourchette.org/localization"
 
 
-def getPygit2FeatureStrings():
-    return [f.name.lower() for f in pygit2.enums.Feature if f & pygit2.features]
-
-
-def simpleLink(url):
-    return f"<a href='{url}'>{url}</a>"
-
-
 class AboutDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
@@ -40,13 +31,10 @@ class AboutDialog(QDialog):
         self.ui = Ui_AboutDialog()
         self.ui.setupUi(self)
 
-        self.urlToolTip = UrlToolTip(self)
-        self.urlToolTip.install()
+        self.setWindowTitle(self.windowTitle().format(APP_DISPLAY_NAME))
 
-        appVersion = QApplication.applicationVersion()
-        appName = qAppName()
-
-        self.setWindowTitle(self.windowTitle().format(appName))
+        # ---------------------------------------------------------------------
+        # Header
 
         buildInfoItems = [
             "Flatpak" if FLATPAK else "",
@@ -57,33 +45,21 @@ class AboutDialog(QDialog):
         buildInfoItems = [s for s in buildInfoItems if s]
         buildInfo = f"({', '.join(buildInfoItems)})" if buildInfoItems else ""
 
-        tagline = _("The comfortable Git UI for Linux.")
+        headerText = dedent(f"""\
+            <span style="font-size: x-large"><b>{APP_DISPLAY_NAME}</b></span>
+            <br>{_("The comfortable Git UI for Linux.")}
+            <br><a href="{WEBSITE_URL}">{WEBSITE_URL}</a>""")
 
-        # ---------------------------------------------------------------------
-        # Header
-
-        pixmap = QPixmap("assets:icons/gitfourchette")
-        pixmap.setDevicePixelRatio(4)
-        self.ui.iconLabel.setPixmap(pixmap)
-
-        self.ui.header.setText(dedent(f"""\
-            <span style="font-size: x-large"><b>{appName}</b></span>
-            <br>{tagline}
-            <br>{simpleLink(WEBSITE_URL)}"""))
-
-        versionText = _("Version {0}", appVersion)
-        self.ui.versionLabel.setText(dedent(f"""\
-            <span style='color:{mutedTextColorHex(self)}'><b>{versionText}</b> {buildInfo}
-            <br>Copyright © 2026 Iliyas Jorio"""))
+        versionText = dedent(f"""\
+            <span style='color: {mutedTextColorHex(self)}'>
+                <b>{_("Version {0}", APP_VERSION)}</b> {buildInfo}
+                <br>Copyright © 2026 Iliyas Jorio
+            </span>""")
 
         # ---------------------------------------------------------------------
         # About page
 
-        self.ui.mugshot.setText("")
-        self.ui.mugshot.setPixmap(QPixmap("assets:icons/mug"))
-
-        # ---------------------------------------------------------------------
-        # Components page
+        libgit2Features = ", ".join([f.name.lower() for f in pygit2.enums.Feature if f & pygit2.features])
 
         try:
             from gitfourchette.mount.treemount import fuse
@@ -91,76 +67,121 @@ class AboutDialog(QDialog):
         except (ImportError, OSError, AttributeError):
             fuseInfo = _("(not available)")
 
-        self.ui.aboutBlurb.setText(dedent(f"""\
+        aboutHtml = dedent(f"""\
             <style>
                 a {{ font-weight: bold; }}
                 hr {{ background: gray; }}
-                table {{ font-size: 8pt; margin-top: 0em; }}
+                table {{ font-size: small; margin-top: 0em; }}
                 th {{ text-align: left; padding-right: 1em; color: gray; }}
+                img {{ float: right; }}
             </style>
-            <p>{linkify(_("If {app} helps you get work done, please consider [making a small donation].", app=appName), DONATE_URL)}</p>
+            <p><img src="assets:icons/mug.png">{
+                linkify(_("If {app} helps you get work done, "
+                          "please consider [making a small donation].",
+                          app=APP_DISPLAY_NAME), DONATE_URL)
+            }</p>
             <p>{_("Thank you for your support!")}</p>
             <hr>
             <table cellspacing=0 cellpadding=0>
-            <tr><th colspan=2>{appName} {appVersion}</th></tr>
+            <tr><th colspan=2>{APP_DISPLAY_NAME} {APP_VERSION}</th></tr>
             <tr><th>Git</th><td>{GitDriver.gitVersion() or _("(unknown version)")} ({settings.prefs.gitPath})</td></tr>
             <tr><th>LFS</th><td>{GitDriver.lfsVersion() or _("(not available)")}</td></tr>
             <tr><th>pygit2</th><td>{pygit2.__version__}</td></tr>
-            <tr><th>libgit2</th><td>{pygit2.LIBGIT2_VERSION} ({', '.join(getPygit2FeatureStrings())})</td></tr>
+            <tr><th>libgit2</th><td>{pygit2.LIBGIT2_VERSION} ({libgit2Features})</td></tr>
             <tr><th>{QT_BINDING}</th><td>{QT_BINDING_VERSION}</td></tr>
             <tr><th>Qt</th><td>{qVersion()}</td></tr>
             <tr><th>mfusepy</th><td>{fuseInfo}</td></tr>
             <tr><th>Pygments</th><td>{pygments.__version__}</td></tr>
             <tr><th>Python</th><td>{'.'.join(str(i) for i in sys.version_info)}</td></tr>
             </table>
-        """))
+        """)
 
         # ---------------------------------------------------------------------
         # Acknowledgments page
 
-        contributorCreditsPath = Path(QFile("assets:/contributors.txt").fileName())
-        contributorCredits = contributorCreditsPath.read_text("utf-8")
-        contributorCredits = contributorCredits.removeprefix("Iliyas Jorio\n")
-        contributorCredits = f"<center style='white-space: pre'>{contributorCredits}</center>"
+        contributors = assetsPath("contributors.txt").read_text("utf-8")
+        contributors = contributors.removeprefix("Iliyas Jorio").strip()
+        contributors = escape(contributors).replace("\n", "<br>")
 
-        translatorCreditsPath = Path(QFile("assets:lang/credits.json").fileName())
-        translatorCredits = json.loads(translatorCreditsPath.read_text("utf-8"))
+        translatorCredits = json.loads(assetsPath("lang/credits.json").read_text("utf-8"))
         translatorFilter = availableLocaleCodes()
-        translatorMarkup = "<center><table>" + "".join(
-            f"<tr><th>{localeCodeToLanguageName(lang)}:</th><td>{'<br>'.join(people)}</td></tr>\n"
+        translatorMarkup = "".join(
+            f"<tr><th>{escape(localeCodeToLanguageName(lang))}:</th>"
+            f"<td>{'<br>'.join(escape(p) for p in people)}</td></tr>"
             for lang, people in translatorCredits.items()
             if lang in translatorFilter
-        ) + "</table></center>"
+        )
 
-        ackText = [
-            _("Additional contributions by:") + contributorCredits,
-
-            linkify(_("Translations welcome!"), TRANSLATE_URL)
-            + " "
-            + _("Brought to your native language by:")
-            + translatorMarkup,
-
-            _("Special thanks to Marc-Alexandre Espiaut for beta testing."),
-        ]
-
-        ackMarkup = "<style>th { text-align: right; padding-right: 8px; color: gray; }</style>"
-        ackMarkup += paragraphs(*ackText)
-
-        self.ui.ackBlurb.setText(ackMarkup)
+        creditsHtml = dedent(f"""\
+            <style>
+                th {{ text-align: right; padding-right: 8px; color: gray; }}
+            </style>
+            <p>
+                {_("Additional contributions by:")}
+                <center>{contributors}</center>
+            </p>
+            <p>
+                <a href="{TRANSLATE_URL}">{_("Translations welcome!")}</a>
+                {_("Brought to your native language by:")}
+                <center><table>{translatorMarkup}</table></center>
+            </p>
+            <p>{_("Special thanks to Marc-Alexandre Espiaut for beta testing.")}</p>
+        """)
 
         # ---------------------------------------------------------------------
         # License page
 
-        self.ui.licenseBlurb.setText(dedent(f"""\
-            <p>{appName} is free software: you can redistribute it and/or
+        licenseHtml = dedent(f"""\
+            <p>{APP_DISPLAY_NAME} is free software: you can redistribute it and/or
             modify it under the terms of the GNU General Public License
             version 3 as published by the Free Software Foundation.</p>
-            <p>{appName} is distributed in the hope that it will be useful,
+            <p>{APP_DISPLAY_NAME} is distributed in the hope that it will be useful,
             but WITHOUT ANY WARRANTY; without even the implied warranty of
             MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For more
             details, read the full terms of the
             <a href='https://www.gnu.org/licenses/gpl-3.0.txt'>GNU General
-            Public License, version 3</a>.</p>"""))
+            Public License, version 3</a>.</p>""")
+
+        # ---------------------------------------------------------------------
+
+        pixmap = QPixmap("assets:icons/gitfourchette")
+        pixmap.setDevicePixelRatio(4)
+        self.ui.logo.setPixmap(pixmap)
+
+        self.ui.header.setText(headerText)
+        self.ui.versionLabel.setText(versionText)
+
+        self.addTab(_p("AboutDialog", "About"), aboutHtml)
+        self.addTab(_p("AboutDialog", "Credits"), creditsHtml)
+        self.addTab(_p("AboutDialog", "License"), licenseHtml)
+
+        # Install QLabelExternalLinkToolTips after all the QLabels are set up.
+        self.urlToolTip = QLabelExternalLinkToolTips(self)
+
+    def addTab(self, title: str, markup: str):
+        scrollArea = QScrollArea(self)
+        scrollArea.setFrameShape(QFrame.Shape.NoFrame)
+        scrollArea.setWidgetResizable(True)
+        scrollArea.setBackgroundRole(QPalette.ColorRole.Base)
+
+        wrapper = QWidget(scrollArea)
+        scrollArea.setWidget(wrapper)
+        layout = QVBoxLayout(wrapper)
+        layout.setContentsMargins(32, 16, 32, 16)
+
+        label = QLabel(wrapper)
+        label.setAlignment(Qt.AlignmentFlag.AlignLeading | Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction | Qt.TextInteractionFlag.TextSelectableByKeyboard | Qt.TextInteractionFlag.TextSelectableByMouse)
+        label.setTextFormat(Qt.TextFormat.RichText)
+        label.setOpenExternalLinks(True)
+        label.setWordWrap(True)
+
+        layout.addWidget(label)
+
+        self.ui.tabWidget.addTab(scrollArea, title)
+
+        # Setting the text AFTER the UI has been set up is much faster
+        label.setText(markup)
 
     @staticmethod
     def popUp(parent: QWidget):

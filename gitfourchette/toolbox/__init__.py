@@ -42,6 +42,7 @@ from .qelidedlabel import QElidedLabel
 from .qfaintseparator import QFaintSeparator
 from .qfilepickercheckbox import QFilePickerCheckBox
 from .qhintbutton import QHintButton
+from .qlabelexternallinktooltips import QLabelExternalLinkToolTips
 from .qprocessconnection import QProcessConnection
 from .qsignalconnectcontext import QSignalConnectContext
 from .qsignalblockercontext import QSignalBlockerContext
@@ -59,6 +60,7 @@ from .qtutils import (
     formatWidgetText,
     formatWidgetTooltip,
     itemViewVisibleRowRange,
+    assetsPath,
     isDarkTheme,
     mutedTextColorHex,
     mutedToolTipColorHex,
@@ -99,6 +101,5 @@ from .textutils import (
     naturalSort,
     qstringLength,
 )
-from .urltooltip import UrlToolTip
 from .validatormultiplexer import ValidatorMultiplexer
 from .validators import ReplaceSpacesWithDashes

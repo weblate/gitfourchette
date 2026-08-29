@@ -242,6 +242,13 @@ def itemViewVisibleRowRange(view: QAbstractItemView):
     return range(top.row(), bottom.row() + 1)
 
 
+def assetsPath(assetFileName: str) -> Path:
+    """
+    Get a pathlib.Path object to a file in Qt's assets directory ("assets:").
+    """
+    return Path(QFile("assets:" + assetFileName).fileName())
+
+
 class DisableWidgetUpdatesContext:
     def __init__(self, widget: QWidget):
         self.widget = widget
