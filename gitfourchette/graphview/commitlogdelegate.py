@@ -227,11 +227,14 @@ class CommitLogDelegate(QStyledItemDelegate):
         # ...Left-to-right zones...
 
         # Hash
-        painter.save()
-        if not isSelected:  # use muted color for hash if not selected
-            painter.setPen(palette.color(colorGroup, QPalette.ColorRole.PlaceholderText))
-        self._paintHash(painter, rect, oid)
-        painter.restore()
+        if settings.prefs.hashesBesideGraph:
+            painter.save()
+            if not isSelected:  # use muted color for hash if not selected
+                painter.setPen(palette.color(colorGroup, QPalette.ColorRole.PlaceholderText))
+            self._paintHash(painter, rect, oid)
+            painter.restore()
+        else:
+            rect.adjust(4, 0, 0, 0)
 
         # Private
         self.paintPrivate(painter, option, index, rect, oid)
@@ -724,7 +727,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         if oid is not None and not self.repoModel.commitPathspecFilter.wantFilter():
             graphRect = QRect(rect)
             paintGraphFrame(painter, graphRect, oid, self.repoModel.graph, self.repoModel.hiddenCommits)
-            rect.setLeft(graphRect.right())
+            rect.setLeft(graphRect.right() + 2)
 
         # ------ Begin refboxes
         painter.save()

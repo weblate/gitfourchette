@@ -428,6 +428,8 @@ def _prefKeyTable() -> dict[str, str]:
             _("Note that you can always hover over the author’s name or date to obtain "
               "detailed information about the author and the committer."),
         ),
+        "hashesBesideGraph": _("Show commit hashes beside the graph"),
+        "hashesBesideGraph_help": _("You can customize how many characters to show in {0}.", tquo(_p("Prefs", "Advanced"))),
         "maxCommits": _("Load up to # commits in the history"),
         "maxCommits_help": _("Set to 0 to always load the full commit history."),
         "alternatingRowColors": _("Draw rows using alternating background colors"),

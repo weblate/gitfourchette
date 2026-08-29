@@ -137,6 +137,7 @@ class Prefs(PrefsFile):
     authorDisplayStyle          : AuthorDisplayStyle    = AuthorDisplayStyle.FullName
     shortTimeFormat             : str                   = SHORT_DATE_DEFAULT_PRESET
     maxCommits                  : int                   = 10000
+    hashesBesideGraph           : bool                  = True
     authorDiffAsterisk          : bool                  = True
     verifyGpgOnTheFly           : bool                  = False
     alternatingRowColors        : bool                  = False

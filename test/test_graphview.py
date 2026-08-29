@@ -7,6 +7,7 @@
 import pytest
 
 from gitfourchette.forms.commitinfodialog import CommitInfoDialog
+from gitfourchette.graphview.commitlogdelegate import CommitLogDelegate
 from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.graphview.graphview import GraphView
 from gitfourchette.nav import NavLocator
@@ -832,3 +833,24 @@ def testDontScrollToSameCommitOnRefresh(tempDir, mainWindow):
     vsb.setSliderPosition(1000)
     rw.refreshRepo()
     assert vsb.sliderPosition() == 1000
+
+
+def testHideCommitHashes(tempDir, mainWindow, monkeypatch):
+    paintHashSpy = CallSpy(monkeypatch, CommitLogDelegate, "_paintHash")
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    QTest.qWait(0)
+    n1 = paintHashSpy.completeCalls
+
+    GFApplication.instance().applyPrefs(hashesBesideGraph=False)
+    rw.graphView.repaint()
+    QTest.qWait(0)
+    n2 = paintHashSpy.completeCalls
+
+    GFApplication.instance().applyPrefs(hashesBesideGraph=True)
+    rw.graphView.repaint()
+    QTest.qWait(0)
+    n3 = paintHashSpy.completeCalls
+
+    assert n3 >= n2 == n1 >= 1
