@@ -279,6 +279,45 @@ if APP_VERBOSEDEL:
 
 
 # -----------------------------------------------------------------------------
+# Patch environment variables for Mac app bundle
+#
+# Our Mac app bundle starts with a minimal environment that likely lacks the
+# PATH required to run git hooks and external tools properly. For example, no
+# paths to homebrew apps, because those are set up in ~/.zprofile. So, get the
+# environment from a login shell and merge it into ours.
+
+def _patchMacAppBundleEnvironment():  # pragma: no cover
+    envProcess = QProcess(None)
+    envProcess.setProgram("/bin/zsh")
+    envProcess.setArguments(["-ilc", "env -0"])
+    envProcess.setProcessChannelMode(QProcess.ProcessChannelMode.ForwardedErrorChannel)
+    envProcess.start()
+    didFinish = envProcess.waitForFinished()
+    if not didFinish:
+        _logger.warning("Could not merge environment variables")
+        return
+
+    envText = envProcess.readAll().data().decode(errors="replace")
+    skipKeys = {"", "_", "OLDPWD", "PWD", "SHELL", "SHLVL"}
+
+    for line in envText.split("\0"):
+        try:
+            k, v = line.split("=", 1)
+        except ValueError:
+            continue
+        if k in skipKeys:
+            continue
+        if INITIAL_ENVIRONMENT.get(k, None) == v:
+            continue
+        _os.environ[k] = v
+        INITIAL_ENVIRONMENT[k] = v
+
+
+if MACOS and (PYINSTALLER_MEIPASS or APP_DEBUG):  # pragma: no cover
+    _patchMacAppBundleEnvironment()
+
+
+# -----------------------------------------------------------------------------
 # Utility functions
 
 def qAppName() -> str:
