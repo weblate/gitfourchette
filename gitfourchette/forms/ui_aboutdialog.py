@@ -14,7 +14,7 @@ class Ui_AboutDialog(object):
     def setupUi(self, AboutDialog):
         AboutDialog.setObjectName("AboutDialog")
         AboutDialog.setWindowModality(Qt.WindowModality.ApplicationModal)
-        AboutDialog.resize(500, 500)
+        AboutDialog.resize(500, 600)
         self.gridLayout = QGridLayout(AboutDialog)
         self.gridLayout.setObjectName("gridLayout")
         self.logo = QLabel(parent=AboutDialog)

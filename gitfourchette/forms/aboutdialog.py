@@ -71,7 +71,7 @@ class AboutDialog(QDialog):
             <style>
                 a {{ font-weight: bold; }}
                 hr {{ background: gray; }}
-                table {{ font-size: small; margin-top: 0em; }}
+                table {{ font-size: small; margin-top: 1em; }}
                 th {{ text-align: left; padding-right: 1em; color: gray; }}
                 img {{ float: right; }}
             </style>
@@ -129,6 +129,19 @@ class AboutDialog(QDialog):
         """)
 
         # ---------------------------------------------------------------------
+        # Changelog
+
+        changelog = assetsPath("changelog.html").read_text("utf-8")
+        changelog = dedent("""\
+            <style>
+                h2 { font-size: medium; font-weight: bold; background: gray; color: white; text-align: center; }
+                ul { -qt-list-indent: 0; margin-left: 16px; }
+                ul li { margin-bottom: 8px; }
+            </style>
+            <body>
+            """) + changelog
+
+        # ---------------------------------------------------------------------
         # License page
 
         licenseHtml = dedent(f"""\
@@ -153,6 +166,7 @@ class AboutDialog(QDialog):
 
         self.addTab(_p("AboutDialog", "About"), aboutHtml)
         self.addTab(_p("AboutDialog", "Credits"), creditsHtml)
+        self.addTab(_p("AboutDialog", "News"), changelog)
         self.addTab(_p("AboutDialog", "License"), licenseHtml)
 
         # Install QLabelExternalLinkToolTips after all the QLabels are set up.

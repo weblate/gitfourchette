@@ -60,6 +60,11 @@ def makeParser():
     parser.add_argument("-V", "--version", action="store_true",
                         help="show tool versions and exit")
 
+    release_group = parser.add_argument_group("Release options")
+
+    release_group.add_argument("-s", "--sync", action="store_true",
+                               help="sync changelog")
+
     loc_group = parser.add_argument_group("Localization options")
 
     loc_group.add_argument("--pot", action="store_true",
@@ -169,17 +174,6 @@ def patchSection(path: Path, contents: str):
     return newText
 
 
-def writeStatusIcon(fill='#ff00ff', char='X', round=2):
-    svg = "\n".join([
-        "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>",
-        f"<rect rx='{round}' ry='{round}' x='0.5' y='0.5' width='15' height='15' stroke='white' stroke-width='1' fill='{fill}'/>",
-        f"<text x='8' y='12' font-weight='bold' font-size='11' font-family='sans-serif' text-anchor='middle' fill='white'>{char}</text>",
-        "</svg>",
-    ])
-    svgPath = Path(ASSETS_DIR) / f"icons/status_{char.lower()}.svg"
-    writeIfDifferent(svgPath, svg)
-
-
 def compileUi(uic: str, uiPath: Path, pyPath: Path, force=False, cleanupOutput=True):
     if not force:
         with suppress(FileNotFoundError):
@@ -257,6 +251,16 @@ def compileUiFiles(uic, force, cleanupOutput):
 
 
 def generateIcons():
+    def writeStatusIcon(fill='#ff00ff', char='X', round=2):
+        svg = "\n".join([
+            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>",
+            f"<rect rx='{round}' ry='{round}' x='0.5' y='0.5' width='15' height='15' stroke='white' stroke-width='1' fill='{fill}'/>",
+            f"<text x='8' y='12' font-weight='bold' font-size='11' font-family='sans-serif' text-anchor='middle' fill='white'>{char}</text>",
+            "</svg>",
+        ])
+        svgPath = Path(ASSETS_DIR) / f"icons/status_{char.lower()}.svg"
+        writeIfDifferent(svgPath, svg)
+
     # Generate status icons.
     # 'U' (unmerged) has custom colors/text, so don't generate it automatically.
     # 'C' (copied) doesn't appear in GitFourchette.
@@ -439,10 +443,68 @@ def writeFreezeFile(qtApi: str):
     patchSection(Path(SRC_DIR) / 'appconsts.py', freezeText)
 
 
+def syncBuiltinChangelog():
+    import markdown
+
+    changelogSourcePath = Path(REPO_ROOTDIR, 'CHANGELOG.md')
+    changelogDestPath = Path(ASSETS_DIR, 'changelog.html')
+
+    changelogText = changelogSourcePath.read_text('utf-8')
+    changelogLines = changelogText.splitlines(keepends=True)
+    changelogLines.pop(0)
+    changelogSoup = markdown.markdown("".join(changelogLines)) + "\n"
+
+    writeIfDifferent(changelogDestPath, changelogSoup)
+
+
+def syncFlatpakChangelog():
+    import markdown
+
+    changelogPath = Path(REPO_ROOTDIR, 'CHANGELOG.md')
+    metainfoPath = Path(REPO_ROOTDIR, 'pkg/flatpak/org.gitfourchette.gitfourchette.metainfo.xml')
+
+    changelogText = changelogPath.read_text('utf-8')
+    changelogSoup = markdown.markdown(changelogText)
+
+    releases = []
+
+    for soupLine in changelogSoup.splitlines():
+        # Flatpak linter doesn't recognize <strong>, they'll reject the build if the changelog contains one
+        soupLine = re.sub(r"<(/?)strong>", r"<\1em>", soupLine)
+
+        if soupLine.startswith("<h1>"):  # Strip main title
+            continue
+
+        if not soupLine.startswith("<h"):  # Insert non-title lines
+            releases.insert(-2, (' ' * 6) + soupLine)
+            continue
+
+        # It's a release
+        ma = re.match(r"<h2>(\S+)\s+\((\d+-\d+-\d+)\)</h2>", soupLine)
+        assert ma, f"Line does not match pattern: {soupLine}"
+        version = ma.group(1)
+        date = ma.group(2)
+        releases.append(f'  <release version="{version}" date="{date}" type="stable">')
+        releases.append(f'    <url>https://github.com/jorio/gitfourchette/releases/tag/v{version}</url>')
+        releases.append('    <description>')
+        releases.append('    </description>')
+        releases.append('  </release>')
+
+    releases.insert(0, "<releases>")
+    releases.append("</releases>")
+    releases = ['  ' + r for r in releases]
+
+    patchSection(metainfoPath, "\n".join(releases))
+
+
 if __name__ == '__main__':
     args = makeParser().parse_args()
 
     FORCE = args.force
+
+    if args.sync:
+        syncBuiltinChangelog()
+        syncFlatpakChangelog()
 
     if args.lang:
         args.pot = True
@@ -461,7 +523,7 @@ if __name__ == '__main__':
         writeFreezeFile(args.freeze)
         sys.exit(0)
 
-    if not (args.ui or args.pot or args.po or args.mo or args.clean_po or args.weblate_credits or args.contributors):
+    if not (args.sync or args.ui or args.pot or args.po or args.mo or args.clean_po or args.weblate_credits or args.contributors):
         makeParser().print_usage()
         sys.exit(1)
 
