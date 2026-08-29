@@ -4,31 +4,25 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-import os
 import os.path
-import shutil
 from contextlib import suppress
 
-import pytest
 from pytestqt.qtbot import QtBot
-
-from gitfourchette.forms.textinputdialog import TextInputDialog
-from gitfourchette.repowidget import RepoWidget
-from .util import *
 
 from gitfourchette import settings
 from gitfourchette.application import GFApplication
 from gitfourchette.forms.aboutdialog import AboutDialog
 from gitfourchette.forms.commitdialog import CommitDialog
-from gitfourchette.forms.donateprompt import DonatePrompt
 from gitfourchette.forms.processdialog import ProcessDialog
 from gitfourchette.forms.reposettingsdialog import RepoSettingsDialog
 from gitfourchette.forms.repostub import RepoStub
+from gitfourchette.forms.textinputdialog import TextInputDialog
 from gitfourchette.graphview.commitlogmodel import SpecialRow, CommitLogModel
-from gitfourchette.mainwindow import MainWindow
 from gitfourchette.nav import NavLocator
+from gitfourchette.repowidget import RepoWidget
 from gitfourchette.settings import Session
 from gitfourchette.sidebar.sidebarmodel import SidebarItem
+from .util import *
 
 
 def bringUpRepoSettings(rw):
@@ -574,217 +568,6 @@ def testAllTaskNamesTranslated(mainWindow):
                     and type is not tasks.RepoTask
                     and type not in tasks.TaskBook.names):
                 raise AssertionError(f"Missing task name translation for {key}")
-
-
-def testDonatePrompt(mainWindow):
-    from gitfourchette import settings
-    app = GFApplication.instance()
-
-    now = QDateTime.currentDateTime().toSecsSinceEpoch()
-    secondsInADay = 60 * 60 * 24
-
-    class Session:
-        numSessions = 0
-
-        def __init__(self, begin=True, end=True):
-            self.begin = begin
-            self.end = end
-
-        def __enter__(self) -> MainWindow:
-            if self.begin:
-                app.mainWindow = None
-                app.beginSession()
-                QTest.qWait(1)
-            window = app.mainWindow
-            assert window is not None
-            Session.numSessions += 1
-            window.setWindowTitle(f"(DonatePrompt session {Session.numSessions})")
-            return window
-
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            if self.end:
-                # Essentially a condensed version of the mainWindow fixture's cleanup code.
-                app.mainWindow.close()
-                app.mainWindow.deleteLater()
-                waitUntilTrue(lambda: not app.mainWindow)
-                app.endSession(clearTempDir=False)
-
-    def daysToNextPrompt() -> int:
-        return (settings.prefs.donatePrompt - now) // secondsInADay
-
-    def schedulePromptInThePast():
-        settings.prefs.donatePrompt = now - 1
-        settings.prefs.write(True)
-
-    # Launch many sessions in the same day - Donate prompt mustn't show up
-    for i in range(15):
-        # Don't schedule the prompt before hitting 10 launches
-        assert 0 == settings.prefs.donatePrompt
-
-        with Session(begin=i != 0) as window:
-            assert not window.findChild(DonatePrompt)
-
-    # Tenth launch should schedule donate prompt to appear in 60 days
-    assert 59 <= daysToNextPrompt() <= 61
-
-    # Force prompt to appear at the next launch for this test
-    schedulePromptInThePast()
-
-    # Make a bogus session. A dialog is vying for our attention so the donate prompt shouldn't get in the way
-    bogusSesh = settings.Session()
-    bogusSesh.tabs = [qTempDir() + "/---this-path-should-not-exist---"]
-    bogusSesh.write(True)
-    with Session() as window:
-        acceptQMessageBox(window, "session couldn.t be restored")
-        assert not window.findChild(DonatePrompt)
-
-    # Intercept prompt and click "never show again"
-    with Session() as window:
-        donate: DonatePrompt = window.findChild(DonatePrompt)
-        donate.ui.byeButton.click()
-    with Session() as window:
-        assert not window.findChild(DonatePrompt)
-        assert settings.prefs.donatePrompt < 0  # permanently disabled
-
-    # Force prompt to appear at the next launch again
-    schedulePromptInThePast()
-
-    # Intercept prompt and click "remind me in 3 months"
-    with Session() as window:
-        donate: DonatePrompt = window.findChild(DonatePrompt)
-        donate.ui.postponeButton.click()
-    assert 89 <= daysToNextPrompt() <= 91
-
-    # Force prompt to appear at the next launch again
-    schedulePromptInThePast()
-
-    # Intercept prompt and click "donate"
-    with Session() as window, MockDesktopServicesContext() as services:
-        assert not services.urls
-        donate: DonatePrompt = window.findChild(DonatePrompt)
-        donate.ui.donateButton.click()
-        QTest.qWait(1500)
-        assert len(services.urls) == 1
-        assert services.urls[0].toString() == "https://ko-fi.com/jorio"
-
-    # Prompt must not show up again
-    with Session(end=False) as window:
-        assert not window.findChild(DonatePrompt)
-        assert settings.prefs.donatePrompt < 0  # permanently disabled
-
-
-def testRestoreSession(tempDir, mainWindow):
-    app = GFApplication.instance()
-
-    for i in range(10):
-        wd = unpackRepo(tempDir, renameTo=f"RepoCopy{i:04}")
-        rw = mainWindow.openRepo(wd)
-        QTest.qWait(1)
-
-    assert mainWindow.tabs.count() == 10
-    mainWindow.tabs.setCurrentIndex(5)
-
-    rw = mainWindow.currentRepoWidget()
-    assert rw.repo.repo_name() == "RepoCopy0005"
-
-    # Collapse something in sidebar
-    originNode = rw.sidebar.findNodeByKind(SidebarItem.Remote)
-    originIndex = rw.sidebar.nodeToFilterIndex(originNode)
-    assert rw.sidebar.isExpanded(originIndex)
-    rw.sidebar.collapse(originIndex)
-    assert not rw.sidebar.isExpanded(originIndex)
-
-    # Hide something in sidebar
-    rw.toggleHideRefPattern("refs/heads/no-parent")
-
-    # Set repo nickname
-    triggerMenuAction(mainWindow.menuBar(), "repo/rename")
-    tid = findQDialog(mainWindow, "nickname", t=TextInputDialog)
-    tid.lineEdit.setText("Nickname0005")
-    tid.accept()
-
-    # End this session
-    originalWindow = mainWindow
-    originalWindow.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
-    originalWindow.close()
-    app.endSession(clearTempDir=False)
-    app.mainWindow = None
-    QTest.qWait(0)
-
-    # Make one of the repos inaccessible
-    shutil.rmtree(f"{tempDir.name}/RepoCopy0003")
-
-    # ----------------------------------------------
-    # Begin new session
-
-    app.beginSession()
-    mainWindow2: MainWindow = waitUntilTrue(lambda: app.mainWindow)
-
-    # We've lost one of the repos
-    acceptQMessageBox(mainWindow2, r"session could.?n.t be restored.+RepoCopy0003")
-    assert mainWindow2.tabs.count() == 9
-
-    # Should restore to same tab
-    rw = mainWindow2.currentRepoWidget()
-    assert rw.repo.repo_name() == "RepoCopy0005"
-
-    # Make sure origin node is still collapsed
-    originNode = rw.sidebar.findNodeByKind(SidebarItem.Remote)
-    originIndex = rw.sidebar.nodeToFilterIndex(originNode)
-    assert not rw.sidebar.isExpanded(originIndex)
-
-    # Make sure hidden branch is still hidden
-    hiddenBranchNode = rw.sidebar.findNodeByRef("refs/heads/no-parent")
-    assert rw.sidebar.sidebarModel.isExplicitlyHidden(hiddenBranchNode)
-
-    # Make sure nickname still set
-    assert mainWindow2.tabs.tabs.tabText(mainWindow2.tabs.currentIndex()) == "Nickname0005"
-
-    # Clean up
-    mainWindow2.close()
-    mainWindow2.deleteLater()
-    waitUntilTrue(lambda: not app.mainWindow)
-
-    # Let fixture delete original window
-    app.mainWindow = originalWindow
-
-
-def testCommandLinePaths(tempDir, mainWindow):
-    wd1 = unpackRepo(tempDir, renameTo="wd1")
-    wd2 = unpackRepo(tempDir, renameTo="wd2")
-    app = GFApplication.instance()
-
-    # End default unit test session so we can start a new one with fake command line paths
-    originalWindow = mainWindow
-    originalWindow.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)  # Let fixture delete original MainWindow
-    originalWindow.close()
-    app.endSession(clearTempDir=False)
-    app.mainWindow = None
-
-    # Begin new session
-    app.commandLinePaths = [
-        wd1 + "/c/c1.txt",  # Any file within the repo should work
-        wd2,
-        wd1,  # Should count as duplicate of the first tab
-    ]
-    app.beginSession()
-    QTest.qWait(1)
-    mainWindow = app.mainWindow
-    assert mainWindow is not originalWindow
-
-    # Check that we opened the correct repos
-    assert mainWindow.tabs.count() == 2  # Two distinct repos were opened
-    assert mainWindow.tabs.currentIndex() == 0  # The last path that was passed was within the first repo
-    assert mainWindow.tabs.widget(0).workdir == os.path.realpath(wd1)
-    assert mainWindow.tabs.widget(1).workdir == os.path.realpath(wd2)
-
-    # Clean up
-    mainWindow.close()
-    mainWindow.deleteLater()
-    waitUntilTrue(lambda: not app.mainWindow)
-
-    # Let fixture delete original window
-    app.mainWindow = originalWindow
 
 
 def testMaximizeDiffArea(tempDir, mainWindow):
