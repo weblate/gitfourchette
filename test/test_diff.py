@@ -9,6 +9,8 @@ import re
 import textwrap
 
 from gitfourchette import settings
+from gitfourchette.blameview.blamewindow import BlameWindow
+from gitfourchette.codeview.codewindow import CodeWindow
 from gitfourchette.diffview.diffview import DiffView
 from gitfourchette.nav import NavLocator
 from gitfourchette.settings import WhitespaceMode
@@ -471,10 +473,10 @@ def testDiffStrayLineEndings(tempDir, mainWindow):
 
     rw.jump(NavLocator.inUnstaged(path="crlf.txt"), check=True)
     assert rw.diffView.isVisible()
-    assert rw.diffView.toPlainText().lower() == (
+    assert rw.diffView.toPlainText().replace("\u2009", " ") == (
         "@@ -0,0 +1,3 @@\n"
-        "hi<crlf>\n"
-        "how you doin<crlf>\n"
+        "hi<CRLF>\n"
+        "how you doin<CRLF>\n"
         "bye<no newline at end of file>"
     )
 
@@ -484,9 +486,9 @@ def testDiffStrayLineEndings(tempDir, mainWindow):
     # case of importing an ancient Mac file from the 80s/90s into a Git repo.
     rw.jump(NavLocator.inUnstaged(path="cr.txt"), check=True)
     assert rw.diffView.isVisible()
-    assert rw.diffView.toPlainText().lower() == (
+    assert rw.diffView.toPlainText().replace("\u2009", " ") == (
         "@@ -0,0 +1 @@\n"
-        "ancient mac file<cr>"
+        "ancient mac file<CR>"
     )
 
 
@@ -1127,7 +1129,8 @@ def testCharacterLevelDiffInUnicodeSurrogatePairs(tempDir, mainWindow, sampleTex
     assert reconstructLine(2) == sampleText[1]
 
 
-def testDiffExoticLineEndings(tempDir, mainWindow):
+@pytest.mark.parametrize("where", ["diff", "blame", "codewindow"])
+def testCodeViewExoticLineEndings(tempDir, mainWindow, where):
     """
     Make sure exotic line endings don't interfere with patch display.
     (Addresses cpython:02c0467f:Modules/_tkinter.c which contains
@@ -1136,36 +1139,87 @@ def testDiffExoticLineEndings(tempDir, mainWindow):
 
     wd = unpackRepo(tempDir)
 
-    # All "exotic" line endings that could mess with patch parsing, especially
-    # with splitlines() - which we definitely shouldn't use when parsing
-    # patches! Not testing U+2029 because Qt automatically generates new
-    # blocks when it sees one of these.
+    # All "exotic" line endings that could mess with:
+    # - the assumption that there's always exactly one QTextBlock per LineData
+    # - patch parsing, especially with splitlines(), which we definitely
+    #   shouldn't use when parsing patches!
+    # Also, this is a C file as a torture test for syntax highlighting as well.
     lines = [
-        "begin",
-        "1 carriage return\r",
-        "2 line tabulation\v",
-        "3 form feed\f",
-        "4 file separator\x1c",
-        "5 group separator\x1d",
-        "6 record separator\x1e",
-        "7 c1 control code\x85",
-        "8 unicode line separator\u2028",
-        "end",
+        'int begin;',
+        '"carriage return followed by line feed";\r',
+        '"carriage return\rin the middle of a line";',
+        '"line tabulation";\v',
+        '"form feed";\f',
+        '"file separator";\x1c',
+        '"group separator";\x1d',
+        '"record separator";\x1e',
+        '"c1 control code";\x85',
+        '"unicode line separator";\u2028',
+        '"unicode paragraph separator";\u2029',
+        'int end;',
     ]
 
     text = "\n".join(lines) + "\n"
 
-    writeFile(f"{wd}/exotic.txt", text)
+    if where == "diff":
+        writeFile(f"{wd}/exotic.c", text)
+        rw = mainWindow.openRepo(wd)
+        view = rw.diffView
+        startBlock = 1
+        expectTrailers = True
+        expectTrailingBlock = False
+        closeWindow = False
+    elif where == "blame":
+        writeFile(f"{wd}/exotic.c", text)
+        shell("git add exotic.c; git commit -m 'exotic'", wd)
+        rw = mainWindow.openRepo(wd)
+        rw.jump(NavLocator.inRef("HEAD", "exotic.c"))
+        triggerContextMenuAction(rw.committedFiles.viewport(), "blame")
+        blameWindow = findWindow("blame", BlameWindow)
+        view = blameWindow.textEdit
+        startBlock = 0
+        expectTrailers = False
+        expectTrailingBlock = True
+        closeWindow = True
+    elif where == "codewindow":
+        cw = CodeWindow(uniqueIdentifier="bogus")
+        cw.setPlainText(text, "exotic.c")
+        cw.show()
+        view = cw.codeView
+        startBlock = 0
+        expectTrailers = False
+        expectTrailingBlock = True
+        closeWindow = True
+    else:
+        raise NotImplementedError()
 
-    rw = mainWindow.openRepo(wd)
+    doc = view.document()
+    assert doc.blockCount() == 1 + len(lines)
 
-    reconstructedText = [rw.diffView.document().findBlockByNumber(i).text()
-                         for i in range(rw.diffView.blockCount())]
+    # Smoke test: select each line (this used to fail)
+    for i in range(len(lines)):
+        qteSelectBlocks(view, 1 + i, 1 + i)
 
-    expectedLines = lines[:]
-    expectedLines[1] = expectedLines[1].removesuffix("\r") + "<CRLF>"
+    # Reconstruct the text from the QTextDocument's representation
+    rl = [doc.findBlockByNumber(i).text() for i in range(startBlock, doc.blockCount())]
 
-    assert expectedLines == reconstructedText[1:]
+    el = lines[:]  # expected lines
+    el[1] = el[1].removesuffix("\r")
+    el[2] = el[2].replace("\r", "\u2028")
+    el[-2] = el[-2].replace("\u2029", "\u2028")
+
+    if expectTrailers:
+        el[1] += "<CRLF>"
+        el[2] += "<stray CR in this line>".replace(" ", "\u2009")
+        el[-2] += "<stray PS in this line>".replace(" ", "\u2009")
+
+    if expectTrailingBlock:
+        el.append("")
+
+    assert el == rl
+
+    if closeWindow:
+        view.window().close()
 
 
 def testDiffTokenizationOnIndentedLineWithIgnoreAllSpace(tempDir, mainWindow):

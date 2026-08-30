@@ -425,7 +425,8 @@ class LoadPatch(RepoTask):
             pass
 
         data = file.read(self.repo)
-        job = LexJob(lexer, data, key)
+        text = data.decode("utf-8", errors="replace")
+        job = LexJob(lexer, text, key)
 
         assert job.fileKey == key
         assert job.fileKey not in LexJobCache.cache

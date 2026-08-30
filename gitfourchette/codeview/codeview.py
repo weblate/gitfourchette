@@ -14,7 +14,7 @@ from gitfourchette.codeview.codegutter import CodeGutter
 from gitfourchette.codeview.codehighlighter import CodeHighlighter
 from gitfourchette.codeview.coderubberband import CodeRubberBand
 from gitfourchette.codeview.codesearch import CodeSearch
-from gitfourchette.diffview.diffdocument import DiffTextFormats
+from gitfourchette.diffview.diffdocument import DiffTextFormats, TRANSLATE_STRAY_LINE_ENDINGS
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator
@@ -160,6 +160,13 @@ class CodeView(QPlainTextEdit):
 
         # Clear the actual contents
         super().clear()
+
+    def setPlainText(self, text: str):
+        # Normalize line endings so our representation matches Git's
+        if "\r" in text or "\u2029" in text:
+            text = text.replace("\r\n", "\n")
+            text = text.translate(TRANSLATE_STRAY_LINE_ENDINGS)
+        super().setPlainText(text)
 
     # ---------------------------------------------
     # Restore position

@@ -6,13 +6,14 @@
 
 from __future__ import annotations
 
+from pygments.lexer import Lexer
+
 from gitfourchette.porcelain import Oid
 from gitfourchette.qt import *
 from gitfourchette.toolbox.benchmark import benchmark
 from gitfourchette.toolbox.textutils import qstringLength
 
 if TYPE_CHECKING:
-    from pygments.lexer import Lexer
     from pygments.token import _TokenType
 
     type LineTokenization = list[tuple[_TokenType, int]]
@@ -32,23 +33,23 @@ class LexJob(QObject):
 
     pulse = Signal()
 
-    def __init__(self, lexer: Lexer, data: bytes | str, fileKey: KeyType):
+    def __init__(self, lexer: Lexer, text: str, fileKey: KeyType):
         # Don't bind the QObject to a parent to allow Python's refcounting to
         # purge evicted cache entries that are not currently in use by the UI.
         super().__init__(None)
         self.setObjectName("LexJob")
 
         assert fileKey
-        assert data, "don't create a LexJob without some data"
+        assert text, "don't create a LexJob without some data"
 
         self.lexer = lexer
         self.lqTokenMap: dict[int, LineTokenization] = {}
         self.hqTokenMap: dict[int, LineTokenization] = {1: []}
         self.fileKey = fileKey
-        self.fileSize = len(data)
+        self.fileSize = len(text)
 
         self.currentLine = 1
-        self.lexGen = lexer.get_tokens(data)  # type: ignore[arg-type] # pygments stubs unaware that data can be bytes
+        self.lexGen = lexer.get_tokens(text)
 
         self.scheduler = QTimer(self)
         self.scheduler.setSingleShot(True)
@@ -136,3 +137,41 @@ class LexJob(QObject):
             assert self.lexingComplete
 
         self.pulse.emit()
+
+
+def _overridePygmentsPreprocessLexerInput(self: Lexer, text: str):
+    """
+    Monkeypatch of Pygments' Lexer._preprocess_lexer_input. The base
+    implementation normalizes line endings slightly differently than Git.
+    We need line numbers to match Git exactly.
+    """
+
+    # Pygments allows passing in bytes or str, we'll just assume str
+    assert isinstance(text, str)
+
+    # Strip BOM, like Pygments does
+    text = text.removeprefix('\ufeff')
+
+    # Normalize CRLF newlines
+    lfNormalized = text.replace('\r\n', '\n')
+
+    # IMPORTANT: Here's where we differ from Pygments! Git does not see a stray
+    # CR as a line ending. Pretend it's just whitespace for Pygments.
+    if text is not lfNormalized:  # skip if text didn't contain any CR
+        lfNormalized = text.replace('\r', ' ')
+        text = lfNormalized
+
+    # The rest of the function is identical to Pygments 2.20's implementation.
+    if self.stripall:
+        text = text.strip()
+    elif self.stripnl:
+        text = text.strip('\n')
+    if self.tabsize > 0:
+        text = text.expandtabs(self.tabsize)
+    if self.ensurenl and not text.endswith('\n'):
+        text += "\n"
+
+    return text
+
+
+Lexer._preprocess_lexer_input = _overridePygmentsPreprocessLexerInput  # type: ignore[attr-defined]

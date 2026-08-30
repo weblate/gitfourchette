@@ -21,6 +21,20 @@ from gitfourchette.syntax import LexJob, ColorScheme
 from gitfourchette.toolbox import *
 
 
+STRAY_LINE_ENDINGS = "\r\u2029"
+TRANSLATE_STRAY_LINE_ENDINGS = {ord(c): 0x2028 for c in STRAY_LINE_ENDINGS}
+"""
+Qt treats LF, CR, and U+2029 (PARAGRAPH SEPARATOR) as newlines, and QTextCursor
+creates a new QTextBlock when inserting text that contains one of these. But Git
+only recognizes LF as a newline. We want QTextBlocks to match up exactly with
+what Git sees as a line, so translate the offending chars to U+2028 (LINE
+SEPARATOR) to show a newline visually without creating a QTextBlock.
+
+(Note: Only call str.translate with this table on a string that has had CRLF
+replaced with LF! This table is only intended to translate stray newline chars.)
+"""
+
+
 _indexLinePattern = re.compile(r"index ([\da-f]+)\.\.([\da-f]+)")
 _hunkHeaderPattern = re.compile(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 
@@ -360,34 +374,51 @@ class DiffDocument:
 
             # Process line ending
             trailer = ""
-            if ld.text.endswith('\r\n'):
-                trimBack = -2
+            text = ld.text
+            if text.endswith("\r\n"):
+                text = text[:-2]
                 if showStrayCRs:
                     trailer = "<CRLF>"
-            elif ld.text.endswith('\n'):
-                trimBack = -1
-            elif ld.text.endswith('\r'):
-                trimBack = -1
+            elif text.endswith("\n"):
+                text = text[:-1]
+            elif text.endswith("\r"):
+                text = text[:-1]
                 if showStrayCRs:
                     trailer = "<CR>"
             else:
                 trailer = _("<no newline at end of file>")
-                trimBack = None  # yes, None. This will cancel slicing.
 
+            # The code assumes there's exactly one QTextBlock for each LineData.
+            # Don't let Qt split the line into multiple blocks if it contains
+            # stray line terminators (CR or PARAGRAPH SEPARATOR).
+            if "\r" in text or "\u2029" in text:
+                strayChar = next((c for c in text if c in STRAY_LINE_ENDINGS), "")
+                strayName = "CR" if strayChar == "\r" else "PS"
+                trailer += _("<stray {0} in this line>", strayName)
+                text = text.translate(TRANSLATE_STRAY_LINE_ENDINGS)
+
+            # Insert the text
             if isEmpty:
                 ld.cursorStart = 0
             else:
                 cursor.insertBlock()
                 ld.cursorStart = cursor.position()
-
+            blockStart = cursor.blockNumber()
             cursor.setBlockFormat(bf)
             cursor.setBlockCharFormat(cf)
-            cursor.insertText(ld.text[:trimBack])
+            cursor.insertText(text)
 
+            # Insert the trailer
             if trailer:
+                # Replace spaces in trailer so whitespace formatting skips it
+                trailer = trailer.replace(" ", "\u2009")
+
                 ld.trailerLength = len(trailer)
                 cursor.setCharFormat(DiffTextFormats.warningCF)
                 cursor.insertText(trailer)
+
+            numBlocks = 1 + cursor.blockNumber() - blockStart
+            assert numBlocks, f"Qt inserted {numBlocks} blocks for line {ld.text:!r}"
 
             ld.cursorEnd = cursor.position()
             isEmpty = False
