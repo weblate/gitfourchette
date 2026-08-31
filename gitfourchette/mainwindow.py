@@ -21,7 +21,7 @@ from gitfourchette.codeview.codewindow import CodeWindow
 from gitfourchette.dropzone import DropAction, DropZone
 from gitfourchette.exttools.toolprocess import ToolProcess, setUpToolCommand
 from gitfourchette.exttools.usercommand import UserCommand
-from gitfourchette.forms.aboutdialog import AboutDialog
+from gitfourchette.forms.aboutdialog import AboutDialog, USERS_GUIDE_URL
 from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.maintoolbar import MainToolBar
 from gitfourchette.forms.repostub import RepoStub
@@ -42,8 +42,6 @@ from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
 
 logger = logging.getLogger(__name__)
-
-USERS_GUIDE_URL = "https://gitfourchette.org/guide"
 
 
 class NoRepoWidgetError(Exception):

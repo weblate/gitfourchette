@@ -554,6 +554,15 @@ def testAboutDialog(mainWindow):
     assert hover(header, hoverPoint)  # move mouse back in label
     waitUntilTrue(lambda: QToolTip.text() == "https://gitfourchette.org")
 
+    with MockDesktopServicesContext(dlg) as services:
+        donateButton = findWidgetWithText(dlg.ui.buttonBox.buttons(), "donate")
+        donateButton.click()
+        assert "ko-fi.com/jorio" in services.urls[-1].toString()
+
+        guideButton = findWidgetWithText(dlg.ui.buttonBox.buttons(), "guide")
+        guideButton.click()
+        assert "gitfourchette.org/guide" in services.urls[-1].toString()
+
     dlg.accept()
 
 

@@ -20,6 +20,7 @@ from gitfourchette.toolbox import *
 from gitfourchette import settings
 
 WEBSITE_URL = "https://gitfourchette.org"
+USERS_GUIDE_URL = "https://gitfourchette.org/guide"
 DONATE_URL = "https://ko-fi.com/jorio"
 TRANSLATE_URL = "https://gitfourchette.org/localization"
 
@@ -156,6 +157,26 @@ class AboutDialog(QDialog):
             Public License, version 3</a>.</p>""")
 
         # ---------------------------------------------------------------------
+        # Donate button
+
+        donateButton = self.ui.buttonBox.addButton(_("Donate"), QDialogButtonBox.ButtonRole.HelpRole)
+        donateButton.setIcon(stockIcon("heart", "gray=#1a9cd2"))
+        donateButton.setCursor(Qt.CursorShape.PointingHandCursor)
+        donateButton.setToolTip(DONATE_URL)
+        donateButton.clicked.connect(self.onDonateClicked)
+        self.donateButton = donateButton
+
+        guideButton = self.ui.buttonBox.addButton(_("User’s Guide"), QDialogButtonBox.ButtonRole.HelpRole)
+        guideButton.setIcon(stockIcon("help-contents"))
+        guideButton.setCursor(Qt.CursorShape.PointingHandCursor)
+        guideButton.setToolTip(USERS_GUIDE_URL)
+        guideButton.clicked.connect(self.onUsersGuideClicked)
+
+        # Don't let Donate take over focus
+        okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
+        okButton.setFocus()
+
+        # ---------------------------------------------------------------------
 
         pixmap = QPixmap("assets:icons/gitfourchette")
         pixmap.setDevicePixelRatio(4)
@@ -196,6 +217,13 @@ class AboutDialog(QDialog):
 
         # Setting the text AFTER the UI has been set up is much faster
         label.setText(markup)
+
+    def onDonateClicked(self):
+        QDesktopServices.openUrl(QUrl(DONATE_URL))
+        self.donateButton.setText(_p("DonatePrompt", "THANK YOU!"))
+
+    def onUsersGuideClicked(self):
+        QDesktopServices.openUrl(QUrl(USERS_GUIDE_URL))
 
     @staticmethod
     def popUp(parent: QWidget):
