@@ -466,6 +466,13 @@ class SidebarModel(QAbstractItemModel):
             if submoduleKey not in repoModel.initializedSubmodules:
                 node.warning = _("Submodule not initialized.")
 
+        # Remove Submodules section if empty
+        if not submoduleRoot.children:
+            a = rootNode.children.pop()
+            b = rootNode.children.pop()
+            assert a is submoduleRoot
+            assert b.kind == SidebarItem.Spacer
+
         # -----------------------------
         # Commit new model
         # -----------------------------

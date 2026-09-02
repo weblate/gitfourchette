@@ -11,6 +11,7 @@ from gitfourchette.nav import NavLocator
 from gitfourchette.repomodel import UC_FAKEID
 from gitfourchette.sidebar.sidebarmodel import SidebarItem, SidebarModel
 from gitfourchette.toolbox import naturalSort
+from . import reposcenario
 from .util import *
 
 
@@ -108,6 +109,8 @@ def testSidebarCollapsePersistent(tempDir, mainWindow):
 
 def testSidebarCollapsedHeaderShowsChildCount(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
+    reposcenario.submodule(wd)
+
     rw = mainWindow.openRepo(wd)
 
     sb = rw.sidebar
@@ -124,7 +127,7 @@ def testSidebarCollapsedHeaderShowsChildCount(tempDir, mainWindow):
     sb.collapseAll()
 
     assert [i.data() for i in indexes] == [
-        "Remotes (1)", "Tags (1)", "Stashes (0)", "Submodules (0)"]
+        "Remotes (1)", "Tags (1)", "Stashes (0)", "Submodules (1)"]
 
 
 def testSidebarCollapseExpandAllFolders(tempDir, mainWindow):
@@ -716,3 +719,17 @@ def testSidebarFilterCollapseState(tempDir, mainWindow):
     # folder2 was originally collapsed, but it should now be expanded because
     # we selected it before closing the search bar.
     assert isExpanded("refs/heads/folder2/leaf")
+
+
+def testSidebarHideSubmoduleSectionWithoutSubmodules(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
+
+    with pytest.raises(KeyError):
+        sb.findNodeByKind(SidebarItem.Submodule)
+
+    reposcenario.submodule(wd)
+    rw.refreshRepo()
+
+    assert sb.findNodeByKind(SidebarItem.Submodule)
