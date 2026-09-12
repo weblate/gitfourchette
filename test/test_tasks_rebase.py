@@ -38,7 +38,8 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
         waitUntilTrue(sequenceView.hasFocus)
 
         # Select row
-        qlvClickNthRow(sequenceView, todo.row)
+        bottomUpRow = sequenceView.model().rowCount() - 1 - todo.row
+        qlvClickNthRow(sequenceView, bottomUpRow)
 
         # Press keyboard shortcut for desired operation
         QTest.keyClicks(sequenceView.viewport(), RebaseOpLetters[todo.op])
@@ -54,14 +55,14 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
             lineEdit: QLineEdit = sequenceView.findChild(QLineEdit)
             assert lineEdit is not None
             assert lineEdit.hasFocus()
+            assert lineEdit.isVisible()
 
             # Fill it in
             QTest.keyClicks(lineEdit, todo.message)
 
             # Warning: in real life, Return commits the current text in the
-            # QLineEdit, but in offscreen mode, this accepts the entire
-            # dialog. Just use tab to commit instead...
-            QTest.keyPress(lineEdit, Qt.Key.Key_Tab)
+            # QLineEdit, but in offscreen mode, this accepts the entire dialog.
+            lineEdit.clearFocus()
             QTest.qWait(0)
 
     return rebaseDialog
@@ -175,7 +176,7 @@ def testRebaseRewordDisplayMessage(tempDir, mainWindow):
         return dialog.ui.sequence.selectedRebaseLines()[0].displayMessage()
 
     # Switching from 'reword' to 'pick' should revert the old name
-    qlvClickNthRow(dialog.ui.sequence, 0)
+    qlvClickNthRow(dialog.ui.sequence, 1)
     assert "hello rewording" == getSelectedMessage()
     QTest.keyClicks(dialog.ui.sequence.viewport(), RebaseOpLetters[RebaseOp.Pick])
     assert "Rename c/c2.txt => c/c2-2.txt" == getSelectedMessage()
@@ -525,7 +526,7 @@ def testRebaseJumpToCommit(tempDir, mainWindow):
     rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
 
     rebaseDialog.ui.sequence.setFocus()
-    qlvClickNthRow(rebaseDialog.ui.sequence, rebaseDialog.ui.sequence.model().rowCount() - 1)
+    qlvClickNthRow(rebaseDialog.ui.sequence, 0)
     triggerContextMenuAction(rebaseDialog.ui.sequence.viewport(), "view commit in repo")
 
     visualPause()

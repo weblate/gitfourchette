@@ -56,8 +56,8 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, widget)
 
         # Draw pill
-        blendAbove, blendBelow = self.pillBlending(index)
-        self.drawPill(painter, rect, item.op, blendAbove, blendBelow)
+        blendOlder, blendNewer = self.pillBlending(index)
+        self.drawPill(painter, rect, item.op, blendOlder, blendNewer)
         rect.adjust(_ColumnPadding, 0, 0, 0)
 
         # Draw hash
@@ -123,11 +123,14 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             painter: QPainter,
             rect: QRect,
             op: RebaseOp,
-            opAbove: RebaseOp | None = None,
-            opBelow: RebaseOp | None = None,
+            olderOp: RebaseOp | None = None,
+            newerOp: RebaseOp | None = None,
             showDanglingErrors: bool = True,
             width: int = 0,
     ):
+        opAbove = newerOp if settings.prefs.rebaseBottomUp else olderOp
+        opBelow = olderOp if settings.prefs.rebaseBottomUp else newerOp
+
         isNarrow = 0 < width <= 50
         isCramped = 0 < width <= 40
 
@@ -184,7 +187,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         else:
             opText = str(op) if not isCramped else RebaseOpLetters[op]
 
-        if showDanglingErrors and not opAbove and (op == RebaseOp.Fixup or op == RebaseOp.Squash):
+        if showDanglingErrors and not olderOp and (op == RebaseOp.Fixup or op == RebaseOp.Squash):
             opText = f"¿{opText}?"
 
         # Paint
@@ -202,42 +205,35 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
 
     @staticmethod
     def pillBlending(index: QModelIndex) -> tuple[RebaseOp | None, RebaseOp | None]:
-        connectAbove = False
-        connectBelow = False
-        opAbove: RebaseOp | None = None
-        opBelow: RebaseOp | None = None
+        connectOlder = False
+        connectNewer = False
+        olderOp: RebaseOp | None = None
+        newerOp: RebaseOp | None = None
 
-        model: QAbstractItemModel = index.model()
-        startOp: RebaseOp = index.data(_ItemRole).op
-        startRow = index.row()
-        startCol = index.column()
+        model = index.model()
+        assert isinstance(model, RebaseSequenceModel)
+        startRow = model.flipRow(index.row())
+        startOp = model.sequence[startRow].op
 
-        for row in range(startRow + 1, model.rowCount()):
-            index = model.index(row, startCol)
-            assert index.isValid()
-            op: RebaseOp = index.data(_ItemRole).op
-            if op == RebaseOp.Drop:
-                continue
-            if op == RebaseOp.Fixup or op == RebaseOp.Squash:
-                connectBelow = True
-            break
+        for row in range(startRow + 1, len(model.sequence)):
+            op = model.sequence[row].op
+            if op != RebaseOp.Drop:
+                connectNewer |= op in [RebaseOp.Fixup, RebaseOp.Squash]
+                break
 
         if startOp == RebaseOp.Fixup or startOp == RebaseOp.Squash:
-            connectAbove = startRow != 0
+            connectOlder = startRow != 0
         elif startOp == RebaseOp.Drop:
-            connectAbove = connectBelow
+            connectOlder = connectNewer
 
-        if connectAbove:
-            above = model.index(startRow - 1, 0)
-            if above.isValid():
-                opAbove = above.data(_ItemRole).op
+        if connectOlder and startRow >= 1:
+            olderOp = model.sequence[startRow - 1].op
 
-        if connectBelow:
-            below = model.index(startRow + 1, 0)
-            assert below.isValid()
-            opBelow = below.data(_ItemRole).op
+        if connectNewer:
+            assert startRow + 1 < len(model.sequence)
+            newerOp = model.sequence[startRow + 1].op
 
-        return opAbove, opBelow
+        return olderOp, newerOp
 
     def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
         editor = QLineEdit(parent)

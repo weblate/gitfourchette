@@ -17,8 +17,7 @@
    <item row="1" column="0">
     <widget class="QHintButton" name="toolButton">
      <property name="toolTip">
-      <string>Drag and drop lines to rearrange them.
-They are executed from top to bottom.</string>
+      <string>Drag and drop lines to rearrange them.</string>
      </property>
      <property name="text">
       <string notr="true">?</string>

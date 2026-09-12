@@ -8,6 +8,7 @@ from __future__ import annotations  # TODO: Remove once we can drop support for 
 
 from typing import Any
 
+from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLine
 from gitfourchette.toolbox import QModelIndex_default
@@ -25,8 +26,14 @@ class RebaseSequenceModel(QAbstractListModel):
     def setSequence(self, sequence: TRebaseSequence):
         self.sequence = sequence
 
+    def flipRow(self, i: int) -> int:
+        if settings.prefs.rebaseBottomUp:
+            i = len(self.sequence) - 1 - i
+        return i
+
     def rebaseLineAtRow(self, row: int) -> RebaseLine:
-        return self.sequence[row]
+        i = self.flipRow(row)
+        return self.sequence[i]
 
     def supportedDropActions(self):
         return Qt.DropAction.MoveAction
@@ -58,10 +65,14 @@ class RebaseSequenceModel(QAbstractListModel):
         if insertAt > sourceRow:
             insertAt -= count
 
-        seq = self.sequence
-        moved = seq[sourceRow : sourceRow + count]
-        del seq[sourceRow : sourceRow + count]
-        seq[insertAt : insertAt] = moved
+        s1 = self.flipRow(sourceRow)
+        s2 = self.flipRow(sourceRow + count - 1)
+        s1, s2 = min(s1, s2), max(s1, s2)
+        insertAt = self.flipRow(insertAt)
+
+        moved = self.sequence[s1 : s2+1]
+        del self.sequence[s1 : s2+1]
+        self.sequence[insertAt : insertAt] = moved
 
         self.endMoveRows()
         return True

@@ -42,7 +42,6 @@ class Ui_RebaseDialog(object):
 
     def retranslateUi(self, RebaseDialog):
         RebaseDialog.setWindowTitle(_p("RebaseDialog", "Rebase"))
-        self.toolButton.setToolTip(_p("RebaseDialog", "Drag and drop lines to rearrange them.\n"
-"They are executed from top to bottom."))
+        self.toolButton.setToolTip(_p("RebaseDialog", "Drag and drop lines to rearrange them."))
 from gitfourchette.rebase.rebasesequenceview import RebaseSequenceView
 from gitfourchette.toolbox.qhintbutton import QHintButton

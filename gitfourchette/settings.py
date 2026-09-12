@@ -202,6 +202,7 @@ class Prefs(PrefsFile):
     resetDontShowAgain          : bool                  = False
     donatePrompt                : int                   = 0
     refSortClearTimestamp       : int                   = 0
+    rebaseBottomUp              : bool                  = True
 
     @property
     def listViewScrollMode(self) -> QAbstractItemView.ScrollMode:
