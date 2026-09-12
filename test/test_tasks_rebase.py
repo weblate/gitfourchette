@@ -386,9 +386,9 @@ def testRebaseSequenceStyleDropIndicator(tempDir, mainWindow, monkeypatch):
     RebaseSequenceStyle.
 
     QDragEnterEvent/QDragMoveEvent/QDropEvent work with MIME data, but Qt won't
-    preserve our QListWidgetItem subclass (RebaseLineWrapper) via MIME drag-and-
-    drop. To avoid corrupting the list, we don't actually complete the drop in
-    this coverage test (QDragLeaveEvent instead of QDropEvent).
+    preserve our custom data via MIME drag-and-drop. To avoid corrupting the
+    list, we don't actually complete the drop in this coverage test
+    (QDragLeaveEvent instead of QDropEvent).
     """
 
     callSpy = CallSpy(monkeypatch, RebaseSequenceStyle, "drawDropIndicator")
@@ -525,7 +525,7 @@ def testRebaseJumpToCommit(tempDir, mainWindow):
     rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
 
     rebaseDialog.ui.sequence.setFocus()
-    qlvClickNthRow(rebaseDialog.ui.sequence, rebaseDialog.ui.sequence.count() - 1)
+    qlvClickNthRow(rebaseDialog.ui.sequence, rebaseDialog.ui.sequence.model().rowCount() - 1)
     triggerContextMenuAction(rebaseDialog.ui.sequence.viewport(), "view commit in repo")
 
     visualPause()

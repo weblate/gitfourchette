@@ -10,8 +10,9 @@ from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator, NavFlags
 from gitfourchette.porcelain import Oid
 from gitfourchette.qt import *
-from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLineWrapper, RebaseOp, RebaseOpColors, RebaseOpLetters, SupportedRebaseOps
-from gitfourchette.toolbox import *
+from gitfourchette.rebase.rebasemodel import RebaseOp, RebaseOpColors, RebaseOpLetters, SupportedRebaseOps, TRebaseSequence
+from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
+from gitfourchette.toolbox import asyncMessageBox, QRichTextMenu, stockIcon
 
 
 class RebaseDialog(QDialog):
@@ -28,14 +29,14 @@ class RebaseDialog(QDialog):
 
         self.ui = Ui_RebaseDialog()
         self.ui.setupUi(self)
-        self.ui.sequence.customContextMenuRequested.connect(self.onContextMenuRequested)
-        self.ui.sequence.opShortcut.connect(self.setCommandOnSelection)
 
         # When data changes, flag the sequence as modified so that reject() asks
         # for confirmation before closing.
-        listModel = self.ui.sequence.model()
-        listModel.rowsMoved.connect(lambda: self.setWindowModified(True))
-        listModel.dataChanged.connect(lambda: self.setWindowModified(True))
+        self.ui.sequence.sequenceModel.rowsMoved.connect(lambda: self.setWindowModified(True))
+        self.ui.sequence.sequenceModel.dataChanged.connect(lambda: self.setWindowModified(True))
+
+        self.ui.sequence.customContextMenuRequested.connect(self.onContextMenuRequested)
+        self.ui.sequence.opShortcut.connect(self.setCommandOnSelection)
 
         # Restore window geometry (TODO: On GNOME, is issue #50 still relevant?)
         if not GNOME and RebaseDialog.LastGeometry:
@@ -69,29 +70,27 @@ class RebaseDialog(QDialog):
     def setSequence(self, sequence: TRebaseSequence):
         self.initialSequence = [line.copy() for line in sequence]
 
-        self.ui.sequence.clear()
-        for line in self.initialSequence:
-            lineWrapper = RebaseLineWrapper(line)
-            self.ui.sequence.addItem(lineWrapper)
+        self.ui.sequence.sequenceModel.setSequence(self.initialSequence)
 
     def setCommandOnSelection(self, command: RebaseOp):
         assert command in SupportedRebaseOps, f"rebase op '{command}' not supported yet"
 
-        selectedItems = self.ui.sequence.selectedItems()
+        indexes = self.ui.sequence.selectedIndexes()
 
-        for wrapper in selectedItems:
-            assert isinstance(wrapper, RebaseLineWrapper)
+        if not indexes:
+            QApplication.beep()
+            return
 
-            item = wrapper.item
-            item.op = command
+        for index in indexes:
+            line = index.data(RebaseSequenceModel.RebaseLineRole)
+            line.op = command
 
-            wrapper.updateFlags()  # flip editable flag if rewording
+        self.ui.sequence.sequenceModel.emitUserDataChanged(indexes)
+        self.ui.sequence.viewport().update()
 
         # Spawn QLineEdit immediately if rewording
-        if command.isEditable() and selectedItems:
-            self.ui.sequence.editItem(selectedItems[0])
-
-        self.ui.sequence.viewport().update()
+        if command.isEditable():
+            self.ui.sequence.edit(indexes[0])
 
     def onContextMenuRequested(self, point: QPoint):
         menu = self.makeContextMenu()

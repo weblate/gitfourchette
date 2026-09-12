@@ -12,7 +12,7 @@ import dataclasses
 import enum
 import re
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from gitfourchette import colors
 from gitfourchette.porcelain import Oid, RefPrefix
@@ -233,46 +233,6 @@ class RebasePlan:
     @property
     def headShorthand(self) -> str:
         return RefPrefix.split(self.headName)[1]
-
-
-class RebaseLineWrapper(QListWidgetItem):
-    def __init__(self, item: RebaseLine):
-        super().__init__()
-        self.item = item.copy()
-        self.updateFlags()
-
-    def data(self, role: int):
-        if role == Qt.ItemDataRole.DisplayRole:
-            return str(self.item)
-        elif role == Qt.ItemDataRole.UserRole:
-            return self.item
-        elif role == Qt.ItemDataRole.ToolTipRole:
-            return self.item.hexHash
-        elif role == Qt.ItemDataRole.EditRole:
-            # Message filling in QLineEdit
-            return self.item.displayMessage()
-        return super().data(role)
-
-    def updateFlags(self):
-        flags = self.flags()
-        if self.item.op.isEditable():
-            flags |= Qt.ItemFlag.ItemIsEditable
-        else:
-            flags &= ~Qt.ItemFlag.ItemIsEditable
-        self.setFlags(flags)
-
-    def setData(self, role: int, value: Any):
-        # Called when the line edit has finished editing text.
-        # Only allowed on Reword and Squash.
-        assert role == Qt.ItemDataRole.EditRole
-        assert self.item.op.isEditable()
-        assert isinstance(value, str)
-
-        # Don't override if identical to original comment
-        if value == self.item.displayMessage(unmodified=True):
-            value = ""
-
-        self.item.payload = value
 
 
 def parseRebaseTodo(text: str) -> TRebaseSequence:

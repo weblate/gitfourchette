@@ -8,6 +8,7 @@ from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpLetters, SupportedRebaseOps
 from gitfourchette.rebase.rebasesequencedelegate import RebaseSequenceDelegate
+from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
 from gitfourchette.rebase.rebasesequencestyle import RebaseSequenceStyle
 from gitfourchette.toolbox.gitutils import *
 from gitfourchette.toolbox.textutils import *
@@ -16,8 +17,10 @@ from gitfourchette.toolbox.textutils import *
 _RebaseOpsByHotkey = {letter: op for op, letter in RebaseOpLetters.items()}
 
 
-class RebaseSequenceView(QListWidget):
+class RebaseSequenceView(QListView):
     opShortcut = Signal(RebaseOp)
+
+    sequenceModel: RebaseSequenceModel
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -35,13 +38,14 @@ class RebaseSequenceView(QListWidget):
         self.setUniformItemSizes(True)
         self.setEditTriggers(QListView.EditTrigger.DoubleClicked | QListView.EditTrigger.EditKeyPressed)
 
+        self.sequenceModel = RebaseSequenceModel(self)
+        self.setModel(self.sequenceModel)
+
     def allRebaseLines(self) -> list[RebaseLine]:
-        lines = [self.item(row).item for row in range(self.count())]  # type: ignore[attr-defined]
-        assert all(isinstance(i, RebaseLine) for i in lines)
-        return lines
+        return self.sequenceModel.sequence[:]
 
     def selectedRebaseLines(self) -> list[RebaseLine]:
-        lines = [wrapper.item for wrapper in self.selectedItems()]  # type: ignore[attr-defined]
+        lines = [index.data(RebaseSequenceModel.RebaseLineRole) for index in self.selectedIndexes()]
         assert all(isinstance(i, RebaseLine) for i in lines)
         return lines
 
@@ -61,11 +65,6 @@ class RebaseSequenceView(QListWidget):
             self.opShortcut.emit(op)
         else:
             super().keyPressEvent(event)
-
-    def supportedDropActions(self) -> Qt.DropAction:
-        # Override default MoveAction|CopyAction to prevent copying items by
-        # holding Ctrl while dragging.
-        return Qt.DropAction.MoveAction
 
     def startDrag(self, supportedActions: Qt.DropAction):
         """

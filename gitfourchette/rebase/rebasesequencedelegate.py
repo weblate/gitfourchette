@@ -10,9 +10,10 @@ from gitfourchette import settings
 from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpColors, RebaseOpLetters
+from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
 from gitfourchette.toolbox import shortHash, mixColors
 
-_ItemRole = Qt.ItemDataRole.UserRole
+_ItemRole = RebaseSequenceModel.RebaseLineRole
 _FallbackColor = QColor(Qt.GlobalColor.magenta)
 _ColumnPadding = 8
 
