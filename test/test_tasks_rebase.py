@@ -527,10 +527,7 @@ def testRebaseJumpToCommit(tempDir, mainWindow):
 
     rebaseDialog.ui.sequence.setFocus()
     qlvClickNthRow(rebaseDialog.ui.sequence, 0)
-    triggerContextMenuAction(rebaseDialog.ui.sequence.viewport(), "view commit in repo")
 
-    visualPause()
     assert NavLocator.inCommit(head, "c/c2-2.txt").isSimilarEnoughTo(rw.navLocator)
 
     rebaseDialog.close()
-

@@ -242,6 +242,36 @@ def itemViewVisibleRowRange(view: QAbstractItemView):
     return range(top.row(), bottom.row() + 1)
 
 
+def itemViewBestIndexOnSelectionChanged(
+        itemView: QAbstractItemView,
+        justSelected: QItemSelection
+) -> QModelIndex:
+    """
+    Return the "best" still-selected index in a QAbstractItemView after a change
+    in its selection.
+    Meant to be called from an overridden QAbstractItemView.selectionChanged().
+    """
+
+    # Try to return an index inside those that were just selected.
+    try:
+        return justSelected.indexes()[0]
+    except IndexError:
+        pass
+
+    # If we've deselected indexes (e.g. with shift/ctrl) without selecting new
+    # ones, then 'selected' might be empty here. But this doesn't necessarily
+    # mean that the selection is empty. Find an index that is still selected.
+    current = itemView.currentIndex()
+
+    selectedIndexes = itemView.selectedIndexes()
+    if not current.isValid() or not selectedIndexes:
+        return QModelIndex_default
+
+    # currentIndex may be outside the selection.
+    # Find the selected index that is closest to current.
+    return min(selectedIndexes, key=lambda index: abs(index.row() - current.row()))
+
+
 def assetsPath(assetFileName: str) -> Path:
     """
     Get a pathlib.Path object to a file in Qt's assets directory ("assets:").

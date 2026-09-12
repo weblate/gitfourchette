@@ -11,6 +11,7 @@ from gitfourchette.rebase.rebasesequencedelegate import RebaseSequenceDelegate
 from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
 from gitfourchette.rebase.rebasesequencestyle import RebaseSequenceStyle
 from gitfourchette.toolbox.gitutils import *
+from gitfourchette.toolbox.qtutils import itemViewBestIndexOnSelectionChanged
 from gitfourchette.toolbox.textutils import *
 
 
@@ -19,6 +20,7 @@ _RebaseOpsByHotkey = {letter: op for op, letter in RebaseOpLetters.items()}
 
 class RebaseSequenceView(QListView):
     opShortcut = Signal(RebaseOp)
+    commitSelected = Signal(Oid)
 
     sequenceModel: RebaseSequenceModel
 
@@ -40,6 +42,14 @@ class RebaseSequenceView(QListView):
 
         self.sequenceModel = RebaseSequenceModel(self)
         self.setModel(self.sequenceModel)
+
+    def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
+        super().selectionChanged(selected, deselected)
+
+        current = itemViewBestIndexOnSelectionChanged(self, selected)
+        if current.isValid():
+            rebaseLine = current.data(RebaseSequenceModel.RebaseLineRole)
+            self.commitSelected.emit(rebaseLine.oid)
 
     def allRebaseLines(self) -> list[RebaseLine]:
         return self.sequenceModel.sequence[:]

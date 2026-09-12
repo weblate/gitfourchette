@@ -61,6 +61,7 @@ from .qtutils import (
     formatWidgetText,
     formatWidgetTooltip,
     itemViewVisibleRowRange,
+    itemViewBestIndexOnSelectionChanged,
     assetsPath,
     isDarkTheme,
     mutedTextColorHex,

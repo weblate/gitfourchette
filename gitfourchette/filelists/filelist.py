@@ -425,8 +425,8 @@ class FileList(QListView):
         if self.hasFocus():
             self.nothingClicked.emit()
 
-    def selectionChanged(self, justSelected: QItemSelection, justDeselected: QItemSelection):
-        super().selectionChanged(justSelected, justDeselected)
+    def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
+        super().selectionChanged(selected, deselected)
 
         # We're the active FileList, clear counterpart.
         self._setCounterpart(-1)
@@ -435,26 +435,11 @@ class FileList(QListView):
         if self.signalsBlocked():
             return
 
-        selectedIndexes = self.selectedIndexes()
-        numSelectedTotal = len(selectedIndexes)
-
-        justSelectedIndexes = list(justSelected.indexes())
-        if justSelectedIndexes:
-            current = justSelectedIndexes[0]
-        else:
-            # Deselecting (e.g. with shift/ctrl) doesn't necessarily mean that the selection has been emptied.
-            # Find an index that is still selected to keep the DiffView in sync with the selection.
-            current = self.currentIndex()
-
-            if current.isValid() and selectedIndexes:
-                # currentIndex may be outside the selection, find the selected index that is closest to currentIndex.
-                current = min(selectedIndexes, key=lambda index: abs(index.row() - current.row()))
-            else:
-                current = None
-
+        numSelectedTotal = len(self.selectedIndexes())
         self.selectedCountChanged.emit(numSelectedTotal)
 
-        if not current or not current.isValid():
+        current = itemViewBestIndexOnSelectionChanged(self, selected)
+        if not current.isValid():
             self.emitNothingClicked()
             return
 
