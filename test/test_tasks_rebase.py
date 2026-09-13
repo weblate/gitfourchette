@@ -39,12 +39,13 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
 
         # Select row
         bottomUpRow = sequenceView.model().rowCount() - 1 - todo.row
+        bottomUpRow -= 1  # account for fake start row
         qlvClickNthRow(sequenceView, bottomUpRow)
 
         # Press keyboard shortcut for desired operation
         QTest.keyClicks(sequenceView.viewport(), RebaseOpLetters[todo.op])
 
-        itemsSoFar = sequenceView.allRebaseLines()
+        itemsSoFar = sequenceView.effectiveSequence()
         assert itemsSoFar[todo.row].op == todo.op
 
         # Apply reworded message, if any
@@ -480,7 +481,7 @@ def testRebaseSequenceViewQDrag(tempDir, mainWindow, monkeypatch):
     # If we did complete the move, RebaseDialog wants us to confirm closing a
     # modified rebase plan.
     if allowActualMove:
-        assert rebaseDialog.ui.sequence.allRebaseLines()[0].displayMessage() == "On master again"
+        assert rebaseDialog.ui.sequence.effectiveSequence()[0].displayMessage() == "On master again"
         qmb = findQMessageBox(rebaseDialog, "really close this rebase plan")
         findWidgetWithText(qmb.buttons(), "close").click()
 

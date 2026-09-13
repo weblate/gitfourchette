@@ -38,8 +38,11 @@ class RebaseOp(enum.StrEnum):
     FakeStart   = "__start"
     FakeRewrite = "__rewrite"
 
-    def isEditable(self):
+    def isEditable(self) -> bool:
         return self == "reword" or self == "squash"
+
+    def isFake(self) -> bool:
+        return self.startswith("__")
 
 
 SupportedRebaseOps = {

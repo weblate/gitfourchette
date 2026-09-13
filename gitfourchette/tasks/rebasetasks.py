@@ -18,7 +18,7 @@ from gitfourchette.porcelain import *
 from gitfourchette.ipc.ipcserver import GFIpcServer
 from gitfourchette.qt import *
 from gitfourchette.rebase.editmsgautofillserver import EditmsgAutoFillServer
-from gitfourchette.rebase.rebasemodel import RebaseLine, RebasePlan, RebaseInfo
+from gitfourchette.rebase.rebasemodel import RebaseInfo, RebaseLine, RebaseOp, RebasePlan
 from gitfourchette.tasks import TaskPrereqs, TaskEffects
 from gitfourchette.tasks.repotask import RepoTask, AbortTask
 from gitfourchette.toolbox import *
@@ -99,8 +99,14 @@ class InteractiveRebase(RepoTask):
 
             plan = RebasePlan(info.todoSeq, headName=info.headName, origHead=info.origHead, onto=info.onto)
 
+            # Insert fake 'start' line
+            ontoCommit = self.repo.peel_commit(plan.onto)
+            ontoCommitMessage, _dummy = messageSummary(ontoCommit.message, "")
+            start = RebaseLine(RebaseOp.FakeStart, str(plan.onto), ontoCommitMessage)
+            sequence = [start] + plan.sequence
+
             dialog = RebaseDialog(self.parentWidget())
-            dialog.setSequence(plan.sequence)
+            dialog.setSequence(sequence)
             dialog.accepted.connect(lambda: self.executeRebase(plan, dialog))
             dialog.exploreCommit.connect(self.rw.jump)
             dialog.show()
@@ -116,7 +122,7 @@ class InteractiveRebase(RepoTask):
 
     def executeRebase(self, oldPlan: RebasePlan, dialog: RebaseDialog):
         """ Run when RebaseDialog is accepted. """
-        newSequence = dialog.ui.sequence.allRebaseLines()
+        newSequence = dialog.ui.sequence.effectiveSequence()
         newPlan = dataclasses.replace(oldPlan, sequence=newSequence)
         ExecuteRebase.invoke(dialog, oldPlan, newPlan)
 

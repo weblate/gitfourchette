@@ -6,7 +6,7 @@
 
 from gitfourchette.localization import *
 from gitfourchette.qt import *
-from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpLetters, SupportedRebaseOps
+from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpLetters, SupportedRebaseOps, TRebaseSequence
 from gitfourchette.rebase.rebasesequencedelegate import RebaseSequenceDelegate
 from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
 from gitfourchette.rebase.rebasesequencestyle import RebaseSequenceStyle
@@ -51,8 +51,8 @@ class RebaseSequenceView(QListView):
             rebaseLine = current.data(RebaseSequenceModel.RebaseLineRole)
             self.commitSelected.emit(rebaseLine.oid)
 
-    def allRebaseLines(self) -> list[RebaseLine]:
-        return self.sequenceModel.sequence[:]
+    def effectiveSequence(self) -> TRebaseSequence:
+        return [line for line in self.sequenceModel.sequence if not line.op.isFake()]
 
     def selectedRebaseLines(self) -> list[RebaseLine]:
         lines = [index.data(RebaseSequenceModel.RebaseLineRole) for index in self.selectedIndexes()]

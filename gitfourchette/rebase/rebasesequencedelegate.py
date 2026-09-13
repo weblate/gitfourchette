@@ -78,6 +78,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         messageFont = QFont(painter.font())
         message = item.displayMessage()
         hint = ""
+        hintParens = True
 
         if item.verifiedEmpty:
             hint = _("Empty commit")
@@ -88,6 +89,10 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             # hint = _("message discarded by {fixup}", fixup="fixup")
             messageFont.setWeight(QFont.Weight.Light)
             messageColor = mutedColor
+        elif item.op == RebaseOp.FakeStart:
+            messageColor = mutedColor
+            hint = "\U0001F512"  # padlock emoji
+            hintParens = False
         elif item.op.isEditable():
             if item.payload:
                 hint = _("reworded")
@@ -98,10 +103,11 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
 
         # Draw hint if we've got enough room
         if hint and rect.width() > painter.fontMetrics().horizontalAdvance("M"*20):
-            hint = f"({hint})"
             hintFont = QFont(painter.font())
-            hintFont.setItalic(True)
             hintFont.setBold(True)
+            if hintParens:
+                hint = f"({hint})"
+                hintFont.setItalic(True)
             hintWidth = QFontMetricsF(hintFont).horizontalAdvance(hint)
             hintAlign = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
             painter.setFont(hintFont)
@@ -215,6 +221,9 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         startRow = model.flipRow(index.row())
         startOp = model.sequence[startRow].op
 
+        if startOp.isFake():
+            return olderOp, newerOp
+
         for row in range(startRow + 1, len(model.sequence)):
             op = model.sequence[row].op
             if op != RebaseOp.Drop:
@@ -222,7 +231,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
                 break
 
         if startOp == RebaseOp.Fixup or startOp == RebaseOp.Squash:
-            connectOlder = startRow != 0
+            connectOlder = True
         elif startOp == RebaseOp.Drop:
             connectOlder = connectNewer
 
@@ -232,6 +241,11 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         if connectNewer:
             assert startRow + 1 < len(model.sequence)
             newerOp = model.sequence[startRow + 1].op
+
+        if olderOp and olderOp.isFake():
+            olderOp = None
+        if newerOp and newerOp.isFake():
+            newerOp = None
 
         return olderOp, newerOp
 

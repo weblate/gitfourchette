@@ -10,7 +10,7 @@ from typing import Any
 
 from gitfourchette import settings
 from gitfourchette.qt import *
-from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLine
+from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLine, RebaseOp
 from gitfourchette.toolbox import QModelIndex_default
 
 
@@ -31,12 +31,26 @@ class RebaseSequenceModel(QAbstractListModel):
             i = len(self.sequence) - 1 - i
         return i
 
+    def canInsertAtRow(self, row: int) -> bool:
+        flippedRow = self.flipRow(row)
+        return flippedRow >= 0
+
     def rebaseLineAtRow(self, row: int) -> RebaseLine:
         i = self.flipRow(row)
         return self.sequence[i]
 
     def supportedDropActions(self):
         return Qt.DropAction.MoveAction
+
+    def dropMimeData(self, data, action, row, column, parent) -> bool:
+        # Prevent Qt from calling setData when dropping rows
+        return False
+
+    def canDropMimeData(self, data: QMimeData, action: Qt.DropAction, row: int, column: int, parent: QModelIndex) -> bool:
+        # Reimplemented with additional row check. If the row is incorrect, the
+        # 'denied' mouse pointer appears and the drop indicator vanishes.
+        superCanDrop = super().canDropMimeData(data, action, row, column, parent)
+        return superCanDrop and self.canInsertAtRow(row)
 
     def moveRows(
         self,
@@ -49,6 +63,10 @@ class RebaseSequenceModel(QAbstractListModel):
         assert not sourceParent.isValid(), "source must be root index"
         assert sourceParent == destinationParent, "must move to root index"
         assert count >= 1
+
+        # Prevent dragging beyond start row
+        if not self.canInsertAtRow(destinationChild):
+            return False
 
         beginMoveRowsOK = self.beginMoveRows(
             sourceParent,
@@ -110,6 +128,10 @@ class RebaseSequenceModel(QAbstractListModel):
             return flags | Qt.ItemFlag.ItemIsDropEnabled
 
         item = self.rebaseLineAtRow(index.row())
+
+        if item.op == RebaseOp.FakeStart:
+            return Qt.ItemFlag.NoItemFlags
+
         flags |= (Qt.ItemFlag.ItemIsEnabled
                   | Qt.ItemFlag.ItemIsSelectable
                   | Qt.ItemFlag.ItemIsDragEnabled)
@@ -122,7 +144,7 @@ class RebaseSequenceModel(QAbstractListModel):
 
         # Called when the line edit has finished editing text.
         # Only allowed on Reword and Squash.
-        assert role == Qt.ItemDataRole.EditRole, f"{role!r}"
+        assert role == Qt.ItemDataRole.EditRole, f"{index.row()} {role!r} {value!r}"
         assert item.op.isEditable()
         assert isinstance(value, str)
 

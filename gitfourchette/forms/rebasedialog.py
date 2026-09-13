@@ -130,5 +130,5 @@ class RebaseDialog(QDialog):
         return menu
 
     def serializeSequence(self):
-        text = "\n".join(str(i) for i in self.ui.sequence.allRebaseLines())
+        text = "\n".join(str(i) for i in self.ui.sequence.effectiveSequence())
         return text
