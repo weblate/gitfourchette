@@ -336,7 +336,10 @@ class RepoModel:
 
         try:
             info = RebaseInfo.parse(self.repo.path)
-        except (OSError, ValueError):
+        except OSError:
+            info = None
+        except (ValueError, NotImplementedError):
+            logger.exception("could not parse RebaseInfo")
             info = None
 
         if info != self.rebase:

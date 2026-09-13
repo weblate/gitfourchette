@@ -251,7 +251,8 @@ def parseRebaseTodo(text: str) -> TRebaseSequence:
             continue
 
         match = _todoLinePattern.match(line)
-        assert match is not None, f"unsupported todo line: {line}"
+        if match is None:
+            raise NotImplementedError(f"unsupported todo line {line!r}")
         commandName, hexHash, comment = match.groups()
 
         if comment.startswith(_PayloadMagicPrefix):

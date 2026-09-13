@@ -532,3 +532,26 @@ def testRebaseJumpToCommit(tempDir, mainWindow):
     assert NavLocator.inCommit(head, "c/c2-2.txt").isSimilarEnoughTo(rw.navLocator)
 
     rebaseDialog.close()
+
+
+def testRebaseCorruptInfo(tempDir, mainWindow):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = [
+        _Todo(0, RebaseOp.Edit),
+        _Todo(1, RebaseOp.Reword, "rewording still works after continue"),
+    ]
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    _driveRebaseDialog(rw, onto, todo).accept()
+
+    assert rw.repo.state() == RepositoryState.REBASE_INTERACTIVE
+    assert rw.mergeBanner.isVisible()
+    continueButton = rw.mergeBanner.findButton("continue rebase")
+    assert continueButton.isEnabled()
+
+    writeFile(f"{wd}/.git/rebase-merge/git-rebase-todo", "yikes-this-will-not-parse")
+    rw.refreshRepo()
+
+    assert rw.mergeBanner.isVisible()
+    assert findTextInWidget(rw.mergeBanner.label, "failed to collect information")
