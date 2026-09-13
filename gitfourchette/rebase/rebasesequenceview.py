@@ -9,7 +9,7 @@ from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpLetters, SupportedRebaseOps, TRebaseSequence
 from gitfourchette.rebase.rebasesequencedelegate import RebaseSequenceDelegate
 from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
-from gitfourchette.rebase.rebasesequencestyle import RebaseSequenceStyle
+from gitfourchette.rebase.rebasesequencedropindicator import RebaseSequenceDropIndicator
 from gitfourchette.toolbox.gitutils import *
 from gitfourchette.toolbox.qtutils import itemViewBestIndexOnSelectionChanged
 from gitfourchette.toolbox.textutils import *
@@ -30,15 +30,17 @@ class RebaseSequenceView(QListView):
         delegate = RebaseSequenceDelegate(self)
         self.setItemDelegate(delegate)
 
-        styleProxy = RebaseSequenceStyle()  # provides nicer PE_IndicatorItemViewItemDrop
-        self.setStyle(styleProxy)
-
         self.setDragEnabled(True)
         self.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
         self.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setUniformItemSizes(True)
         self.setEditTriggers(QListView.EditTrigger.DoubleClicked | QListView.EditTrigger.EditKeyPressed)
+
+        self.dropIndicator = RebaseSequenceDropIndicator(self.viewport())
+        self.dropIndicator.setFixedHeight(32)
+        self.dropIndicator.hide()
+        self.setDropIndicatorShown(False)  # remove Qt's native indicator
 
         self.sequenceModel = RebaseSequenceModel(self)
         self.setModel(self.sequenceModel)
@@ -76,6 +78,14 @@ class RebaseSequenceView(QListView):
         else:
             super().keyPressEvent(event)
 
+    def dragMoveEvent(self, event: QDragMoveEvent):
+        super().dragMoveEvent(event)
+        self.dropIndicator.syncPositionOnDrag(event, self)
+
+    def dragLeaveEvent(self, event: QDragLeaveEvent):
+        super().dragLeaveEvent(event)
+        self.dropIndicator.hide()
+
     def startDrag(self, supportedActions: Qt.DropAction):
         """
         The Breeze style draws items with a hover rectangle as the mouse cursor
@@ -93,6 +103,7 @@ class RebaseSequenceView(QListView):
             drag.exec(supportedActions)
         finally:
             delegate.ignoreMouseOverState = False
+            self.dropIndicator.hide()
             self.viewport().update()
 
     def makeQDrag(self) -> QDrag:

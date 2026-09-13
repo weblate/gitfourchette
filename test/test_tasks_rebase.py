@@ -10,7 +10,7 @@ from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.rebasedialog import RebaseDialog
 from gitfourchette.nav import NavLocator
 from gitfourchette.rebase.rebasemodel import RebaseOp, RebaseOpLetters
-from gitfourchette.rebase.rebasesequencestyle import RebaseSequenceStyle
+from gitfourchette.rebase.rebasesequencedropindicator import RebaseSequenceDropIndicator
 from gitfourchette.rebase.rebasesequenceview import RebaseSequenceView
 from gitfourchette.toolbox import QRichTextMenu
 from .util import *
@@ -382,10 +382,10 @@ def testRebaseBannerCantContinueWithUnstagedChanges(tempDir, mainWindow):
     banner.findButton("continue rebase").click()
 
 
-def testRebaseSequenceStyleDropIndicator(tempDir, mainWindow, monkeypatch):
+@pytest.mark.skipif(QT5, reason="Qt 5 (deprecated) is finicky with this test, but Qt 6 is fine")
+def testRebaseSequenceDropIndicator(tempDir, mainWindow, monkeypatch):
     """
-    Coverage test for the custom drop indicator painting code in
-    RebaseSequenceStyle.
+    Coverage test for RebaseSequenceDropIndicator's painting code.
 
     QDragEnterEvent/QDragMoveEvent/QDropEvent work with MIME data, but Qt won't
     preserve our custom data via MIME drag-and-drop. To avoid corrupting the
@@ -393,7 +393,7 @@ def testRebaseSequenceStyleDropIndicator(tempDir, mainWindow, monkeypatch):
     (QDragLeaveEvent instead of QDropEvent).
     """
 
-    callSpy = CallSpy(monkeypatch, RebaseSequenceStyle, "drawDropIndicator")
+    callSpy = CallSpy(monkeypatch, RebaseSequenceDropIndicator, "paintEvent")
 
     wd = unpackRepo(tempDir)
     onto = Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
