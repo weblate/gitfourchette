@@ -4,21 +4,23 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GitFourchette\n"
 "Report-Msgid-Bugs-To: https://github.com/jorio/gitfourchette/issues\n"
-"Last-Translator: Automatically generated\n"
+"Last-Translator: S F <weblate.diving132@passmail.net>\n"
 "Language: hu\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"Language-Team: none\n"
+"Language-Team: Hungarian <https://hosted.weblate.org/projects/gitfourchette/gitfourchette/hu/>\n"
+"PO-Revision-Date: 2026-09-22 20:51+0000\n"
+"X-Generator: Weblate 2026.10.dev0\n"
 
 #: application.py:134 forms/aboutdialog.py:59
 msgid "The comfortable Git UI for Linux."
-msgstr ""
+msgstr "A kényelmes GIT kezelőfelület Linuxon."
 
 #: application.py:137
 msgid "Repository paths to open on launch."
-msgstr ""
+msgstr "A kezdéskor megnyitott tárhelyek elérési útvonalai."
 
 #: application.py:322
 #, python-brace-format
@@ -37,15 +39,15 @@ msgstr ""
 #: application.py:600
 #, python-brace-format
 msgid "Couldn’t start {0} ({1})."
-msgstr ""
+msgstr "{0} ({1}) nem indítható."
 
 #: application.py:601
 msgid "Please make sure OpenSSH is installed on your system."
-msgstr ""
+msgstr "Kérlek biztosítsd, hogy az OpenSSH jelen van a rendszereden."
 
 #: application.py:602
 msgid "SSH agent"
-msgstr ""
+msgstr "SSH agent"
 
 #: blameview/blamegutter.py:186
 msgid "(Uncommitted)"
@@ -56,7 +58,7 @@ msgstr ""
 #: forms/contextheader.py:114 forms/prefsdialog.py:292 tasks/misctasks.py:97
 #: tasks/nettasks.py:300 tasks/repotask.py:72
 msgid ":"
-msgstr ""
+msgstr ":"
 
 #: blameview/blamegutter.py:228
 msgid "Not Committed Yet"
@@ -68,20 +70,20 @@ msgstr ""
 
 #: blameview/blamegutter.py:232
 msgid "author"
-msgstr ""
+msgstr "szerző"
 
 #: blameview/blamegutter.py:233
 msgid "date"
-msgstr ""
+msgstr "dátum"
 
 #: blameview/blamegutter.py:234 blameview/blamegutter.py:235
 #: forms/aboutdialog.py:103 forms/aboutdialog.py:111
 msgid "(not available)"
-msgstr ""
+msgstr "(nem elérhető)"
 
 #: blameview/blamegutter.py:234
 msgid "file name"
-msgstr ""
+msgstr "fájlnév"
 
 #: blameview/blamegutter.py:235
 msgid "revision"
@@ -111,7 +113,7 @@ msgstr ""
 
 #: blameview/blamewindow.py:50
 msgid "Jump"
-msgstr ""
+msgstr "Ugrás"
 
 #: blameview/blamewindow.py:51
 msgid "View this commit in the repo"
@@ -119,11 +121,11 @@ msgstr ""
 
 #: blameview/blamewindow.py:56
 msgid "Shift+Click:"
-msgstr ""
+msgstr "Shift+Egérgomb:"
 
 #: blameview/blamewindow.py:59
 msgid "Older"
-msgstr ""
+msgstr "Régebbi"
 
 #: blameview/blamewindow.py:61
 msgid "Go to next older revision"
@@ -131,11 +133,11 @@ msgstr ""
 
 #: blameview/blamewindow.py:61
 msgid "Jump to bottom"
-msgstr ""
+msgstr "Aljára ugrás"
 
 #: blameview/blamewindow.py:65
 msgid "Newer"
-msgstr ""
+msgstr "Újabb"
 
 #: blameview/blamewindow.py:67
 msgid "Go to next newer revision"
@@ -143,27 +145,27 @@ msgstr ""
 
 #: blameview/blamewindow.py:67
 msgid "Jump to top"
-msgstr ""
+msgstr "Tetejére ugrás"
 
 #: blameview/blamewindow.py:71
 msgid "Back"
-msgstr ""
+msgstr "Vissza"
 
 #: blameview/blamewindow.py:73 tasks/taskbook.py:65
 msgid "Navigate back"
-msgstr ""
+msgstr "Visszanavigálás"
 
 #: blameview/blamewindow.py:77
 msgid "Forward"
-msgstr ""
+msgstr "Előre"
 
 #: blameview/blamewindow.py:79 tasks/taskbook.py:66
 msgid "Navigate forward"
-msgstr ""
+msgstr "Előre navigálás"
 
 #: codeview/codeview.py:373
 msgid "Configure Appearance…"
-msgstr ""
+msgstr "Kinézet változtatása…"
 
 #: diffarea.py:115
 msgid "Unstaged files: will not be included in the commit unless you stage them."
@@ -171,19 +173,19 @@ msgstr ""
 
 #: diffarea.py:123
 msgid "Stage"
-msgstr ""
+msgstr "Előkészítés"
 
 #: diffarea.py:125
 msgid "Stage selected files"
-msgstr ""
+msgstr "Választott fájlok előkészítése"
 
 #: diffarea.py:130 diffview/diffview.py:79
 msgid "Discard"
-msgstr ""
+msgstr "Elvet"
 
 #: diffarea.py:132
 msgid "Discard changes in selected files"
-msgstr ""
+msgstr "Kiválasztott fájlok változtatásainak elvetése"
 
 #: diffarea.py:168
 msgid "Staged files: will be included in the commit."
@@ -191,11 +193,11 @@ msgstr ""
 
 #: diffarea.py:176
 msgid "Unstage"
-msgstr ""
+msgstr "Előkészítés visszavonása"
 
 #: diffarea.py:178
 msgid "Unstage selected files"
-msgstr ""
+msgstr "Kiválasztott fájlok előkészítésének visszavonása"
 
 #: diffarea.py:183 tasks/committasks.py:540
 msgctxt "verb"
@@ -204,23 +206,23 @@ msgstr ""
 
 #: diffbuttons.py:27
 msgid "SVG image preview"
-msgstr ""
+msgstr "SVG kép előnézet"
 
 #: diffbuttons.py:89 trtables.py:384
 msgid "Show up to # context lines"
-msgstr ""
+msgstr "Mutass maximum # sort"
 
 #: diffbuttons.py:104
 msgid "Context lines"
-msgstr ""
+msgstr "Kontextus környezet"
 
 #: diffbuttons.py:107
 msgid "Context"
-msgstr ""
+msgstr "Kontextus"
 
 #: diffview/diffdocument.py:374
 msgid "<no newline at end of file>"
-msgstr ""
+msgstr "<nincs újsor a fájl végén>"
 
 #: diffview/diffview.py:67
 msgid "Stage Selection"
@@ -315,7 +317,7 @@ msgstr ""
 
 #: diffview/diffview.py:538 diffview/diffview.py:539
 msgid "or Middle-Click"
-msgstr ""
+msgstr "vagy Középső Egérgomb"
 
 #: diffview/diffview.py:546
 #, python-brace-format
@@ -333,19 +335,19 @@ msgstr[1] ""
 
 #: diffview/specialdiff.py:82
 msgid "File contents didn’t change."
-msgstr ""
+msgstr "A fájl tartalma nem változott."
 
 #: diffview/specialdiff.py:92
 msgid "Empty file was deleted."
-msgstr ""
+msgstr "Üres fájl törlésre került."
 
 #: diffview/specialdiff.py:99
 msgid "New empty file."
-msgstr ""
+msgstr "Új üres fájl."
 
 #: diffview/specialdiff.py:105
 msgid "Whitespace changes ignored. Contents otherwise identical."
-msgstr ""
+msgstr "Whitespace módosítások elvetése. Tartalom egyébként ugyanaz."
 
 #: diffview/specialdiff.py:106
 msgid "Current whitespace mode:"
@@ -353,7 +355,7 @@ msgstr ""
 
 #: diffview/specialdiff.py:110
 msgid "Renamed:"
-msgstr ""
+msgstr "Átnevezve:"
 
 #: diffview/specialdiff.py:114
 msgid "Mode change:"
@@ -370,16 +372,16 @@ msgstr ""
 
 #: diffview/specialdiff.py:136
 msgid "This image is very large."
-msgstr ""
+msgstr "Ez a kép nagyon nagy."
 
 #: diffview/specialdiff.py:137
 msgid "[Load image anyway] (this may take a moment)"
-msgstr ""
+msgstr "[Kép betöltése] (hosszadalmas lehet)"
 
 #: diffview/specialdiff.py:138
 #, python-brace-format
 msgid "[Configure image preview limit] (currently: {0})"
-msgstr ""
+msgstr "[Kép előnézet korlátozása] (jelenleg: {0})"
 
 #: diffview/specialdiff.py:141
 msgid "This diff is very large."
@@ -387,7 +389,7 @@ msgstr ""
 
 #: diffview/specialdiff.py:141 tasks/indextasks.py:488
 msgid "This file is very large."
-msgstr ""
+msgstr "Ez a fájl nagyon nagy."
 
 #: diffview/specialdiff.py:142 tasks/loadtasks.py:379
 msgid "[Load diff anyway] (this may take a moment)"
@@ -400,25 +402,25 @@ msgstr ""
 
 #: diffview/specialdiff.py:160
 msgid "Old type:"
-msgstr ""
+msgstr "Régi típus:"
 
 #: diffview/specialdiff.py:161
 msgid "New type:"
-msgstr ""
+msgstr "Új típus:"
 
 #: diffview/specialdiff.py:168
 msgid "This file’s type has changed."
-msgstr ""
+msgstr "A fájl típusa megváltozott."
 
 #: diffview/specialdiff.py:189
 msgid "File appears to be binary."
-msgstr ""
+msgstr "A fájl binárisnak tűnik."
 
 #: diffview/specialdiff.py:197 gitdriver/lfspointer.py:61
 msgid "Object missing from local LFS cache."
 msgid_plural "Objects missing from local LFS cache."
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Objektum hiányzik az LFS Cache-ből."
+msgstr[1] "Objektumok hiányoznak az LFS Cache-ből."
 
 #: diffview/specialdiff.py:205
 msgid "Download object to display the diff"
@@ -428,7 +430,7 @@ msgstr[1] ""
 
 #: diffview/specialdiff.py:217 diffview/specialdiffview.py:112
 msgid "not LFS"
-msgstr ""
+msgstr "nem LFS"
 
 #: diffview/specialdiff.py:226
 msgid "Storage changed:"
@@ -436,11 +438,11 @@ msgstr ""
 
 #: diffview/specialdiff.py:235
 msgid "File contents remained identical during the conversion."
-msgstr ""
+msgstr "A fájl tartalma nem változott konvertáláskor."
 
 #: diffview/specialdiff.py:238
 msgid "File contents modified during the conversion!"
-msgstr ""
+msgstr "A fájl tartalma megváltozott konvertáláskor!"
 
 #: diffview/specialdiff.py:246
 msgid "This untracked subtree is the root of another Git repository."
@@ -449,7 +451,7 @@ msgstr ""
 #: diffview/specialdiff.py:252 repowidget.py:481
 #, python-brace-format
 msgid "Open {0}"
-msgstr ""
+msgstr "{0} megnyitása"
 
 #: diffview/specialdiff.py:255
 #, python-brace-format
@@ -458,7 +460,7 @@ msgstr ""
 
 #: diffview/specialdiff.py:256
 msgid "Recommended action:"
-msgstr ""
+msgstr "Ajánlott akció:"
 
 #: diffview/specialdiff.py:301
 #, python-brace-format
@@ -511,7 +513,7 @@ msgstr ""
 #: diffview/specialdiff.py:319
 #, python-brace-format
 msgid "(path: {0})"
-msgstr ""
+msgstr "(elérési út: {0})"
 
 #: diffview/specialdiff.py:354
 msgid "The subtree’s <b>HEAD</b> has moved to another commit."
@@ -527,11 +529,11 @@ msgstr ""
 
 #: diffview/specialdiff.py:361
 msgid "Old:"
-msgstr ""
+msgstr "Régi:"
 
 #: diffview/specialdiff.py:362
 msgid "New:"
-msgstr ""
+msgstr "Új:"
 
 #: diffview/specialdiff.py:370
 #, python-brace-format
@@ -563,7 +565,7 @@ msgstr ""
 
 #: diffview/specialdiff.py:394
 msgid "IMPORTANT"
-msgstr ""
+msgstr "FONTOS"
 
 #: diffview/specialdiff.py:402
 msgid "The subtree contains <b>uncommitted changes</b>. They can’t be committed from the parent repo. You can:"
@@ -591,23 +593,23 @@ msgstr ""
 
 #: diffview/specialdiffview.py:106
 msgid "New image"
-msgstr ""
+msgstr "Új kép"
 
 #: diffview/specialdiffview.py:107
 msgid "Old image"
-msgstr ""
+msgstr "Régi kép"
 
 #: diffview/specialdiffview.py:108
 msgid "Deleted image"
-msgstr ""
+msgstr "Törölt kép"
 
 #: diffview/specialdiffview.py:121
 msgid "pixels"
-msgstr ""
+msgstr "pixel"
 
 #: diffview/specialdiffview.py:125
 msgid "shown below"
-msgstr ""
+msgstr "lásd alul"
 
 #: dropzone.py:38
 #, python-brace-format
@@ -637,7 +639,7 @@ msgstr ""
 #: exttools/mergedriver.py:105
 #, python-brace-format
 msgid "{0} ran into error {1}."
-msgstr ""
+msgstr "{1} hiba történt {0} közben."
 
 #: exttools/mergedriver.py:114
 #, python-brace-format
@@ -647,7 +649,7 @@ msgstr ""
 #: exttools/mergedriver.py:115
 #, python-brace-format
 msgid "Exit code: {0}."
-msgstr ""
+msgstr "Kilépési kód: {0}."
 
 #: exttools/toolcommands.py:115
 #, python-brace-format
@@ -662,7 +664,7 @@ msgstr[1] ""
 
 #: exttools/toolcommands.py:300
 msgid "Command exited with code:"
-msgstr ""
+msgstr "Parancs kilépési kódja:"
 
 #: exttools/toolcommands.py:301
 msgid "Continue in a shell?"
@@ -671,50 +673,50 @@ msgstr ""
 #: exttools/toolprocess.py:45
 #, python-brace-format
 msgid "Failed to start {tool}"
-msgstr ""
+msgstr "{tool} sikertelen indítása"
 
 #: exttools/toolprocess.py:48
 #, python-brace-format
 msgid "There is an issue with the {tool} command template in your settings:"
-msgstr ""
+msgstr "Probléma van a {tool} parancs sablonjával a beállításokban:"
 
 #: exttools/toolprocess.py:53
 #, python-brace-format
 msgid "Couldn’t start Flatpak {command} ({tool})."
-msgstr ""
+msgstr "Flatpak {command} ({tool}) sikertelen indítása."
 
 #: exttools/toolprocess.py:55
 #, python-brace-format
 msgid "Couldn’t start {command} ({tool})."
-msgstr ""
+msgstr "{command} ({tool}) sikertelen indítása."
 
 #: exttools/toolprocess.py:57
 msgid "It might not be installed on your machine."
-msgstr ""
+msgstr "Valószínűleg nincs jelen a gépeden."
 
 #: exttools/toolprocess.py:67
 #, python-brace-format
 msgid "Where is {tool}?"
-msgstr ""
+msgstr "{tool} elérési útja?"
 
 #: exttools/toolprocess.py:77
 msgid "Edit Command…"
-msgstr ""
+msgstr "Parancs Szerkesztése…"
 
 #: exttools/toolprocess.py:82
 #, python-brace-format
 msgid "Locate {tool}…"
-msgstr ""
+msgstr "{tool} elérési útjának megadása…"
 
 #: exttools/toolprocess.py:101
 #, python-brace-format
 msgid "{tool} isn’t configured in your settings yet."
-msgstr ""
+msgstr "{tool} még nincs konfigurálva a beállításokban."
 
 #: exttools/toolprocess.py:107
 #, python-brace-format
 msgid "Set up {tool}"
-msgstr ""
+msgstr "{tool} beállítása"
 
 #: exttools/usercommand.py:98
 msgid "Unknown placeholder token"
@@ -742,7 +744,7 @@ msgstr ""
 
 #: exttools/usercommand.py:171
 msgid "A file must be selected"
-msgstr ""
+msgstr "Fájl kiválasztása kötelező"
 
 #: exttools/usercommand.py:198
 msgid "A remote or a remote branch must be selected"
@@ -751,12 +753,12 @@ msgstr ""
 #: exttools/usercommand.py:203
 msgctxt "relative path"
 msgid "(relative)"
-msgstr ""
+msgstr "(relatív)"
 
 #: exttools/usercommand.py:204
 msgctxt "absolute path"
 msgid "(absolute)"
-msgstr ""
+msgstr "(abszolút)"
 
 #: exttools/usercommand.py:206
 msgid "Hash of the selected commit in the history"
@@ -764,11 +766,11 @@ msgstr ""
 
 #: exttools/usercommand.py:207 exttools/usercommand.py:208
 msgid "Path to the selected file"
-msgstr ""
+msgstr "A kiválasztott fájl elérési útja"
 
 #: exttools/usercommand.py:209 exttools/usercommand.py:210
 msgid "Path to the selected file’s parent directory"
-msgstr ""
+msgstr "A kiválasztott fájl könyvtárának elérési útja"
 
 #: exttools/usercommand.py:211
 msgid "Hash of the HEAD commit"
@@ -801,8 +803,8 @@ msgstr ""
 #: filelists/committedfiles.py:51
 msgid "&Revert This Change…"
 msgid_plural "&Revert These Changes…"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Vátoztatás Visszavonása…"
+msgstr[1] "Változtatások Visszavonása…"
 
 #: filelists/committedfiles.py:56
 msgid "Restor&e File Revision…"
@@ -831,7 +833,7 @@ msgstr ""
 
 #: filelists/committedfiles.py:75
 msgid "&Save a Copy…"
-msgstr ""
+msgstr "Má&solat Mentése…"
 
 #: filelists/committedfiles.py:86 filelists/dirtyfiles.py:88
 #: filelists/stagedfiles.py:56
@@ -906,15 +908,15 @@ msgstr[1] ""
 #, python-brace-format
 msgid "&Delete File…"
 msgid_plural "&Delete {n} Files…"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Fájl Törlése…"
+msgstr[1] "{n} Fájl Törlése…"
 
 #: filelists/dirtyfiles.py:57
 #, python-brace-format
 msgid "&Discard Changes in File…"
 msgid_plural "&Discard Changes in {n} Files…"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Fájl Változásainak Elvetése…"
+msgstr[1] "{n} Fájl Változásainak Elvetése…"
 
 #: filelists/dirtyfiles.py:78
 #, python-brace-format
@@ -957,15 +959,15 @@ msgstr ""
 #, python-brace-format
 msgid "Open &Folder"
 msgid_plural "Open {n} &Folders"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Könyvtár Megnyitása"
+msgstr[1] "{n} Könyvtár Megnyitása"
 
 #: filelists/filelist.py:257
 #, python-brace-format
 msgid "&Copy Path"
 msgid_plural "&Copy {n} Paths"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Elérési Út Másolása"
+msgstr[1] "{n} Elérési Út Másolása"
 
 #: filelists/filelist.py:263 trtables.py:364
 msgid "Path display style"
