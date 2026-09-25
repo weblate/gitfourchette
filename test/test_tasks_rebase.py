@@ -555,3 +555,63 @@ def testRebaseCorruptInfo(tempDir, mainWindow):
 
     assert rw.mergeBanner.isVisible()
     assert findTextInWidget(rw.mergeBanner.label, "failed to collect information")
+
+
+def testRebaseDateOptions(tempDir, mainWindow):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = [
+        _Todo(0, RebaseOp.Pick),
+        _Todo(1, RebaseOp.Reword, "reworded head commit"),
+    ]
+
+    wd = unpackRepo(tempDir)
+    shell("git branch starting-point", wd)
+
+    rw = mainWindow.openRepo(wd)
+    currentSecs = QDateTime.currentSecsSinceEpoch()
+
+    # Nothing
+
+    rebaseDialog = _driveRebaseDialog(rw, onto, todo)
+    menu = rebaseDialog.ui.optionsButton.menu()
+    assert findMenuAction(menu, "separate author.committer dates").isChecked()
+    rebaseDialog.accept()
+
+    head = rw.repo.head_commit
+    assert head.author.name == "A U Thor"
+    assert head.committer.name == "Test Person"
+    assert head.committer.time != head.author.time
+    assert QDateTime.fromSecsSinceEpoch(head.author.time).toString("yyyy-MM-dd") == "2022-01-16"
+    assert head.committer.time - currentSecs <= 60
+
+    # --committer-date-is-author-date
+
+    shell("git reset --hard starting-point", wd)
+    rw.refreshRepo()
+
+    rebaseDialog = _driveRebaseDialog(rw, onto, todo)
+    menu = rebaseDialog.ui.optionsButton.menu()
+    findMenuAction(menu, "set committer date to author date").setChecked(True)
+    rebaseDialog.accept()
+
+    head = rw.repo.head_commit
+    assert head.author.name == "A U Thor"
+    assert head.committer.name == "Test Person"
+    assert head.committer.time == head.author.time
+    assert QDateTime.fromSecsSinceEpoch(head.committer.time).toString("yyyy-MM-dd") == "2022-01-16"
+
+    # --reset-author-date
+
+    shell("git reset --hard starting-point", wd)
+    rw.refreshRepo()
+
+    rebaseDialog = _driveRebaseDialog(rw, onto, todo)
+    menu = rebaseDialog.ui.optionsButton.menu()
+    findMenuAction(menu, "set author date").setChecked(True)
+    rebaseDialog.accept()
+
+    head = rw.repo.head_commit
+    assert head.author.name == "A U Thor"
+    assert head.committer.name == "Test Person"
+    assert head.committer.time == head.author.time
+    assert head.committer.time - currentSecs <= 60

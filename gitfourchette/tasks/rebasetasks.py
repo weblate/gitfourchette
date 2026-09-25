@@ -124,7 +124,7 @@ class InteractiveRebase(RepoTask):
         """ Run when RebaseDialog is accepted. """
         newSequence = dialog.ui.sequence.effectiveSequence()
         newPlan = dataclasses.replace(oldPlan, sequence=newSequence)
-        ExecuteRebase.invoke(dialog, oldPlan, newPlan)
+        ExecuteRebase.invoke(dialog, oldPlan, newPlan, dialog.rebaseExtraArgs())
 
     def confirmNoopRebase(self, headName: str, headCommit: Oid, ontoCommit: Oid):
         message = paragraphs(
@@ -146,7 +146,7 @@ class ExecuteRebase(RepoTask):
         # TODO: need clean workdir, too
         return TaskPrereqs.NoConflicts | TaskPrereqs.NoUnborn | TaskPrereqs.NoCherrypick
 
-    def flow(self, oldPlan: RebasePlan, newPlan: RebasePlan):
+    def flow(self, oldPlan: RebasePlan, newPlan: RebasePlan, extraArgs: set[str]):
         self.oldPlan = oldPlan
         self.newPlan = newPlan
 
@@ -157,6 +157,7 @@ class ExecuteRebase(RepoTask):
         driver = yield from self.flowCallGit(
             "-c", "core.abbrev=no",
             "rebase", "-i", str(newPlan.onto),
+            *extraArgs,
             env={
                 "GIT_SEQUENCE_EDITOR": sequenceServer.clientCommand(),
                 "GIT_EDITOR": EditmsgAutoFillServer(self).clientCommand(),

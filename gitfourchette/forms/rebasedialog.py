@@ -11,7 +11,7 @@ from gitfourchette.nav import NavLocator
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import RebaseOp, RebaseOpColors, RebaseOpLetters, SupportedRebaseOps, TRebaseSequence
 from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
-from gitfourchette.toolbox import asyncMessageBox, QRichTextMenu
+from gitfourchette.toolbox import *
 
 
 class RebaseDialog(QDialog):
@@ -20,11 +20,13 @@ class RebaseDialog(QDialog):
     exploreCommit = Signal(NavLocator)
 
     initialSequence: TRebaseSequence
+    rebaseDateArg: str
 
     def __init__(self, parent: QWidget | None):
         super().__init__(parent)
 
         self.initialSequence = []
+        self.rebaseDateArg = ""
 
         self.ui = Ui_RebaseDialog()
         self.ui.setupUi(self)
@@ -44,6 +46,15 @@ class RebaseDialog(QDialog):
         self.finished.connect(self._onFinishedSaveGeometry)
 
         self.ui.sequence.commitSelected.connect(lambda oid: self.exploreCommit.emit(NavLocator.inCommit(oid)))
+
+        optionsMenu = self._makeOptionsMenu()
+        self.ui.optionsButton.setMenu(optionsMenu)
+
+    def rebaseExtraArgs(self) -> list[str]:
+        args = []
+        if self.rebaseDateArg:
+            args.append(self.rebaseDateArg)
+        return args
 
     def _onFinishedSaveGeometry(self):
         RebaseDialog.LastGeometry = self.saveGeometry().data()
@@ -132,3 +143,30 @@ class RebaseDialog(QDialog):
     def serializeSequence(self):
         text = "\n".join(str(i) for i in self.ui.sequence.effectiveSequence())
         return text
+
+    # --------------------------------------------------------------------------
+    # Options menu
+    # --------------------------------------------------------------------------
+
+    def _makeOptionsMenu(self):
+        menu = QRichTextMenu(self)
+        dateGroup = QActionGroup(menu)
+        mutedColor = mutedTextColorHex(menu)
+
+        for label, switch in [
+            (_("Separate author/committer dates"), ""),
+            (_("Set committer date to author date"), "--committer-date-is-author-date"),
+            (_("Set author date to current time"), "--reset-author-date"),
+        ]:
+            markup = f"{label} <span style='font-size: small; white-space: pre; color: {mutedColor};'>    {switch}</span>"
+
+            action = menu.addRichTextAction(markup)
+            action.setCheckable(True)
+            action.setChecked(switch == self.rebaseDateArg)
+            action.toggled.connect(lambda checked, sw=switch: self._onToggleDateSwitch(checked, sw))
+            action.setActionGroup(dateGroup)
+
+        return menu
+
+    def _onToggleDateSwitch(self, toggled: bool, switch: str):
+        self.rebaseDateArg = switch if toggled else ""
