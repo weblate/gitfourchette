@@ -487,7 +487,6 @@ def testRefSortFavorsHeadBranch(tempDir, mainWindow):
     assert amendedIndex.row() < masterIndex.row()
 
 
-# @pytest.mark.skipif(WAYLAND and not OFFSCREEN, reason="wayland blocks cursor control (note: offscreen is fine)")
 @pytest.mark.skipif(QT5, reason="Qt 5 (deprecated) is finicky with this test, but Qt 6 is fine")
 def testCommitToolTip(tempDir, mainWindow):
     wd = unpackRepo(tempDir)

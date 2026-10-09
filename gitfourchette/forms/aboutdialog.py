@@ -90,7 +90,7 @@ class AboutDialog(QDialog):
             <tr><th>pygit2</th><td>{pygit2.__version__}</td></tr>
             <tr><th>libgit2</th><td>{pygit2.LIBGIT2_VERSION} ({libgit2Features})</td></tr>
             <tr><th>{QT_BINDING}</th><td>{QT_BINDING_VERSION}</td></tr>
-            <tr><th>Qt</th><td>{qVersion()}</td></tr>
+            <tr><th>Qt</th><td>{qVersion()} ({QGuiApplication.platformName()})</td></tr>
             <tr><th>mfusepy</th><td>{fuseInfo}</td></tr>
             <tr><th>Pygments</th><td>{pygments.__version__}</td></tr>
             <tr><th>Python</th><td>{'.'.join(str(i) for i in sys.version_info)}</td></tr>

@@ -790,7 +790,7 @@ def summonContextMenu(target: QWidget, localPoint=QPoint_zero):
 
 
 def summonToolTip(target: QWidget, localPoint=QPoint_zero):
-    if WAYLAND and not OFFSCREEN:
+    if qIsWayland() and not OFFSCREEN:
         warnings.warn("*** ON WAYLAND, THIS TEST SHOULD RUN IN OFFSCREEN MODE. ***")
 
     # Sometimes, especially on Windows, a tooltip may remain from wherever the

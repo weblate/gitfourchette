@@ -136,7 +136,6 @@ PYINSTALLER_MEIPASS = getattr(_sys, "_MEIPASS", "") if getattr(_sys, "frozen", F
 XDG_RUNTIME_DIR = _os.environ.get("XDG_RUNTIME_DIR", "")
 GNOME = "GNOME" in _os.environ.get("XDG_CURRENT_DESKTOP", "").upper().split(":")  # e.g. "ubuntu:GNOME"
 KDE = "KDE" in _os.environ.get("XDG_CURRENT_DESKTOP", "").upper().split(":")
-WAYLAND = _os.environ.get("XDG_SESSION_TYPE", "").upper() == "WAYLAND"
 OFFSCREEN = _os.environ.get("QT_QPA_PLATFORM", "").upper() == "OFFSCREEN"
 
 # Capture environment variables that were set on boot.
@@ -328,3 +327,13 @@ def qAppName() -> str:
 def qTempDir() -> str:
     """ Path to temporary directory for this session. """
     return QApplication.instance().tempDir.path()  # type: ignore[attr-defined]
+
+
+def qIsWayland() -> bool:
+    """ Return True if the current QPA platform plugin is Wayland.
+    (If QApplication isn't created, fall back to XDG_SESSION_TYPE.) """
+
+    if not QGuiApplication.instance():
+        return _os.environ.get("XDG_SESSION_TYPE", "").upper() == "WAYLAND"
+
+    return "WAYLAND" in QGuiApplication.platformName().upper()
