@@ -4,13 +4,13 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-from gitfourchette import trtables
+from gitfourchette import trtables, settings
 from gitfourchette.forms.ui_rebasedialog import Ui_RebaseDialog
 from gitfourchette.localization import *
 from gitfourchette.nav import NavLocator
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import RebaseOp, RebaseOpColors, RebaseOpLetters, SupportedRebaseOps, TRebaseSequence
-from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
+from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel, RebaseUndoCommand
 from gitfourchette.toolbox import *
 
 
@@ -21,23 +21,33 @@ class RebaseDialog(QDialog):
 
     initialSequence: TRebaseSequence
     rebaseDateArg: str
+    undoStack: QUndoStack
 
-    def __init__(self, parent: QWidget | None):
+    @property
+    def sequenceModel(self) -> RebaseSequenceModel:
+        return self.ui.sequence.sequenceModel
+
+    def __init__(self, initialSequence: TRebaseSequence, parent: QWidget | None):
         super().__init__(parent)
-
-        self.initialSequence = []
-        self.rebaseDateArg = ""
 
         self.ui = Ui_RebaseDialog()
         self.ui.setupUi(self)
 
+        self.rebaseDateArg = ""
+        self.undoStack = QUndoStack(self)
+
+        # Install initial sequence into model
+        self.initialSequence = initialSequence
+        self.sequenceModel.replaceSequence(initialSequence)
+
         # When data changes, flag the sequence as modified so that reject() asks
         # for confirmation before closing.
-        self.ui.sequence.sequenceModel.rowsMoved.connect(lambda: self.setWindowModified(True))
-        self.ui.sequence.sequenceModel.dataChanged.connect(lambda: self.setWindowModified(True))
+        self.sequenceModel.rowsMoved.connect(self._onSequenceEdited)
+        self.sequenceModel.dataChanged.connect(self._onSequenceEdited)
 
         self.ui.sequence.customContextMenuRequested.connect(self.onContextMenuRequested)
         self.ui.sequence.opShortcut.connect(self.setCommandOnSelection)
+        self.ui.sequence.commitSelected.connect(lambda oid: self.exploreCommit.emit(NavLocator.inCommit(oid)))
 
         # Restore window geometry (TODO: On GNOME, is issue #50 still relevant?)
         if not GNOME and RebaseDialog.LastGeometry:
@@ -45,10 +55,26 @@ class RebaseDialog(QDialog):
 
         self.finished.connect(self._onFinishedSaveGeometry)
 
-        self.ui.sequence.commitSelected.connect(lambda oid: self.exploreCommit.emit(NavLocator.inCommit(oid)))
-
         optionsMenu = self._makeOptionsMenu()
         self.ui.optionsButton.setMenu(optionsMenu)
+
+        # Undo/redo keyboard shortcuts
+        undoKS = QKeySequence(QKeySequence.StandardKey.Undo)
+        redoKS = QKeySequence(QKeySequence.StandardKey.Redo)
+        makeWidgetShortcut(self, self.undoStack.undo, undoKS, context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        makeWidgetShortcut(self, self.undoStack.redo, redoKS, context=Qt.ShortcutContext.WidgetWithChildrenShortcut)
+
+        undoText = undoKS.toString(QKeySequence.SequenceFormat.NativeText)
+        redoText = redoKS.toString(QKeySequence.SequenceFormat.NativeText)
+        directionText = _("bottom to top") if settings.prefs.rebaseBottomUp else _("top to bottom")
+        self.ui.toolButton.setToolTip(paragraphs(
+            _("Drag and drop lines to rearrange them. They will be executed {direction}.",
+              direction=directionText),
+            _("Right-click lines to change their operation. You can also select some lines then "
+              "press the first letter of an operation (e.g. press {0} for {1}).",
+              tquo("D"), tquo("drop")),
+            _("You can undo/redo with {undo} and {redo}.", undo=undoText, redo=redoText),
+        ))
 
     def rebaseExtraArgs(self) -> list[str]:
         args = []
@@ -79,11 +105,6 @@ class RebaseDialog(QDialog):
         qmb.finished.connect(qmbFinished)
         qmb.show()
 
-    def setSequence(self, sequence: TRebaseSequence):
-        self.initialSequence = [line.copy() for line in sequence]
-
-        self.ui.sequence.sequenceModel.setSequence(self.initialSequence)
-
     def setCommandOnSelection(self, command: RebaseOp):
         assert command in SupportedRebaseOps, f"rebase op '{command}' not supported yet"
 
@@ -97,7 +118,7 @@ class RebaseDialog(QDialog):
             line = index.data(RebaseSequenceModel.RebaseLineRole)
             line.op = command
 
-        self.ui.sequence.sequenceModel.emitUserDataChanged(indexes)
+        self.sequenceModel.emitUserDataChanged(indexes)
         self.ui.sequence.viewport().update()
 
         # Spawn QLineEdit immediately if rewording
@@ -170,3 +191,31 @@ class RebaseDialog(QDialog):
 
     def _onToggleDateSwitch(self, toggled: bool, switch: str):
         self.rebaseDateArg = switch if toggled else ""
+
+    # --------------------------------------------------------------------------
+    # Sequence edit callbacks
+    # --------------------------------------------------------------------------
+
+    def _onSequenceEdited(self):
+        self.setWindowModified(True)
+
+        # Figure out what sequence "undo" should restore
+        undoIndex = self.undoStack.index()
+        if undoIndex == 0:
+            # This is the first command ever: "undo" returns to initial sequence
+            undo = self.initialSequence
+        else:
+            # "Undo" returns to current state in undo stack
+            topCommand = self.undoStack.command(undoIndex - 1)
+            assert isinstance(topCommand, RebaseUndoCommand), repr(topCommand)
+            undo = topCommand.redoSequence
+
+        # "Redo" always restores current sequence
+        redo = self.sequenceModel.sequence
+
+        # Discard no-op commands
+        if undo == redo:
+            return
+
+        undoCommand = RebaseUndoCommand(undo, redo, self.sequenceModel)
+        self.undoStack.push(undoCommand)

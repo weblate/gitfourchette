@@ -23,8 +23,16 @@ class RebaseSequenceModel(QAbstractListModel):
         super().__init__(parent)
         self.sequence = []
 
-    def setSequence(self, sequence: TRebaseSequence):
-        self.sequence = sequence
+    def replaceSequence(self, sequence: TRebaseSequence):
+        if sequence == self.sequence:
+            # Ignore spam calls from QUndoStack.push (via RebaseUndoCommand.redo)
+            return
+
+        sequenceCopy = [line.copy() for line in sequence]
+
+        self.beginResetModel()
+        self.sequence = sequenceCopy
+        self.endResetModel()
 
     def flipRow(self, i: int) -> int:
         if settings.prefs.rebaseBottomUp:
@@ -161,3 +169,22 @@ class RebaseSequenceModel(QAbstractListModel):
         top = min(indexes, key=QModelIndex.row)
         bottom = max(indexes, key=QModelIndex.row)
         self.dataChanged.emit(top, bottom, [RebaseSequenceModel.RebaseLineRole])
+
+
+class RebaseUndoCommand(QUndoCommand):
+    def __init__(
+            self,
+            undoSequence: TRebaseSequence,
+            redoSequence: TRebaseSequence,
+            model: RebaseSequenceModel,
+    ):
+        super().__init__()
+        self.undoSequence = [line.copy() for line in undoSequence]
+        self.redoSequence = [line.copy() for line in redoSequence]
+        self.sequenceModel = model
+
+    def undo(self):
+        self.sequenceModel.replaceSequence(self.undoSequence)
+
+    def redo(self):
+        self.sequenceModel.replaceSequence(self.redoSequence)

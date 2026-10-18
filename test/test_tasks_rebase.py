@@ -5,6 +5,7 @@
 # -----------------------------------------------------------------------------
 
 import dataclasses
+import textwrap
 
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.rebasedialog import RebaseDialog
@@ -615,3 +616,36 @@ def testRebaseDateOptions(tempDir, mainWindow):
     assert head.committer.name == "Test Person"
     assert head.committer.time == head.author.time
     assert head.committer.time - currentSecs <= 60
+
+
+def testRebaseUndoRedo(tempDir, mainWindow):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = [
+        _Todo(0, RebaseOp.Edit),
+        _Todo(1, RebaseOp.Reword, "reworded head commit"),
+    ]
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rebaseDialog = _driveRebaseDialog(rw, onto, todo)
+    rebaseDialog.ui.sequence.setFocus()
+
+    for _dummy in range(3):
+        QTest.keySequence(rebaseDialog, QKeySequence.StandardKey.Undo)
+
+    assert rebaseDialog.serializeSequence().strip() == textwrap.dedent("""\
+        pick ce112d052bcf42442aa8563f1e2b7a8aabbf4d17 # Rename c/c2.txt => c/c2-2.txt
+        pick c9ed7bf12c73de26422b7c5a44d74cfce5a8993b # Delete c/c2-2.txt
+    """).strip()
+
+    for _dummy in range(3):
+        QTest.keySequence(rebaseDialog, QKeySequence.StandardKey.Redo)
+
+    assert rebaseDialog.serializeSequence().strip() == textwrap.dedent("""\
+        edit ce112d052bcf42442aa8563f1e2b7a8aabbf4d17 # Rename c/c2.txt => c/c2-2.txt
+        reword c9ed7bf12c73de26422b7c5a44d74cfce5a8993b #GITFOURCHETTE_REBASE_PAYLOAD=cmV3b3JkZWQgaGVhZCBjb21taXQ=
+    """).strip()
+
+    rebaseDialog.reject()
+    qmb = findQMessageBox(rebaseDialog, "really close")
+    findWidgetWithText(qmb.buttons(), "close").click()

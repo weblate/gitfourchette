@@ -105,8 +105,7 @@ class InteractiveRebase(RepoTask):
             start = RebaseLine(RebaseOp.FakeStart, str(plan.onto), ontoCommitMessage)
             sequence = [start] + plan.sequence
 
-            dialog = RebaseDialog(self.parentWidget())
-            dialog.setSequence(sequence)
+            dialog = RebaseDialog(sequence, self.parentWidget())
             dialog.accepted.connect(lambda: self.executeRebase(plan, dialog))
             dialog.exploreCommit.connect(self.rw.jump)
             dialog.show()
