@@ -16,12 +16,14 @@ from gitfourchette.toolbox import QModelIndex_default
 
 class RebaseSequenceModel(QAbstractListModel):
     RebaseLineRole = Qt.ItemDataRole.UserRole
+    RebaseDanglingRole = Qt.ItemDataRole.UserRole + 1
 
     sequence: TRebaseSequence
 
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         self.sequence = []
+        self.danglingHash = ""
 
     def replaceSequence(self, sequence: TRebaseSequence):
         if sequence == self.sequence:
@@ -31,8 +33,20 @@ class RebaseSequenceModel(QAbstractListModel):
         sequenceCopy = [line.copy() for line in sequence]
 
         self.beginResetModel()
+
         self.sequence = sequenceCopy
+        self.refreshDanglingHash()
+
         self.endResetModel()
+
+    def refreshDanglingHash(self):
+        self.danglingHash = ""
+        for line in self.sequence:
+            if line.op in [RebaseOp.Pick, RebaseOp.Reword, RebaseOp.Edit]:
+                break
+            if line.op in [RebaseOp.Fixup, RebaseOp.Squash]:
+                self.danglingHash = line.hexHash
+                break
 
     def flipRow(self, i: int) -> int:
         if settings.prefs.rebaseBottomUp:
@@ -124,6 +138,9 @@ class RebaseSequenceModel(QAbstractListModel):
 
         if role == RebaseSequenceModel.RebaseLineRole:
             return item
+
+        if role == RebaseSequenceModel.RebaseDanglingRole:
+            return item.hexHash == self.danglingHash
 
         return None
 

@@ -6,14 +6,13 @@
 
 import math
 
-from gitfourchette import settings
+from gitfourchette import settings, colors
 from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpColors, RebaseOpLetters
 from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
 from gitfourchette.toolbox import shortHash, mixColors
 
-_ItemRole = RebaseSequenceModel.RebaseLineRole
 _FallbackColor = QColor(Qt.GlobalColor.magenta)
 _ColumnPadding = 8
 
@@ -42,7 +41,8 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         colorGroup = QPalette.ColorGroup.Active if isActive else QPalette.ColorGroup.Inactive
 
         # Gather data from model
-        item: RebaseLine = index.data(_ItemRole)
+        item: RebaseLine = index.data(RebaseSequenceModel.RebaseLineRole)
+        isDangling: bool = index.data(RebaseSequenceModel.RebaseDanglingRole)
 
         # Begin painting
         painter.save()
@@ -81,7 +81,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         hintParens = True
 
         if item.verifiedEmpty:
-            hint = _("Empty commit")
+            hint = _("empty commit")
 
         if item.op == RebaseOp.Drop:
             messageFont.setStrikeOut(True)
@@ -101,17 +101,22 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             else:
                 hint = _("double-click/{key} to reword", key="F2")
 
+        if isDangling:
+            hint = _("can’t {0} the starting commit!", item.op)
+
         # Draw hint if we've got enough room
         if hint and rect.width() > painter.fontMetrics().horizontalAdvance("M"*20):
             hintFont = QFont(painter.font())
             hintFont.setBold(True)
             if hintParens:
                 hint = f"({hint})"
+                if isDangling:
+                    hint += " \U0001F6AB"  # no entry sign
                 hintFont.setItalic(True)
             hintWidth = QFontMetricsF(hintFont).horizontalAdvance(hint)
             hintAlign = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
             painter.setFont(hintFont)
-            painter.setPen(mutedColor)
+            painter.setPen(mutedColor if isSelected or not isDangling else colors.red)
             painter.drawText(rect.adjusted(0, 0, -4, 0), hintAlign, hint)
             rect.adjust(0, 0, -int(hintWidth), 0)
 
@@ -131,7 +136,6 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             op: RebaseOp,
             olderOp: RebaseOp | None = None,
             newerOp: RebaseOp | None = None,
-            showDanglingErrors: bool = True,
             width: int = 0,
     ):
         opAbove = newerOp if settings.prefs.rebaseBottomUp else olderOp
@@ -192,9 +196,6 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             font.setBold(False)
         else:
             opText = str(op) if not isCramped else RebaseOpLetters[op]
-
-        if showDanglingErrors and not olderOp and (op == RebaseOp.Fixup or op == RebaseOp.Squash):
-            opText = f"¿{opText}?"
 
         # Paint
         painter.save()

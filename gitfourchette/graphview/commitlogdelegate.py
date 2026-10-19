@@ -781,7 +781,7 @@ class CommitLogDelegate(QStyledItemDelegate):
             pillWidth += seqNumWidth + spacing
 
         if op is not None:
-            RebaseSequenceDelegate.drawPill(painter, rect, op, showDanglingErrors=False, width=pillWidth)
+            RebaseSequenceDelegate.drawPill(painter, rect, op, width=pillWidth)
 
             zone = CommitToolTipZone(left, rect.left(), "ref", tip)
             self.newToolTipZone(zone)

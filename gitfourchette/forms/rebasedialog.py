@@ -197,6 +197,9 @@ class RebaseDialog(QDialog):
     # --------------------------------------------------------------------------
 
     def _onSequenceEdited(self):
+        # Check that user hasn't introduced a dangling operation
+        self.sequenceModel.refreshDanglingHash()
+
         self.setWindowModified(True)
 
         # Figure out what sequence "undo" should restore
