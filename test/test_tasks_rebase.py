@@ -692,3 +692,25 @@ def testRebaseCommitDialogInfoMessage(tempDir, mainWindow):
     commitDialog = findQDialog(rw, "commit", t=CommitDialog)
     assert findTextInWidget(commitDialog.ui.infoText, "rebasing.+inserting a new commit")
     commitDialog.reject()
+
+
+def testRebaseUncommittedChangesYellowBannerAtBoot(tempDir, mainWindow):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = [
+        _Todo(0, RebaseOp.Edit),
+    ]
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rebaseDialog = _driveRebaseDialog(rw, onto, todo)
+    rebaseDialog.accept()
+    assert rw.mergeBanner.property("heeded")  # green
+
+    shell("rm master.txt", wd)  # uncommitted change
+    rw.refreshRepo()
+    assert not rw.mergeBanner.property("heeded")  # yellow
+
+    # Reopen the repo
+    mainWindow.closeAllTabs()
+    rw = mainWindow.openRepo(wd)
+    assert not rw.mergeBanner.property("heeded")  # yellow

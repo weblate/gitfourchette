@@ -212,6 +212,7 @@ class PrimeRepo(RepoTask):
 
         # Refresh tab/window/banner text
         rw.nameChange.emit()
+        rw.refreshBanner()
 
         # It's not necessary to refresh everything again (including workdir patches)
         # after priming the repo.
