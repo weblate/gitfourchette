@@ -4,6 +4,7 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from gitfourchette import trtables
 from gitfourchette.forms.signatureform import SignatureOverride
 from gitfourchette.forms.ui_commitdialog import Ui_CommitDialog
 from gitfourchette.localization import *
@@ -62,26 +63,9 @@ class CommitDialog(QDialog):
             buttonCaption = _("Co&mmit")
             self.setWindowTitle(englishTitleCase(_("New commit")))
 
-        warning = ""
-        if repositoryState == RepositoryState.MERGE:
-            warning = _("This commit will conclude the merge.")
-        elif repositoryState == RepositoryState.CHERRYPICK:
-            warning = _("This commit will conclude the cherry-pick.")
-        elif repositoryState == RepositoryState.REVERT:
-            warning = _("This commit will conclude the revert.")
-        elif amendingCommitHash and emptyCommit:
-            warning = _("Amending commit {0} without changing its contents (no staged changes).",
-                        lquo(amendingCommitHash))
-        elif amendingCommitHash:
-            warning = _("Amending commit {0}.", lquo(amendingCommitHash))
-        elif detachedHead:
-            warning = _("<b>Detached HEAD</b> – You are not in any branch! "
-                        "You should create a branch to keep track of your commit.")
-        elif emptyCommit:
-            warning = _("Creating an empty commit (no staged changes).")
-
-        self.ui.infoBox.setVisible(bool(warning))
-        self.ui.infoText.setText(warning)
+        infoMessage = self._infoMessage(amendingCommitHash, detachedHead, repositoryState, emptyCommit)
+        self.ui.infoBox.setVisible(bool(infoMessage))
+        self.ui.infoText.setText(infoMessage)
         self.ui.infoIcon.setPixmap(stockIcon("SP_MessageBoxInformation").pixmap(self.InfoIconSize))
         self.ui.infoIcon.setMaximumWidth(self.InfoIconSize)
 
@@ -215,3 +199,39 @@ class CommitDialog(QDialog):
 
         self.ui.signatureButton.setToolTip(tt)
         self.ui.revealSignature.setToolTip(tt)
+
+    @classmethod
+    def _infoMessage(cls, amendingCommitHash: str, detachedHead: bool,
+                     repositoryState: RepositoryState, emptyCommit: bool):
+        info = ""
+        isRebasing = repositoryState == RepositoryState.REBASE_INTERACTIVE
+
+        # Default message during a rebase (can be replaced by "amending" or
+        # "inserting an empty commit")
+        if isRebasing:
+            info = _("Inserting a new commit.")
+
+        if repositoryState == RepositoryState.MERGE:
+            info = _("This commit will conclude the merge.")
+        elif repositoryState == RepositoryState.CHERRYPICK:
+            info = _("This commit will conclude the cherry-pick.")
+        elif repositoryState == RepositoryState.REVERT:
+            info = _("This commit will conclude the revert.")
+        elif amendingCommitHash and emptyCommit:
+            info = _("Amending commit {0} without changing its contents (no staged changes).",
+                        lquo(amendingCommitHash))
+        elif amendingCommitHash:
+            info = _("Amending commit {0}.", lquo(amendingCommitHash))
+        elif detachedHead and not isRebasing:
+            info = _("<b>Detached HEAD</b> – You are not in any branch! "
+                        "You should create a branch to keep track of your commit.")
+        elif emptyCommit and not isRebasing:
+            info = _("Creating an empty commit (no staged changes).")
+        elif emptyCommit and isRebasing:
+            info = _("Inserting an empty commit (no staged changes).")
+
+        # Add "Rebasing" prefix during a rebase
+        if isRebasing:
+            info = f"<b>{trtables.enum(RepositoryState.REBASE)}</b> – {info}"
+
+        return info

@@ -667,3 +667,28 @@ def testRebaseUndoRedo(tempDir, mainWindow):
     rebaseDialog.reject()
     qmb = findQMessageBox(rebaseDialog, "really close")
     findWidgetWithText(qmb.buttons(), "close").click()
+
+
+def testRebaseCommitDialogInfoMessage(tempDir, mainWindow):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = [
+        _Todo(0, RebaseOp.Edit),
+    ]
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rebaseDialog = _driveRebaseDialog(rw, onto, todo)
+    rebaseDialog.accept()
+
+    rw.diffArea.commitButton.click()
+    acceptQMessageBox(rw, "empty commit")
+    commitDialog = findQDialog(rw, "commit", t=CommitDialog)
+    assert findTextInWidget(commitDialog.ui.infoText, "rebasing.+inserting an empty commit")
+    commitDialog.reject()
+
+    shell("git rm master.txt", wd)
+    rw.refreshRepo()
+    rw.diffArea.commitButton.click()
+    commitDialog = findQDialog(rw, "commit", t=CommitDialog)
+    assert findTextInWidget(commitDialog.ui.infoText, "rebasing.+inserting a new commit")
+    commitDialog.reject()
