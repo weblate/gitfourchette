@@ -576,6 +576,31 @@ def testRebaseCorruptInfo(tempDir, mainWindow):
     assert findTextInWidget(rw.mergeBanner.label, "failed to collect information")
 
 
+def testRebaseBannerCommitLinks(tempDir, mainWindow):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = [
+        _Todo(0, RebaseOp.Edit),
+    ]
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    _driveRebaseDialog(rw, onto, todo).accept()
+
+    assert rw.mergeBanner.isVisible()
+
+    qlabelClickLink(rw.mergeBanner.label, id7(onto))
+    assert NavLocator.inCommit(onto, "a/a1").isSimilarEnoughTo(rw.navLocator)
+
+    stop = Oid(hex="ce112d052bcf42442aa8563f1e2b7a8aabbf4d17")
+    qlabelClickLink(rw.mergeBanner.label, id7(stop))
+    assert NavLocator.inCommit(stop, "c/c2-2.txt").isSimilarEnoughTo(rw.navLocator)
+
+    shell("rm master.txt", wd)
+    rw.refreshRepo()
+    qlabelClickLink(rw.mergeBanner.label, "Go to Working Directory")
+    assert NavLocator.inUnstaged("master.txt").isSimilarEnoughTo(rw.navLocator)
+
+
 def testRebaseDateOptions(tempDir, mainWindow):
     onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
     todo = [

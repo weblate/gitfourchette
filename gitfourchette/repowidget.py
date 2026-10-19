@@ -289,6 +289,7 @@ class RepoWidget(QWidget):
         banner = Banner(self, orientation=Qt.Orientation.Vertical)
         banner.setProperty("class", "merge")
         banner.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        banner.label.linkActivated.connect(self.processInternalLink)
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -678,10 +679,22 @@ class RepoWidget(QWidget):
             info = self.repoModel.rebase
             assert info is not None
 
-            title = _("Rebasing {0} onto {1}", tquoe(info.headShorthand), tquoe(shortHash(info.onto, maybe=True)))
+            if info.onto:
+                ontoLink = NavLocator.inCommit(info.onto).url()
+                ontoText = f"<a href='{ontoLink}'>{shortHash(info.onto)}</a>"
+            else:
+                ontoText = "???"
+
+            title = _("Rebasing {0} onto {1}", tquoe(info.headShorthand), ontoText)
             title = f"({info.msgnum}/{info.end}) {title}"
 
-            textParts = [_("Stopped at {commit}", commit=tquoe(shortHash(info.stoppedSha, maybe=True) or "???"))]
+            if isinstance(info.stoppedSha, Oid):
+                stopLink = NavLocator.inCommit(info.stoppedSha).url()
+                stopText = f"<a href='{stopLink}'>{shortHash(info.stoppedSha)}</a>"
+            else:
+                stopText = info.stoppedSha or "???"
+
+            textParts = [_("Stopped at {commit}", commit=stopText)]
 
             try:
                 preview = self.repo[info.stoppedSha].peel(Commit).message
@@ -697,9 +710,13 @@ class RepoWidget(QWidget):
 
             if conflicts:
                 textParts.append(_("Fix conflicts to continue."))
+                gotoWdText = _("Go to Working Directory")
+                textParts[-1] += f" (<a href='{NavLocator.inWorkdir().url()}'>{gotoWdText}</a>)"
                 actions[_("Continue rebase")] = None
             elif any(d.status != GitStatus.Untracked for d in self.repoModel.workdirUnstagedDeltas):
                 textParts.append(_("No conflicts. Stage or discard your changes to continue."))
+                gotoWdText = _("Go to Working Directory")
+                textParts[-1] += f" (<a href='{NavLocator.inWorkdir().url()}'>{gotoWdText}</a>)"
                 actions[_("Continue rebase")] = None
             else:
                 textParts.append(_("You can continue."))

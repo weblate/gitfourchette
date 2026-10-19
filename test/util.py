@@ -500,6 +500,30 @@ def triggerContextMenuAction(widget: QWidget, pattern: str, point: QPoint = QPoi
         pass
 
 
+def qlabelClickLink(label: QLabel, pattern: str):
+    doc = QTextDocument(None)
+    try:
+        doc.setHtml(label.text())
+        block = doc.firstBlock()
+
+        while block.isValid():
+            for fragment in block.fragments():
+                fmt = fragment.charFormat()
+                if not fmt.isAnchor():
+                    continue
+                href = fmt.anchorHref()
+                if not href:
+                    continue
+                if re.search(pattern, fragment.text(), re.IGNORECASE | re.MULTILINE | re.DOTALL):
+                    label.linkActivated.emit(href)
+                    return
+            block = block.next()
+
+        raise KeyError(f"did not find link pattern in QLabel: '{pattern}'")
+    finally:
+        doc.deleteLater()
+
+
 def qteFind(qte: QTextEdit | QPlainTextEdit, pattern: str, plainText=False):
     assert isinstance(qte, (QTextEdit, QPlainTextEdit))
     if plainText:

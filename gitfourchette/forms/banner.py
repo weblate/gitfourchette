@@ -88,7 +88,12 @@ class Banner(QFrame):
         toggleQssProperty(self, "heeded", heeded)
 
         smallPt = adjustedWidgetFontSize(self.label, FONT_POINT_PERCENT)
-        markup = f"<style>sm {{ font-size: {smallPt}pt; }}</style>"
+        textColor = self.label.palette().text().color()
+        markup = f"""<style>
+            sm {{ font-size: {smallPt}pt; }}
+            a {{ color: {textColor.name()}; }}
+        </style>"""
+
         if title:
             markup += f"<b>{title}</b>"
             if text:
