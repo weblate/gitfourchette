@@ -40,10 +40,7 @@ class EditmsgAutoFillServer(GFIpcServer):
         doneLast = rebaseInfo.doneSeq[-1]
 
         # If we stopped on a reword, dump the message
-        if doneLast.op.isEditable():
-            if not doneLast.payload:
-                logger.warning(f"No payload for: {doneLast}!")
-
+        if doneLast.op.isEditable() and doneLast.payload:
             editmsgPath.write_text(doneLast.payload)
         else:
             logger.debug(f"confirming verbatim commit message: {doneLast}")

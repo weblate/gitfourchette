@@ -21,7 +21,7 @@ from .util import *
 class _Todo:
     row: int
     op: RebaseOp
-    message: str = ""
+    message: str | None = None
 
 
 def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
@@ -50,7 +50,7 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
         assert itemsSoFar[todo.row].op == todo.op
 
         # Apply reworded message, if any
-        if todo.message:
+        if todo.message is not None:
             assert todo.op.isEditable(), "need editable op to change message"
 
             # QLineEdit should have been brought up by hotkey
@@ -209,6 +209,24 @@ def testRebaseRewordAfterContinue(tempDir, mainWindow):
 
     assert rw.repo.state() == RepositoryState.NONE
     assert rw.repo.head_commit.message.strip() == "rewording still works after continue"
+
+
+def testRebaseRewordNoop(tempDir, mainWindow):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = [
+        _Todo(0, RebaseOp.Pick),
+        _Todo(1, RebaseOp.Reword, ""),  # Reword to empty message
+    ]
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rebaseDialog = _driveRebaseDialog(rw, onto, todo)
+    rebaseDialog.accept()
+
+    head = rw.repo.head_commit
+    assert head.message.strip() == "Delete c/c2-2.txt"
+    assert head.author.name == "A U Thor"
+    assert head.committer.name == "Test Person"
 
 
 def testRebaseCausesConflicts(tempDir, mainWindow):
