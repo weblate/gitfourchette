@@ -151,7 +151,7 @@ def testContinueRebase(tempDir, mainWindow):
 def testRebaseReword(tempDir, mainWindow):
     onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
     todo = [
-        _Todo(0, RebaseOp.Reword, "rewording older commit"),
+        _Todo(0, RebaseOp.Reword, "  rewording older commit  "),  # some extra whitespace
         _Todo(1, RebaseOp.Reword, "rewording newer commit"),
     ]
 

@@ -147,11 +147,14 @@ class RebaseSequenceModel(QAbstractListModel):
             flags |= Qt.ItemFlag.ItemIsEditable
         return flags
 
-    def setData(self, index: QModelIndex, value: Any, role = ...):
+    def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole):
+        """
+        Called when the line edit has finished editing commit message text.
+        Only allowed on Reword and Squash.
+        """
+
         item = self.rebaseLineAtRow(index.row())
 
-        # Called when the line edit has finished editing text.
-        # Only allowed on Reword and Squash.
         assert role == Qt.ItemDataRole.EditRole, f"{index.row()} {role!r} {value!r}"
         assert item.op.isEditable()
         assert isinstance(value, str)
@@ -159,6 +162,9 @@ class RebaseSequenceModel(QAbstractListModel):
         # Don't override if identical to original comment
         if value == item.displayMessage(unmodified=True):
             value = ""
+
+        # Git will strip whitespace in commit messages
+        value = value.strip()
 
         item.payload = value
 
