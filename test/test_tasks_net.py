@@ -168,7 +168,8 @@ def testDeleteRemoteBranch(tempDir, mainWindow, method):
         rw.sidebar.findNodeByRef("refs/remotes/localfs/no-parent")
 
 
-def testRenameRemoteBranch(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
+def testRenameRemoteBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     bareCopy = makeBareCopy(wd, addAsRemote="localfs", preFetch=True, deleteOtherRemotes=True)
 
@@ -188,8 +189,15 @@ def testRenameRemoteBranch(tempDir, mainWindow):
     assert rw.repo.branches.local["no-parent"].upstream_name == "refs/remotes/localfs/no-parent"
 
     node = rw.sidebar.findNodeByRef("refs/remotes/localfs/no-parent")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "rename")
+    if method == "sidebarmenu":
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "rename")
+    elif method == "sidebarkey":
+        rw.sidebar.setFocus()
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_F2)
+    else:
+        raise NotImplementedError(f"unknown method {method}")
 
     dlg = findQDialog(rw, "rename")
     dlg.findChild(QLineEdit).setText("new-name")
