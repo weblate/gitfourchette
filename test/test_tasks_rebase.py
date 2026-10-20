@@ -402,6 +402,26 @@ def testRebaseBannerCantContinueWithUnstagedChanges(tempDir, mainWindow):
     banner.findButton("continue rebase").click()
 
 
+def testRebaseDanglingFixup(tempDir, mainWindow):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = [_Todo(0, RebaseOp.Fixup)]
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rebaseDialog = _driveRebaseDialog(rw, onto, todo)
+
+    okButton: QPushButton = rebaseDialog.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
+    assert not okButton.isEnabled()
+    assert rebaseDialog.warningHint.isVisible()
+
+    rebaseDialog.ui.sequence.setFocus()
+    QTest.keySequence(rebaseDialog, QKeySequence.StandardKey.Undo)
+    assert okButton.isEnabled()
+    assert not rebaseDialog.warningHint.isVisible()
+
+    rebaseDialog.accept()
+
+
 @pytest.mark.skipif(QT5, reason="Qt 5 (deprecated) is finicky with this test, but Qt 6 is fine")
 def testRebaseSequenceDropIndicator(tempDir, mainWindow, monkeypatch):
     """

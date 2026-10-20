@@ -44,6 +44,7 @@ class RebaseDialog(QDialog):
         # for confirmation before closing.
         self.sequenceModel.rowsMoved.connect(self._onSequenceEdited)
         self.sequenceModel.dataChanged.connect(self._onSequenceEdited)
+        self.sequenceModel.modelReset.connect(lambda: self._onSequenceEdited(pushUndo=False))  # emitted after undo/redo
 
         self.ui.sequence.customContextMenuRequested.connect(self.onContextMenuRequested)
         self.ui.sequence.opShortcut.connect(self.setCommandOnSelection)
@@ -75,6 +76,10 @@ class RebaseDialog(QDialog):
               tquo("D"), tquo("drop")),
             _("You can undo/redo with {undo} and {redo}.", undo=undoText, redo=redoText),
         ))
+
+        self.warningHint = QHintButton(self, iconKey="achtung")
+        self.ui.buttonBox.addButton(self.warningHint, QDialogButtonBox.ButtonRole.ActionRole)
+        self.warningHint.setVisible(False)
 
     def rebaseExtraArgs(self) -> list[str]:
         args = []
@@ -196,10 +201,23 @@ class RebaseDialog(QDialog):
     # Sequence edit callbacks
     # --------------------------------------------------------------------------
 
-    def _onSequenceEdited(self):
+    def _onSequenceEdited(self, pushUndo: bool = True):
         # Check that user hasn't introduced a dangling operation
         self.sequenceModel.refreshDanglingHash()
+        dangling = self.sequenceModel.danglingHash
 
+        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(not dangling)
+        self.warningHint.setVisible(bool(dangling))
+
+        if dangling:
+            warning = _("Please review commit {0} before proceeding.", tquo(shortHash(dangling)))
+            self.warningHint.setToolTip(warning)
+
+        if not pushUndo:
+            return
+
+        # Have reject() show a confirmation dialog before closing.
+        # On macOS, this also adds a dot to the window's close button.
         self.setWindowModified(True)
 
         # Figure out what sequence "undo" should restore
@@ -216,9 +234,7 @@ class RebaseDialog(QDialog):
         # "Redo" always restores current sequence
         redo = self.sequenceModel.sequence
 
-        # Discard no-op commands
-        if undo == redo:
-            return
-
-        undoCommand = RebaseUndoCommand(undo, redo, self.sequenceModel)
-        self.undoStack.push(undoCommand)
+        # Don't push no-op commands
+        if undo != redo:
+            undoCommand = RebaseUndoCommand(undo, redo, self.sequenceModel)
+            self.undoStack.push(undoCommand)
