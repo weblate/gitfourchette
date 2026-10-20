@@ -12,6 +12,7 @@ from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLine, RebaseOp
 from gitfourchette.toolbox import QModelIndex_default
+from gitfourchette.nav import PUSH_INTERVAL_MS
 
 
 class RebaseSequenceModel(QAbstractListModel):
@@ -195,6 +196,8 @@ class RebaseSequenceModel(QAbstractListModel):
 
 
 class RebaseUndoCommand(QUndoCommand):
+    _globalCounter = 0
+
     def __init__(
             self,
             undoSequence: TRebaseSequence,
@@ -205,9 +208,29 @@ class RebaseUndoCommand(QUndoCommand):
         self.undoSequence = [line.copy() for line in undoSequence]
         self.redoSequence = [line.copy() for line in redoSequence]
         self.sequenceModel = model
+        self.timestamp = QDateTime.currentMSecsSinceEpoch()
+        self.counter = RebaseUndoCommand._globalCounter
+        RebaseUndoCommand._globalCounter += 1
 
     def undo(self):
         self.sequenceModel.replaceSequence(self.undoSequence)
 
     def redo(self):
         self.sequenceModel.replaceSequence(self.redoSequence)
+
+    def id(self):
+        return 0x52454241  # 'REBA' - some id is necessary for mergeWith
+
+    def mergeWith(self, other: QUndoCommand):
+        """ When dragging a selection of multiple rows, Qt calls moveRows for
+        each individual row. In this case, compress the undo commands. """
+
+        assert isinstance(other, RebaseUndoCommand)
+        assert self.counter < other.counter, "other command must be newer"
+
+        if other.timestamp - self.timestamp < PUSH_INTERVAL_MS:
+            # Absorb newer command issued a short time after this one
+            self.redoSequence = other.redoSequence
+            return True
+
+        return False

@@ -12,8 +12,9 @@ from gitfourchette.forms.rebasedialog import RebaseDialog
 from gitfourchette.nav import NavLocator
 from gitfourchette.rebase.rebasemodel import RebaseOp, RebaseOpLetters
 from gitfourchette.rebase.rebasesequencedropindicator import RebaseSequenceDropIndicator
+from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
 from gitfourchette.rebase.rebasesequenceview import RebaseSequenceView
-from gitfourchette.toolbox import QRichTextMenu
+from gitfourchette.toolbox import QRichTextMenu, QModelIndex_default
 from .util import *
 
 
@@ -688,6 +689,50 @@ def testRebaseUndoRedo(tempDir, mainWindow):
         edit ce112d052bcf42442aa8563f1e2b7a8aabbf4d17 # Rename c/c2.txt => c/c2-2.txt
         reword c9ed7bf12c73de26422b7c5a44d74cfce5a8993b #GITFOURCHETTE_REBASE_PAYLOAD=cmV3b3JkZWQgaGVhZCBjb21taXQ=
     """).strip()
+
+    rebaseDialog.reject()
+    qmb = findQMessageBox(rebaseDialog, "really close")
+    findWidgetWithText(qmb.buttons(), "close").click()
+
+
+def testRebaseUndoRedoCommandCompression(tempDir, mainWindow):
+    """ Dragging and dropping multiple rows should come out to a single undo
+    command. """
+
+    onto = Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
+    s1 = ["c9ed7bf", "ce112d0", "d0114ab", "f73b956", "7f82283", "59706a1", "d31f5a6", "83d2f04", "1203b03", "bab66b4"]
+    s2 = ["7f82283", "59706a1", "d31f5a6", "83d2f04", "c9ed7bf", "ce112d0", "d0114ab", "f73b956", "1203b03", "bab66b4"]
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rebaseDialog = _driveRebaseDialog(rw, onto, [])
+    rebaseDialog.ui.sequence.setFocus()
+
+    def getHashes():
+        hashes = []
+        for row in range(rebaseDialog.sequenceModel.rowCount()):
+            index = rebaseDialog.sequenceModel.index(row)
+            line = index.data(RebaseSequenceModel.RebaseLineRole)
+            hashes.append(id7(line.hexHash))
+        return hashes
+
+    assert getHashes() == s1
+
+    # Move rows. Drag-and-drop is tricky in a unit testing environment, so
+    # simulate many calls to moveRows, just like a real drag-and-drop does.
+    qlvClickNthRow(rebaseDialog.ui.sequence, 4)
+    qlvClickNthRow(rebaseDialog.ui.sequence, 8-1, Qt.KeyboardModifier.ShiftModifier)
+    for i in range(4):
+        rebaseDialog.sequenceModel.moveRow(QModelIndex_default, 4+i, QModelIndex_default, 0+i)
+    assert getHashes() == s2
+
+    # Undo - must return to sequence 1 thanks to command compression (mergeWith)
+    QTest.keySequence(rebaseDialog, QKeySequence.StandardKey.Undo)
+    assert getHashes() == s1
+
+    # Redo - must return to sequence 2
+    QTest.keySequence(rebaseDialog, QKeySequence.StandardKey.Redo)
+    assert getHashes() == s2
 
     rebaseDialog.reject()
     qmb = findQMessageBox(rebaseDialog, "really close")
