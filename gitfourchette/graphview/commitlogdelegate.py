@@ -728,12 +728,12 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         left = rect.left()
         seqNumWidth = QFontMetrics(self.rebaseNumberFont).horizontalAdvance("0" * seqNumDigits)
-        pillWidth = 50
+        pillWidth = 56
         spacing = 4
         advanceTo = left + seqNumWidth + spacing + pillWidth + spacing*2
 
         op: RebaseOp | None = None
-        tip: str = ""
+        tip: str = _("Rebase") + _(":") + " "
         seqNum, done = rebase.sequenceIndexOf(oid)
 
         if seqNum < 0 and (rewriters := rebase.rewriters.get(oid)):
@@ -744,28 +744,37 @@ class CommitLogDelegate(QStyledItemDelegate):
                 minStep = min(j, minStep)
                 maxStep = max(j, maxStep)
             if minStep == maxStep:
-                tip = _("Rewrite of step {0}", minStep)
+                tip += _("Rewrite of step {0}", minStep)
             else:
-                tip = _("Rewrite of steps {0}-{1}", minStep, maxStep)
+                tip += _("Rewrite of steps {0}-{1}", minStep, maxStep)
         elif seqNum < 0:
             op = None
         elif oid == rebase.onto:
             op = RebaseOp.FakeStart
-            tip = _("Rebase initiated onto this commit")
+            tip += _("Initiated onto this commit")
         elif oid == rebase.stoppedSha:
             op = RebaseOp.FakeStop
-            tip = _("Rebase stopped here")
+            tip += _("Step {0} of {1}, stopped here", seqNum, rebase.end)
         elif not done:
             op = rebase.sequenceLine(seqNum).op
-            tip = _("To do")
+            tip += _("Step {0} of {1}, not executed yet", seqNum, rebase.end)
         elif (rebasedAs := rebase.rewritten.get(oid, oid)) != oid:
             op = RebaseOp.FakeDoneRW
-            line = rebase.sequenceLine(seqNum)
-            tip = _("Rebased as {0} ({1})", "*" + shortHash(rebasedAs), line.op)
+            tip += "*" + _("Rewritten as {0}", shortHash(rebasedAs))
         else:
             op = RebaseOp.FakeDone
             line = rebase.sequenceLine(seqNum)
-            tip = _("Rebased as-is ({0})", line.op)
+            tip += _("Cherry-picked as-is", line.op)
+
+        # Look for concrete commit (which commit we'll meld into)
+        meldingSeqNum = 0
+        if op is not None and op.isMelding():
+            for i in range(seqNum-1, 0, -1):
+                concreteCandidate = rebase.sequenceLine(i)
+                if concreteCandidate.op.isConcrete():
+                    meldingSeqNum = i
+                    tip += "\n" + _("This commit will be melded into step {0}", meldingSeqNum)
+                    break
 
         if seqNum >= 1:
             numRect = QRect(rect)
@@ -781,7 +790,7 @@ class CommitLogDelegate(QStyledItemDelegate):
             pillWidth += seqNumWidth + spacing
 
         if op is not None:
-            RebaseSequenceDelegate.drawPill(painter, rect, op, width=pillWidth)
+            RebaseSequenceDelegate.drawPill(painter, rect, op, width=pillWidth, meldingSeqNum=meldingSeqNum)
 
             zone = CommitToolTipZone(left, rect.left(), "ref", tip)
             self.newToolTipZone(zone)

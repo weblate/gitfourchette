@@ -137,12 +137,13 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             olderOp: RebaseOp | None = None,
             newerOp: RebaseOp | None = None,
             width: int = 0,
+            meldingSeqNum: int = 0,
     ):
         bottomUp = settings.prefs.rebaseBottomUp
         opAbove = newerOp if bottomUp else olderOp
         opBelow = olderOp if bottomUp else newerOp
 
-        isNarrow = 0 < width <= 50
+        isNarrow = 0 < width <= 70
         isCramped = 0 < width <= 40
 
         font = QFont(painter.font())
@@ -188,7 +189,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             chevron = "🞂" if not MACOS else "▶"
             opText = chevron*3 if isNarrow else (_("stop") + " " + chevron*3)
         elif op == RebaseOp.FakeStart:
-            opText = "★" if isNarrow else _("start")
+            opText = _("start")
         elif op == RebaseOp.FakeDone:
             opText = "\u2713"
         elif op == RebaseOp.FakeDoneRW:
@@ -199,6 +200,9 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             font.setBold(False)
         else:
             opText = str(op) if not isCramped else RebaseOpLetters[op]
+
+        if meldingSeqNum > 0 and op.isMelding():
+            opText = f"{opText[:3]}\u2192{meldingSeqNum}"
 
         # Draw pill
         painter.save()
