@@ -46,7 +46,6 @@ class Ui_RebaseDialog(object):
         RebaseDialog.setTabOrder(self.optionsButton, self.toolButton)
 
     def retranslateUi(self, RebaseDialog):
-        RebaseDialog.setWindowTitle(_p("RebaseDialog", "Rebase"))
         self.optionsButton.setText(_p("RebaseDialog", "&Options"))
 from gitfourchette.rebase.rebasesequenceview import RebaseSequenceView
 from gitfourchette.toolbox.qhintbutton import QHintButton

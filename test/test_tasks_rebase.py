@@ -30,7 +30,7 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
 
     # Bring up RebaseDialog
     triggerContextMenuAction(rw.graphView.viewport(), "rebase")
-    rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
+    rebaseDialog = waitForQDialog(rw, "rebase|rebasing", t=RebaseDialog)
 
     sequenceView = rebaseDialog.ui.sequence
 
@@ -443,7 +443,7 @@ def testRebaseSequenceDropIndicator(tempDir, mainWindow, monkeypatch):
     # Bring up RebaseDialog
     rw.jump(NavLocator.inCommit(onto, ""))
     triggerContextMenuAction(rw.graphView.viewport(), "rebase")
-    rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
+    rebaseDialog = waitForQDialog(rw, "rebase|rebasing", t=RebaseDialog)
 
     view: RebaseSequenceView = rebaseDialog.ui.sequence
     LMB = Qt.MouseButton.LeftButton
@@ -488,7 +488,7 @@ def testRebaseSequenceViewQDrag(tempDir, mainWindow, monkeypatch):
     # Bring up RebaseDialog
     rw.jump(NavLocator.inCommit(onto, ""))
     triggerContextMenuAction(rw.graphView.viewport(), "rebase")
-    rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
+    rebaseDialog = waitForQDialog(rw, "rebase|rebasing", t=RebaseDialog)
 
     view = rebaseDialog.ui.sequence
     LMB = Qt.MouseButton.LeftButton
@@ -541,7 +541,7 @@ def testRebaseRichTextMenu(tempDir, mainWindow, monkeypatch):
     # Bring up RebaseDialog
     rw.jump(NavLocator.inCommit(onto, ""))
     triggerContextMenuAction(rw.graphView.viewport(), "rebase")
-    rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
+    rebaseDialog = waitForQDialog(rw, "rebase|rebasing", t=RebaseDialog)
 
     rebaseDialog.ui.sequence.setFocus()
     qlvClickNthRow(rebaseDialog.ui.sequence, 1)
@@ -564,7 +564,7 @@ def testRebaseJumpToCommit(tempDir, mainWindow):
     # Bring up RebaseDialog
     rw.jump(NavLocator.inCommit(onto, ""))
     triggerContextMenuAction(rw.graphView.viewport(), "rebase")
-    rebaseDialog = waitForQDialog(rw, "rebase", t=RebaseDialog)
+    rebaseDialog = waitForQDialog(rw, "rebase|rebasing", t=RebaseDialog)
 
     rebaseDialog.ui.sequence.setFocus()
     qlvClickNthRow(rebaseDialog.ui.sequence, 0)

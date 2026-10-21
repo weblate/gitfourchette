@@ -109,6 +109,7 @@ class InteractiveRebase(RepoTask):
             sequence = [start] + plan.sequence
 
             dialog = RebaseDialog(sequence, self.parentWidget())
+            dialog.setWindowTitle("[*]" + _("Rebasing {0} onto {1}", tquoe(info.headShorthand), tquo(shortHash(info.onto))))
             dialog.accepted.connect(lambda: self.executeRebase(plan, dialog))
             dialog.exploreCommit.connect(self.rw.jump)
             dialog.show()
