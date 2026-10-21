@@ -68,6 +68,9 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
             lineEdit.clearFocus()
             QTest.qWait(0)
 
+        # Give delegate time to repaint (for coverage)
+        QTest.qWait(0)
+
     return rebaseDialog
 
 
@@ -713,6 +716,55 @@ def testRebaseUndoRedo(tempDir, mainWindow):
     rebaseDialog.reject()
     qmb = findQMessageBox(rebaseDialog, "really close")
     findWidgetWithText(qmb.buttons(), "close").click()
+
+
+def testRebaseSequenceDelegatePaintCoverage(tempDir, mainWindow):
+    """ Coverage test for RebaseSequenceDelegate.paint """
+
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    todo = [
+        _Todo(7, RebaseOp.Edit),
+        _Todo(6, RebaseOp.Fixup),
+        _Todo(4, RebaseOp.Fixup),
+        _Todo(3, RebaseOp.Reword, "hello2"),
+        _Todo(2, RebaseOp.Fixup),
+        _Todo(1, RebaseOp.Drop),
+        _Todo(0, RebaseOp.Edit),
+    ]
+
+    wd = unpackRepo(tempDir)
+
+    # Insert junk commits that we'll rewrite
+    shell("""
+        git commit --allow-empty -mhello
+        git commit --allow-empty -mhello
+        git commit --allow-empty -mhello
+        git commit --allow-empty -mhello
+        git commit --allow-empty -mhello
+        git commit --allow-empty -mhello
+        git commit --allow-empty -mhello
+        git commit --allow-empty -mhello
+    """, wd)
+
+    # Grow window so all rebased commits show up in the graph
+    mainWindow.resize(1600, 1600)
+
+    # Do the rebase
+    rw = mainWindow.openRepo(wd)
+    _driveRebaseDialog(rw, onto, todo).accept()
+
+    # First stop in rebase (let it paint pending fixups)
+    QTest.qWait(0)  # let delegate repaint
+    assert rw.mergeBanner.isVisible()
+    findWidgetWithText(rw.mergeBanner.buttons, "continue rebase").click()
+
+    # Second stop in rebase (let it paint 'done' commits)
+    QTest.qWait(0)  # let delegate repaint
+
+    # Conclude the rebase
+    assert rw.mergeBanner.isVisible()
+    findWidgetWithText(rw.mergeBanner.buttons, "continue rebase").click()
+    assert not rw.mergeBanner.isVisible()
 
 
 def testRebaseUndoRedoCommandCompression(tempDir, mainWindow):

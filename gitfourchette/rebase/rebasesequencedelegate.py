@@ -11,7 +11,7 @@ from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpColors, RebaseOpLetters
 from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
-from gitfourchette.toolbox import shortHash, mixColors
+from gitfourchette.toolbox import shortHash, mixColors, lerp
 
 _FallbackColor = QColor(Qt.GlobalColor.magenta)
 _ColumnPadding = 8
@@ -32,7 +32,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         return size
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
-        if self.ignoreMouseOverState:
+        if self.ignoreMouseOverState:  # pragma: no cover - Always false in offscreen mode because startDrag returns immediately
             option.state &= ~QStyle.StateFlag.State_MouseOver
 
         widget = option.widget
@@ -138,8 +138,9 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             newerOp: RebaseOp | None = None,
             width: int = 0,
     ):
-        opAbove = newerOp if settings.prefs.rebaseBottomUp else olderOp
-        opBelow = olderOp if settings.prefs.rebaseBottomUp else newerOp
+        bottomUp = settings.prefs.rebaseBottomUp
+        opAbove = newerOp if bottomUp else olderOp
+        opBelow = olderOp if bottomUp else newerOp
 
         isNarrow = 0 < width <= 50
         isCramped = 0 < width <= 40
@@ -151,6 +152,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         rrRadius = rect.height() // 2
         if not width:
             width = QFontMetrics(font).horizontalAdvance("oooooi") + 2 * rrRadius
+            width += 12  # make room for arrow
 
         textRect = QRectF(rect)
         textRect.adjust(0, vMargin, 0, -vMargin)
@@ -167,6 +169,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         pillPath.addRoundedRect(pillRect, rrRadius, rrRadius)
 
         # Gradient
+        colorText = Qt.GlobalColor.white
         colorCenter = RebaseOpColors.get(op, _FallbackColor)
         colorAbove = RebaseOpColors.get(opAbove or op, _FallbackColor)
         colorBelow = RebaseOpColors.get(opBelow or op, _FallbackColor)
@@ -197,15 +200,63 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         else:
             opText = str(op) if not isCramped else RebaseOpLetters[op]
 
-        # Paint
+        # Draw pill
         painter.save()
         painter.setFont(font)
         painter.setClipRect(rect)  # confine drawing to row
         if op != RebaseOp.FakeRewrite and op != RebaseOp.FakeDone and op != RebaseOp.FakeDoneRW:
-            painter.setPen(Qt.GlobalColor.white)
+            painter.setPen(colorText)
             painter.fillPath(pillPath, gradient)
             painter.drawPath(pillPath)
-        painter.drawText(textRect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter, opText)
+
+        # Make room for arrow, if any
+        textRectAdj = QRectF(textRect)
+        if opAbove or opBelow:
+            textRectAdj.adjust(0, 0, -14, 0)
+
+        # Draw text
+        painter.drawText(textRectAdj, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter, opText)
+
+        # Draw arrows from fixup/squash to concrete commit
+        if opAbove or opBelow:
+            lx = textRect.right() - 9.0   # line X
+            cy = textRect.center().y() + 1
+            ty = rect.top()
+            by = rect.bottom()
+            arrowBaseX = lx - 5.5
+            arrowTipX = arrowBaseX - 4.5
+
+            # Don't draw arrow if fixup/squash is first in the sequence
+            drawArrowHere = not (opBelow if bottomUp else opAbove) and not op.isMelding()
+
+            path = QPainterPath()
+            if not drawArrowHere:
+                # Straight line
+                path.moveTo(lx, ty if opAbove else cy)
+                path.lineTo(lx, by if opBelow else cy)
+            else:
+                # Curve
+                curveStartY = ty if bottomUp else by
+                path.moveTo(lx, curveStartY)
+                path.lineTo(lx, lerp(curveStartY, cy, .33))
+                path.cubicTo(lx, cy, arrowBaseX+1, cy, arrowBaseX+1, cy)
+
+            # Fill arrow triangle, commit circle
+            painter.setBrush(colorText)
+            if drawArrowHere:
+                painter.drawPolygon([  # type: ignore[call-overload]  # inaccurate stubs
+                    QPointF(arrowBaseX, cy-4),
+                    QPointF(arrowBaseX, cy+4),
+                    QPointF(arrowTipX, cy)])
+            elif op != RebaseOp.Drop:
+                painter.drawEllipse(QPointF(lx, cy + .5), 2.5, 2.5)
+
+            # Draw straight line or curve
+            pen = QPen(colorText, 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.SquareCap, Qt.PenJoinStyle.BevelJoin)
+            painter.setPen(pen)
+            painter.setBrush(Qt.GlobalColor.transparent)
+            painter.drawPath(path)
+
         painter.restore()
 
         rect.setLeft(round(textRect.right()))
@@ -228,10 +279,10 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         for row in range(startRow + 1, len(model.sequence)):
             op = model.sequence[row].op
             if op != RebaseOp.Drop:
-                connectNewer |= op in [RebaseOp.Fixup, RebaseOp.Squash]
+                connectNewer |= op.isMelding()
                 break
 
-        if startOp == RebaseOp.Fixup or startOp == RebaseOp.Squash:
+        if startOp.isMelding():
             connectOlder = True
         elif startOp == RebaseOp.Drop:
             connectOlder = connectNewer
@@ -243,10 +294,13 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             assert startRow + 1 < len(model.sequence)
             newerOp = model.sequence[startRow + 1].op
 
+        # Don't blend to older fake operation (i.e. "start")
         if olderOp and olderOp.isFake():
             olderOp = None
-        if newerOp and newerOp.isFake():
-            newerOp = None
+
+        # There are no situations where we might blend into a newer fake op
+        if newerOp:
+            assert not newerOp.isFake()
 
         return olderOp, newerOp
 

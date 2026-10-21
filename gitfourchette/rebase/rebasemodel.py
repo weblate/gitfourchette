@@ -38,10 +38,21 @@ class RebaseOp(enum.StrEnum):
     FakeStart   = "__start"
     FakeRewrite = "__rewrite"
 
+    def isMelding(self) -> bool:
+        """True if this operation requires a connection to an older commit."""
+        return self == "fixup" or self == "squash"
+
+    def isConcrete(self) -> bool:
+        """True if this operation breaks a chain of melding operations."""
+        return self in {"pick", "edit", "reword"}
+
     def isEditable(self) -> bool:
+        """True if this operation allows editing the commit message."""
         return self == "reword" or self == "squash"
 
     def isFake(self) -> bool:
+        """True if this is an internal operation that must be stripped from the
+        sequence before feeding it to Git."""
         return self.startswith("__")
 
 

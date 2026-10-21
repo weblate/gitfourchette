@@ -43,9 +43,9 @@ class RebaseSequenceModel(QAbstractListModel):
     def refreshDanglingHash(self):
         self.danglingHash = ""
         for line in self.sequence:
-            if line.op in [RebaseOp.Pick, RebaseOp.Reword, RebaseOp.Edit]:
+            if line.op.isConcrete():
                 break
-            if line.op in [RebaseOp.Fixup, RebaseOp.Squash]:
+            if line.op.isMelding():
                 self.danglingHash = line.hexHash
                 break
 

@@ -100,6 +100,7 @@ class RebaseSequenceView(QListView):
         drag = self.makeQDrag()
 
         try:
+            # Note: this returns immediately in offscreen mode!
             drag.exec(supportedActions)
         finally:
             delegate.ignoreMouseOverState = False
