@@ -11,7 +11,7 @@ from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpColors, RebaseOpLetters
 from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
-from gitfourchette.toolbox import shortHash, mixColors, lerp
+from gitfourchette.toolbox import shortHash, mixColors, lerp, stockIcon
 
 _FallbackColor = QColor(Qt.GlobalColor.magenta)
 _ColumnPadding = 8
@@ -78,7 +78,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         messageFont = QFont(painter.font())
         message = item.displayMessage()
         hint = ""
-        hintParens = True
+        hintIcon = ""
 
         if item.verifiedEmpty:
             hint = _("empty commit")
@@ -91,8 +91,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             messageColor = mutedColor
         elif item.op == RebaseOp.FakeStart:
             messageColor = mutedColor
-            hint = "\U0001F512"  # padlock emoji
-            hintParens = False
+            hintIcon = "action-unavailable"
         elif item.op.isEditable():
             if item.payload:
                 hint = _("reworded")
@@ -103,22 +102,25 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
 
         if isDangling:
             hint = _("can’t {0} the starting commit!", item.op)
+            hintIcon = "achtung"
+
+        if hintIcon:
+            icon = stockIcon(hintIcon)
+            icon.paint(painter, QRect(rect.right() - 16, rect.top(), 16, rect.height()))
+            rect.adjust(0, 0, -20, 0)
 
         # Draw hint if we've got enough room
         if hint and rect.width() > painter.fontMetrics().horizontalAdvance("M"*20):
             hintFont = QFont(painter.font())
+            hintFont.setPointSize(round(hintFont.pointSize() * 90 / 100.0))
             hintFont.setBold(True)
-            if hintParens:
-                hint = f"({hint})"
-                if isDangling:
-                    hint += " \U0001F6AB"  # no entry sign
-                hintFont.setItalic(True)
+            hintFont.setItalic(True)
             hintWidth = QFontMetricsF(hintFont).horizontalAdvance(hint)
             hintAlign = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
             painter.setFont(hintFont)
             painter.setPen(mutedColor if isSelected or not isDangling else colors.red)
             painter.drawText(rect.adjusted(0, 0, -4, 0), hintAlign, hint)
-            rect.adjust(0, 0, -int(hintWidth), 0)
+            rect.adjust(0, 0, -int(hintWidth) - 8, 0)
 
         # Draw message
         message = painter.fontMetrics().elidedText(message, option.textElideMode, rect.width())
