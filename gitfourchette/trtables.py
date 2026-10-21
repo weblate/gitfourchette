@@ -331,6 +331,7 @@ def _enumTable() -> dict[type[Enum], dict[Enum, str]]:
 def _prefKeyTable() -> dict[str, str]:
     from gitfourchette.toolbox.textutils import paragraphs, tquo, escape
     from gitfourchette.exttools.usercommand import UserCommand
+    from gitfourchette.qt import FLATPAK
 
     sshAuthSock = os.environ.get("SSH_AUTH_SOCK", "")
     if sshAuthSock:
@@ -343,6 +344,11 @@ def _prefKeyTable() -> dict[str, str]:
         sshAuthSockHelp = _("Note: Per {k}, no ssh-agent seems to be running on your system.")
     sshAuthSockHelp = "<blockquote>" + sshAuthSockHelp.format(
         k="SSH_AUTH_SOCK", v=escape(sshAuthSock), c="AddKeysToAgent")
+
+    gitPathHelp = ""
+    if FLATPAK:
+        gitPathHelp = "<p>" + _("Note that the Flatpak’s built-in Git cannot call external programs. "
+                                "If you use Git hooks or credential helpers, you should use your host system’s Git.")
 
     return {
         "general": _p("Prefs", "General"),
@@ -492,12 +498,13 @@ def _prefKeyTable() -> dict[str, str]:
             _("The {0} placeholder is mandatory. It is automatically substituted for a wrapper script that "
               "enters your working directory and optionally starts one of your Custom Commands.",
               "$COMMAND")),
-        "gitPath": "git",
+        "gitPath": "Git",
+        "gitPath_help": gitPathHelp,
         "ownAskpass": _("Have OpenSSH ask for passphrases via {app}", app=APP_DISPLAY_NAME),
         "ownAskpass_help": paragraphs(
             _("Tick this to have OpenSSH use {app} to ask for passphrases."),
             _("Untick this if you’ve set up another program in the {0} environment variable (such as {1}).", tquo("SSH_ASKPASS"), tquo("ksshaskpass"))),
-        "ownSshAgent": "ssh-agent",
+        "ownSshAgent": _("SSH agent"),
         "ownSshAgent_false": _("Use ssh-agent provided by the system") + " " + "" if sshAuthSock else _("(not detected)"),
         "ownSshAgent_true": _("Have {app} manage its own ssh-agent", app=APP_DISPLAY_NAME),
         "ownSshAgent_help": paragraphs(

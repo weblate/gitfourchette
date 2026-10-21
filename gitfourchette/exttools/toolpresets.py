@@ -242,10 +242,19 @@ class ToolPresets:
 
     @classmethod
     def defaultGit(cls, hostOnly=False) -> str:
-        return shlex.quote(
-            (not hostOnly and cls.flatpakBuiltInGit())
-            or ToolCommands.which("git")
-            or "/usr/bin/git")
+        defaultGit = ToolCommands.which("git")
+
+        # Flatpak: only use built-in Git if Git isn't installed on the host
+        # (Except in test mode, where we enforce the built-in Git to make sure
+        # everything works with it)
+        if (FLATPAK
+                and not APP_TESTMODE
+                and not hostOnly
+                and not defaultGit):
+            defaultGit = cls.flatpakBuiltInGit()
+
+        defaultGit = defaultGit or "/usr/bin/git"
+        return shlex.quote(defaultGit)
 
 
 ToolPresets._filterToolPresets()
