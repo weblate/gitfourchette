@@ -11,7 +11,7 @@ from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import RebaseLine, RebaseOp, RebaseOpColors, RebaseOpLetters
 from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
-from gitfourchette.toolbox import shortHash, mixColors, lerp, stockIcon
+from gitfourchette.toolbox import shortHash, mixColors, lerp, stockIcon, isDarkTheme
 
 _FallbackColor = QColor(Qt.GlobalColor.magenta)
 _ColumnPadding = 8
@@ -172,7 +172,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         pillPath.addRoundedRect(pillRect, rrRadius, rrRadius)
 
         # Gradient
-        colorText = Qt.GlobalColor.white
+        colorText = QColor(Qt.GlobalColor.white)
         colorCenter = RebaseOpColors.get(op, _FallbackColor)
         colorAbove = RebaseOpColors.get(opAbove or op, _FallbackColor)
         colorBelow = RebaseOpColors.get(opBelow or op, _FallbackColor)
@@ -206,25 +206,39 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         if meldingSeqNum > 0 and op.isMelding():
             opText = f"{opText[:3]}\u2192{meldingSeqNum}"
 
-        # Draw pill
+        # Draw pill, or just the text for rewritten/done
+        drawPillBackground = op not in {RebaseOp.FakeRewrite, RebaseOp.FakeDone, RebaseOp.FakeDoneRW}
         painter.save()
         painter.setFont(font)
         painter.setClipRect(rect)  # confine drawing to row
-        if op != RebaseOp.FakeRewrite and op != RebaseOp.FakeDone and op != RebaseOp.FakeDoneRW:
-            painter.setPen(colorText)
+        if drawPillBackground:
             painter.fillPath(pillPath, gradient)
-            painter.drawPath(pillPath)
+        else:
+            painter.drawText(textRect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter, opText)
 
         # Make room for arrow, if any
         textRectAdj = QRectF(textRect)
         if opAbove or opBelow:
             textRectAdj.adjust(0, 0, -14, 0)
 
-        # Draw text
-        painter.drawText(textRectAdj, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter, opText)
+        # Overlay text/arrows: first pass is shadow, second pass is white
+        painter.translate(2, 2)
+        for overlayPass in range(2 if drawPillBackground else 0):
+            if overlayPass == 0:
+                colorText = QColor(Qt.GlobalColor.black)
+                colorText.setAlphaF(.3 if isDarkTheme() else .2)
+            else:
+                colorText = QColor(Qt.GlobalColor.white)
+            painter.setPen(colorText)
+            painter.translate(-1, -1)
 
-        # Draw arrows from fixup/squash to concrete commit
-        if opAbove or opBelow:
+            # Draw text
+            painter.drawText(textRectAdj, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter, opText)
+
+            # Draw arrows from fixup/squash to concrete commit
+            if not (opAbove or opBelow):
+                continue
+
             lx = textRect.right() - 9.0   # line X
             cy = textRect.center().y() + 1
             ty = rect.top()
@@ -262,6 +276,11 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             painter.setPen(pen)
             painter.setBrush(Qt.GlobalColor.transparent)
             painter.drawPath(path)
+
+        # Draw pill outline on top
+        if drawPillBackground:
+            painter.setPen(colorText)
+            painter.drawPath(pillPath)
 
         painter.restore()
 
