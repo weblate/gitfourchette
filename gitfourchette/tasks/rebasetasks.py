@@ -40,6 +40,9 @@ class InteractiveRebase(RepoTask):
         return TaskPrereqs.NoConflicts | TaskPrereqs.NoUnborn | TaskPrereqs.NoCherrypick
 
     def flow(self, ontoCommit: Oid):
+        if self.rw.findChild(RebaseDialog):
+            raise AbortTask(_("Please conclude the current rebase before starting a new one."))
+
         headName = self.repo.head_branch_shorthand
         headCommit = self.repo.head_commit_id
 
@@ -109,6 +112,7 @@ class InteractiveRebase(RepoTask):
             dialog.accepted.connect(lambda: self.executeRebase(plan, dialog))
             dialog.exploreCommit.connect(self.rw.jump)
             dialog.show()
+            dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         except Exception as ex:
             # Switch to non-graceful abort

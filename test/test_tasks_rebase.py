@@ -804,3 +804,21 @@ def testRebaseUncommittedChangesYellowBannerAtBoot(tempDir, mainWindow):
     mainWindow.closeAllTabs()
     rw = mainWindow.openRepo(wd)
     assert not rw.mergeBanner.property("heeded")  # yellow
+
+
+def testRebaseSingleDialog(tempDir, mainWindow):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    rebaseDialog = _driveRebaseDialog(rw, onto, [])
+
+    # Attempt to start a second rebase; denied
+    rw.jump(NavLocator.inCommit(onto, ""))
+    triggerContextMenuAction(rw.graphView.viewport(), "rebase")
+    acceptQMessageBox(rw, "conclude the current rebase")
+
+    # After closing the rebase dialog, we should be able to start a new one
+    rebaseDialog.close()
+    rebaseDialog = _driveRebaseDialog(rw, onto, [])
+    rebaseDialog.close()
