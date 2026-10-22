@@ -22,6 +22,7 @@ from gitfourchette.exttools.toolprocess import ToolProcess
 from gitfourchette.forms.ui_conflictview import Ui_ConflictView
 from gitfourchette.gitdriver import GitConflict, GitConflictSides
 from gitfourchette.localization import *
+from gitfourchette.porcelain import RefPrefix
 from gitfourchette.qt import *
 from gitfourchette.repomodel import RepoModel
 from gitfourchette.tasks import HardSolveConflicts, AcceptMergeConflictResolution, OpenMergeTool
@@ -229,6 +230,15 @@ class ConflictView(QWidget):
 
         # Reveal the page
         self.ui.stackedWidget.setCurrentWidget(page)
+
+        if self.repoModel.rebase:
+            rebase = self.repoModel.rebase
+            _dummy, headName = RefPrefix.split(rebase.headName)
+            stoppedSha = shortHash(rebase.stoppedSha, maybe=True)
+            self.ui.oursRebaseLabel.setText(_("(in the branch you’re rebasing onto)"))
+            self.ui.theirsRebaseLabel.setText(_("(in commit {0} being replayed from {1})", tquo(stoppedSha), tquo(headName)))
+        self.ui.oursRebaseLabel.setVisible(bool(self.repoModel.rebase))
+        self.ui.theirsRebaseLabel.setVisible(bool(self.repoModel.rebase))
 
         self.ui.oursButton.setText(strings.ours1 + "\u2026")
         self.ui.oursButton.setToolTip(strings.ours2)
