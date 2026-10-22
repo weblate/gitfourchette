@@ -199,6 +199,7 @@ class Sidebar(QTreeView):
             prefix, branchName = RefPrefix.split(data)
             assert prefix == RefPrefix.HEADS
             branch = repo.branches.local[branchName]
+            targetOid = model.repoModel.refs[refName]
 
             activeBranchName = model.repoModel.homeBranch
             isCurrentBranch = branch and branch.is_checked_out()
@@ -240,6 +241,13 @@ class Sidebar(QTreeView):
                     _("&Merge into {0}…", activeBranchDisplay),
                     taskArgs=refName,
                 ).replace(enabled=not isCurrentBranch and activeBranchName),
+
+                TaskBook.action(
+                    self,
+                    ResetHead,
+                    _("&Reset {0} to Here…", activeBranchDisplay),
+                    taskArgs=targetOid,
+                ).replace(enabled=not isCurrentBranch),
 
                 ActionDef.SEPARATOR,
 
@@ -312,6 +320,7 @@ class Sidebar(QTreeView):
             refName = data
             prefix, shorthand = RefPrefix.split(refName)
             assert prefix == RefPrefix.REMOTES
+            targetOid = model.repoModel.refs[refName]
 
             remoteName, remoteBranchName = porcelain.split_remote_branch_shorthand(shorthand)
             remoteUrl = self.sidebarModel.repo.remotes[remoteName].url
@@ -337,6 +346,8 @@ class Sidebar(QTreeView):
 
                 TaskBook.action(self, MergeBranch, _("&Merge into {0}…", activeBranchDisplay),
                                 taskArgs=refName, enabled=bool(activeBranchName)),
+
+                TaskBook.action(self, ResetHead, _("&Reset {0} to Here…", activeBranchDisplay), taskArgs=targetOid),
 
                 ActionDef.SEPARATOR,
 

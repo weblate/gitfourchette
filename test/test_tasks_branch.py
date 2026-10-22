@@ -723,12 +723,34 @@ def testResetHeadToCommit(tempDir, mainWindow, method):
     else:
         raise NotImplementedError(f"unknown method {method}")
 
-    dlg: ResetHeadDialog = findQDialog(rw, "reset.+master.+to.+0966a4")
+    dlg = findQDialog(rw, "reset.+master.+to.+0966a4", t=ResetHeadDialog)
     dlg.modeButtons[ResetMode.HARD].click()
     dlg.accept()
 
     assert rw.repo.head.target == oid1
     assert rw.repo.branches.local['master'].target == oid1
+
+
+def testResetHeadToBranchFromSidebar(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
+
+    node = sb.findNode(lambda n: n.data == "refs/heads/master")
+    menu = sb.makeNodeMenu(node)
+    assert not findMenuAction(menu, "reset.+master.+to here").isEnabled()
+
+    for ref in ["refs/heads/no-parent", "refs/remotes/origin/master"]:
+        oid = rw.repo.references[ref].peel(Commit).id
+        node = sb.findNode(lambda n, r=ref: n.data == r)
+        menu = sb.makeNodeMenu(node)
+        triggerMenuAction(menu, "reset.+master.+to here")
+
+        dlg = findQDialog(rw, "reset.+master.+to.+" + id7(oid), t=ResetHeadDialog)
+        dlg.modeButtons[ResetMode.HARD].click()
+        dlg.accept()
+        assert rw.repo.head.target == oid
+        assert rw.repo.branches.local['master'].target == oid
 
 
 def testResetHeadRecurseSubmodules(tempDir, mainWindow):
