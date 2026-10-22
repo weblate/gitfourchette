@@ -874,3 +874,24 @@ def testRebaseSingleDialog(tempDir, mainWindow):
     rebaseDialog.close()
     rebaseDialog = _driveRebaseDialog(rw, onto, [])
     rebaseDialog.close()
+
+
+def testRebaseFromSidebar(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
+
+    node = sb.findNode(lambda n: n.data == "refs/heads/master")
+    menu = sb.makeNodeMenu(node)
+    assert not findMenuAction(menu, "rebase.+master.+onto here").isEnabled()
+
+    node = sb.findNode(lambda n: n.data == "refs/heads/no-parent")
+    menu = sb.makeNodeMenu(node)
+    triggerMenuAction(menu, "rebase.+master.+onto here")
+    findQDialog(rw, "(rebase|rebasing).+master.+onto.+42e4e7c", t=RebaseDialog).reject()
+    QTest.qWait(0)  # let the dialog be destroyed
+
+    node = sb.findNode(lambda n: n.data == "refs/remotes/origin/master")
+    menu = sb.makeNodeMenu(node)
+    triggerMenuAction(menu, "rebase.+master.+onto here")
+    findQDialog(rw, "(rebase|rebasing).+master.+onto.+49322bb", t=RebaseDialog).reject()

@@ -210,13 +210,13 @@ class Sidebar(QTreeView):
             upstreamMissing = False
             if not upstreamBranchName:
                 with suppress(KeyError):
-                    upstreamBranchName = self.sidebarModel.repoModel.upstreams[branchName]
+                    upstreamBranchName = model.repoModel.upstreams[branchName]
                     hasUpstream = True
                     upstreamMissing = True
                     upstreamSubmenuTitle += " " +_("(Missing)")
 
             thisBranchDisplay = lquoe(branchName)
-            activeBranchDisplay = lquoe(activeBranchName)
+            activeBranchDisplay = lquoe(activeBranchName) if activeBranchName else "HEAD"
             upstreamBranchDisplay = lquoe(upstreamBranchName)
 
             userCommandTokens = [UserCommand.Token.Commit, UserCommand.Token.Ref]
@@ -240,7 +240,14 @@ class Sidebar(QTreeView):
                     MergeBranch,
                     _("&Merge into {0}…", activeBranchDisplay),
                     taskArgs=refName,
-                ).replace(enabled=not isCurrentBranch and activeBranchName),
+                ).replace(enabled=not isCurrentBranch),
+
+                TaskBook.action(
+                    self,
+                    InteractiveRebase,
+                    _("Rebase {0} &onto Here…", activeBranchDisplay),
+                    taskArgs=targetOid,
+                ).replace(enabled=not isCurrentBranch),
 
                 TaskBook.action(
                     self,
@@ -315,7 +322,7 @@ class Sidebar(QTreeView):
 
         elif item == SidebarItem.RemoteBranch:
             activeBranchName = model.repoModel.homeBranch
-            activeBranchDisplay = lquoe(activeBranchName) if activeBranchName else _("(no current branch)")
+            activeBranchDisplay = lquoe(activeBranchName) if activeBranchName else "HEAD"
 
             refName = data
             prefix, shorthand = RefPrefix.split(refName)
@@ -344,8 +351,9 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self, MergeBranch, _("&Merge into {0}…", activeBranchDisplay),
-                                taskArgs=refName, enabled=bool(activeBranchName)),
+                TaskBook.action(self, MergeBranch, _("&Merge into {0}…", activeBranchDisplay), taskArgs=refName),
+
+                TaskBook.action(self, InteractiveRebase, _("Rebase {0} &onto Here…", activeBranchDisplay), taskArgs=targetOid),
 
                 TaskBook.action(self, ResetHead, _("&Reset {0} to Here…", activeBranchDisplay), taskArgs=targetOid),
 
