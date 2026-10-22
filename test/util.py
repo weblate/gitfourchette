@@ -858,4 +858,17 @@ def shell(script: str, directory: str, authorSig=TEST_SIGNATURE, committerSig=TE
     if FLATPAK:
         scriptPath = ToolCommands.FlatpakSandboxedCommandPrefix + scriptPath
 
-    ToolCommands.runSync(scriptPath, directory=directory, strict=True)
+    scriptCommand = [scriptPath]
+
+    # On Windows, prepend with bash.exe
+    if WINDOWS:
+        gitExe = shutil.which("git.exe")
+        if not gitExe:
+            raise FileNotFoundError("git.exe missing")
+        bashParent = Path(gitExe).resolve().parent.parent
+        if bashParent.name == "ucrt64":  # when pytest is called within git-bash itself
+            bashParent = bashParent.parent
+        bash = bashParent / "bin/bash.exe"
+        scriptCommand.insert(0, str(bash))
+
+    ToolCommands.runSync(*scriptCommand, directory=directory, strict=True)
