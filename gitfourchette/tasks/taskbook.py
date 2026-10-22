@@ -193,6 +193,7 @@ class TaskBook:
             tasks.EditRepoSettings: "configure",
             tasks.FetchRemoteBranch: "git-fetch",
             tasks.FetchRemotes: "git-fetch",
+            tasks.InteractiveRebase: "git-rebase",
             tasks.JumpBack: "back",
             tasks.JumpForward: "forward",
             tasks.JumpToHEAD: "git-head",
