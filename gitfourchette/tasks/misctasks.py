@@ -60,7 +60,7 @@ class EditRepoSettings(RepoTask):
                 # 0: OK
                 # 5: "unset an option which does not exist" (man git-config, DESCRIPTION)
                 if driver.exitCode() not in [0, 5]:
-                    raise AbortTask(driver.htmlErrorText(), details=driver.formatCommandLine())
+                    raise AbortTask.fromGitError(driver)
 
         if customKeyFile != repoPrefs.customKeyFile:
             repoPrefs.customKeyFile = customKeyFile

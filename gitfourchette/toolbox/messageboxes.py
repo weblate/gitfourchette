@@ -167,7 +167,7 @@ def asyncMessageBox(
         icon: MessageBoxIconName,
         title: str,
         text: str,
-        buttons=QMessageBox.StandardButton.NoButton,
+        buttons=QMessageBox.StandardButton.Ok,
         macShowTitle=True,
         deleteOnClose=True,
 ) -> QMessageBox:

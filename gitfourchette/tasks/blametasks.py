@@ -75,7 +75,7 @@ class OpenBlame(RepoTask):
                 "HEAD",
                 autoFail=False)
             if driver.exitCode() not in [0, 1]:
-                raise AbortTask(driver.htmlErrorText(), details=driver.formatCommandLine())
+                raise AbortTask.fromGitError(driver)
             useHead = driver.exitCode() == 0
 
         if useHead:

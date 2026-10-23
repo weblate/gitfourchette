@@ -352,7 +352,7 @@ class SetUpGitIdentity(RepoTask):
                     values[key] = driver.stdoutScrollback().strip()
                     break
                 if exitCode != 1:
-                    raise AbortTask(driver.htmlErrorText(), details=driver.formatCommandLine())
+                    raise AbortTask.fromGitError(driver)
 
         return values["user.name"], values["user.email"]
 
@@ -537,7 +537,7 @@ class RevertCommit(RepoTask):
         # 128: Local changes would be overwritten, etc.
         exitCode = driver.exitCode()
         if exitCode not in [0, 1]:
-            raise AbortTask(driver.htmlErrorText(), details=driver.formatCommandLine())
+            raise AbortTask.fromGitError(driver)
 
         # Refresh libgit2 index for conflict analysis
         yield from self.flowEnterWorkerThread()
@@ -590,7 +590,7 @@ class CherrypickCommit(RepoTask):
         if exitCode not in [0, 1]:
             # Surface Git's own error message instead of an opaque exception
             # (e.g. exit code 128 when local changes would be overwritten).
-            raise AbortTask(driver.htmlErrorText(), details=driver.formatCommandLine())
+            raise AbortTask.fromGitError(driver)
 
         yield from self.flowEnterWorkerThread()
 

@@ -144,12 +144,21 @@ class AbortTask(Exception):
             text: str = "",
             icon: MessageBoxIconName = "warning",
             asStatusMessage: bool = False,
-            details: str = ""
+            details: str = "",
+            setUpGit: bool = False,
     ):
         super().__init__(text)
         self.icon = icon
         self.asStatusMessage = asStatusMessage
         self.details = details
+        self.setUpGit = setUpGit
+
+    @classmethod
+    def fromGitError(cls, driver: GitDriver, message: str = ""):
+        return cls(
+            driver.htmlErrorText(message),
+            details=driver.formatCommandLine(),
+            setUpGit=FLATPAK and driver.exitCode() == 127)
 
 
 class RepoGoneError(FileNotFoundError):
@@ -1180,15 +1189,30 @@ class RepoTaskRunner(QObject):
 
     def reportAbortTask(self, task: RepoTask, exception: AbortTask):
         message = str(exception)
-        if message and exception.asStatusMessage:
+
+        if not message:
+            return
+
+        if exception.asStatusMessage:
             self.progress.emit("\u26a0 " + message, False)
-        elif message:
-            parentWidget = self.parent()
-            assert isinstance(parentWidget, (QWidget, None))
-            qmb = asyncMessageBox(parentWidget, exception.icon, task.name(), message)
-            if exception.details:
-                qmb.setDetailedText(exception.details)
-            qmb.show()
+            return
+
+        parentWidget = self.parent()
+        assert isinstance(parentWidget, (QWidget, None))
+
+        qmb = asyncMessageBox(parentWidget, exception.icon, task.name(), message)
+
+        if exception.details:
+            qmb.setDetailedText(exception.details)
+
+        if exception.setUpGit:
+            extraButton = QPushButton(qmb)
+            extraButton.setText(_("Change Git executable…"))
+            extraButton.setIcon(stockIcon("configure"))
+            extraButton.clicked.connect(lambda: GFApplication.instance().openPrefsDialog("gitPath"))
+            qmb.addButton(extraButton, QMessageBox.ButtonRole.ResetRole)
+
+        qmb.show()
 
 
 class ProcessWrapper(QObject):
@@ -1246,12 +1270,15 @@ class ProcessWrapper(QObject):
                     yield FlowControlToken(FlowControlToken.Kind.WaitProcessReady)
 
         if not self._didStart:
+            processError = f"<i>{escape(process.errorString())}</i>"
+            setUpGit = False
             if isinstance(process, GitDriver):
-                message = _("Couldn’t start Git ({0}).", process.error())
+                message = _("Couldn’t start Git ({0}).", processError)
+                setUpGit = True
             else:
-                message = _("Couldn’t start process ({0}).", process.error())
+                message = _("Couldn’t start process ({0}).", processError)
             message += f"<p style='font-size: small'><code>{escape(self.formatCommand(simple=True))}</code><br>"
-            raise AbortTask(message)
+            raise AbortTask(message, setUpGit=setUpGit)
 
     def coWaitFinished(self, autoFail=True) -> RepoTask.Flow[None]:
         process = self.process
@@ -1275,15 +1302,15 @@ class ProcessWrapper(QObject):
 
         if autoFail and exitCode != 0:
             if isinstance(process, GitDriver):
-                message = process.htmlErrorText()
-            else:
-                simpleCommandLine = self.formatCommand(simple=True)
-                message = _("Process {0} exited with code {1}.", escape(process.program()), exitCode)
-                message += f"<p style='font-size: small'>{escape(simpleCommandLine)}</p>"
+                raise AbortTask.fromGitError(process)
 
-                stderr = process.readAllStandardError().data().decode(errors="replace")
-                if stderr.strip():
-                    message += f"<p style='white-space: pre-wrap'>{escape(stderr)}</p>"
+            simpleCommandLine = self.formatCommand(simple=True)
+            message = _("Process {0} exited with code {1}.", escape(process.program()), exitCode)
+            message += f"<p style='font-size: small'>{escape(simpleCommandLine)}</p>"
+
+            stderr = process.readAllStandardError().data().decode(errors="replace")
+            if stderr.strip():
+                message += f"<p style='white-space: pre-wrap'>{escape(stderr)}</p>"
 
             raise AbortTask(message, details=self.formatCommand())
 

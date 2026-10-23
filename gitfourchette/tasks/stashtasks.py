@@ -210,8 +210,7 @@ class ApplyStash(RepoTask):
             message = [self.epilog.status]
             if deleteAfterApply:
                 message.append(_("The stash wasn’t deleted in case you need to re-apply it later."))
-            markup = driver.htmlErrorText(paragraphs(*message))
-            raise AbortTask(markup, details=driver.formatCommandLine())
+            raise AbortTask.fromGitError(driver, paragraphs(*message))
 
 
 class DropStash(RepoTask):

@@ -74,7 +74,7 @@ class InteractiveRebase(RepoTask):
         elif _AbortMagicNoop in stderr:
             yield from self.confirmNoopRebase(headName, headCommit, ontoCommit)
         else:
-            raise AbortTask(driver.htmlErrorText(), details=driver.formatCommandLine())
+            raise AbortTask.fromGitError(driver)
 
     def onClientConnected(self, handshake: GFIpcProtocol.Handshake, socket: QLocalSocket):
         abortPayload = _AbortMagicOK
@@ -283,7 +283,7 @@ def _debriefRebase(task: RepoTask, driver: GitDriver, headName: str, headCommit:
 
     if unknownFailure:
         # Bail loudly
-        raise AbortTask(driver.htmlErrorText())
+        raise AbortTask.fromGitError(driver)
 
     state = task.repo.state()
 

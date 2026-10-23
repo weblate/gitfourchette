@@ -13,6 +13,7 @@ from pytestqt.qtbot import QtBot
 from gitfourchette import settings
 from gitfourchette.forms.aboutdialog import AboutDialog
 from gitfourchette.forms.commitdialog import CommitDialog
+from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.processdialog import ProcessDialog
 from gitfourchette.forms.reposettingsdialog import RepoSettingsDialog
 from gitfourchette.forms.repostub import RepoStub
@@ -729,10 +730,20 @@ def testFailedToStartGitProcess(tempDir, mainWindow, taskThread):
         # flatpak-spawn always starts successfully, so the errorOccurred callback won't run.
         # Instead, look for return code 127 from /usr/bin/env.
         assert findTextInWidget(repoStub.ui.promptReadyLabel, "code.+127")
-        acceptQMessageBox(mainWindow, "code 127")
+        qmb = findQMessageBox(mainWindow, "code 127")
     else:
         assert findTextInWidget(repoStub.ui.promptReadyLabel, "couldn.t start git")
-        acceptQMessageBox(mainWindow, "couldn.t start git")
+        qmb = findQMessageBox(mainWindow, "couldn.t start git")
+
+    # The message box should suggest changing the Git executable
+    setUpButton = findChildWithText(qmb, "change git", t=QPushButton)
+    setUpButton.click()
+
+    # Make sure the gitPath field has focus in PrefsDialog
+    prefsDialog = findQDialog(mainWindow, "settings", t=PrefsDialog)
+    gitPathControl = prefsDialog.findChild(QWidget, "prefctl_gitPath")
+    waitUntilTrue(gitPathControl.hasFocus)
+    prefsDialog.close()
 
 
 @pytest.mark.notParallelizableOnWindows
