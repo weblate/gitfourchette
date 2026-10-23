@@ -419,10 +419,12 @@ def testFetchRemoteBranchUnbornHead(tempDir, mainWindow):
 
     rw = mainWindow.openRepo(wd)
     assert masterTip != rw.repo.branches.remote["origin/master"].target
-
     node = rw.sidebar.findNodeByRef("refs/remotes/origin/master")
     menu = rw.sidebar.makeNodeMenu(node)
-    assert not findMenuAction(menu, "merge").isEnabled()
+
+    triggerMenuAction(menu, "merge")
+    acceptQMessageBox(rw, "create the initial commit")
+
     triggerMenuAction(menu, "fetch")
     assert masterTip == rw.repo.branches.remote["origin/master"].target
 

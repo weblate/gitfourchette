@@ -637,7 +637,6 @@ def testNewBranchFromLocalBranchInFolder(tempDir, mainWindow):
     assert localBranches["folder1/folder2/leaf"].target == localBranches["folder1/folder2/leaf-2"].target
 
 
-
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "graphmenu", "graphkey"])
 def testSwitchBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
@@ -751,6 +750,22 @@ def testResetHeadToBranchFromSidebar(tempDir, mainWindow):
         dlg.accept()
         assert rw.repo.head.target == oid
         assert rw.repo.branches.local['master'].target == oid
+
+
+def testResetDetachedHead(tempDir, mainWindow):
+    oid1 = Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
+
+    wd = unpackRepo(tempDir)
+    shell("git checkout --detach", wd)
+    rw = mainWindow.openRepo(wd)
+
+    rw.jump(NavLocator.inCommit(oid1))
+    triggerContextMenuAction(rw.graphView.viewport(), "reset.+here")
+    dlg = findQDialog(rw, "reset.+HEAD.+to.+0966a4", t=ResetHeadDialog)
+    dlg.modeButtons[ResetMode.HARD].click()
+    dlg.accept()
+
+    assert rw.repo.head.target == oid1
 
 
 def testResetHeadRecurseSubmodules(tempDir, mainWindow):

@@ -398,7 +398,7 @@ class EditUpstreamBranch(RepoTask):
 
 class ResetHead(RepoTask):
     def prereqs(self) -> TaskPrereqs:
-        return TaskPrereqs.NoUnborn | TaskPrereqs.NoDetached
+        return TaskPrereqs.NoUnborn
 
     def flow(self, onto: Oid):
         branchName = self.repo.head_branch_shorthand
@@ -514,6 +514,9 @@ class FastForwardBranch(RepoTask):
 
 
 class MergeBranch(RepoTask):
+    def prereqs(self) -> TaskPrereqs:
+        return TaskPrereqs.NoUnborn
+
     def flow(self, them: str | Oid, silentFastForward=False, autoFastForwardOptionName=""):
         # Figure out oid
         if isinstance(them, str):
