@@ -16,6 +16,7 @@ from gitfourchette.rebase.rebasesequencemodel import RebaseSequenceModel
 from gitfourchette.rebase.rebasesequenceview import RebaseSequenceView
 from gitfourchette.toolbox import QRichTextMenu, QModelIndex_default
 from .util import *
+from . import reposcenario
 
 
 @dataclasses.dataclass
@@ -895,3 +896,14 @@ def testRebaseFromSidebar(tempDir, mainWindow):
     menu = sb.makeNodeMenu(node)
     triggerMenuAction(menu, "rebase.+master.+onto here")
     findQDialog(rw, "(rebase|rebasing).+master.+onto.+49322bb", t=RebaseDialog).reject()
+
+
+def testRebaseWithChangesInWorkingDirectory(tempDir, mainWindow):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    wd = unpackRepo(tempDir)
+    reposcenario.fileWithStagedAndUnstagedChanges(wd)
+    rw = mainWindow.openRepo(wd)
+
+    rw.jump(NavLocator.inCommit(onto, ""))
+    triggerContextMenuAction(rw.graphView.viewport(), "rebase")
+    acceptQMessageBox(rw, "working directory contains changes")

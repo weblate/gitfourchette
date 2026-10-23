@@ -36,8 +36,7 @@ _AbortMagicToctou = "InteractiveRebaseAbortMagicToctou"
 
 class InteractiveRebase(RepoTask):
     def prereqs(self):
-        # TODO: need clean workdir, too
-        return TaskPrereqs.NoConflicts | TaskPrereqs.NoUnborn | TaskPrereqs.NoCherrypick
+        return TaskPrereqs.NoChanges | TaskPrereqs.NoUnborn | TaskPrereqs.NoCherrypick
 
     def flow(self, ontoCommit: Oid):
         if self.rw.findChild(RebaseDialog):

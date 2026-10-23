@@ -62,6 +62,7 @@ class TaskPrereqs(enum.IntFlag):
     NoConflicts = enum.auto()
     NoCherrypick = enum.auto()
     NoStagedChanges = enum.auto()
+    NoChanges = enum.auto()
 
 
 class TaskEffects(enum.IntFlag):
@@ -733,6 +734,7 @@ class RepoTask(QObject):
             prereqs = self.prereqs()
         repo = self.repo
 
+        # TODO: Use cached wd deltas?
         if TaskPrereqs.NoConflicts in prereqs and repo.any_conflicts:
             raise AbortTask(_("Fix merge conflicts before performing this action."))
 
@@ -751,10 +753,20 @@ class RepoTask(QObject):
                 _("You are in the middle of a cherry-pick."),
                 _("Before performing this action, conclude the cherry-pick.")))
 
+        # TODO: Use cached wd deltas?
         if TaskPrereqs.NoStagedChanges in prereqs and repo.any_staged_changes:
             raise AbortTask(paragraphs(
                 _("You have staged changes."),
                 _("Before performing this action, commit your changes or stash them.")))
+
+        if TaskPrereqs.NoChanges in prereqs:
+            anyStaged = bool(self.repoModel.workdirStagedDeltas)
+            anyUnstaged = any(not d.status.isAddedOrUntracked for d in self.repoModel.workdirUnstagedDeltas)
+
+            if anyStaged or anyUnstaged:
+                raise AbortTask(paragraphs(
+                    _("Your working directory contains changes."),
+                    _("Before performing this action, commit your changes or stash them.")))
 
 
 class RepoTaskRunner(QObject):
