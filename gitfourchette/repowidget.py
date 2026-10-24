@@ -686,7 +686,6 @@ class RepoWidget(QWidget):
                 ontoText = "???"
 
             title = _("Rebasing {0} onto {1}", tquoe(info.headShorthand), ontoText)
-            title = f"({info.msgnum}/{info.end}) {title}"
 
             if isinstance(info.stoppedSha, Oid):
                 stopLink = NavLocator.inCommit(info.stoppedSha).url()
@@ -694,7 +693,7 @@ class RepoWidget(QWidget):
             else:
                 stopText = info.stoppedSha or "???"
 
-            textParts = [_("Stopped at {commit}", commit=stopText)]
+            textParts = [_("Step {0} of {1}: Stopped at {commit}", info.msgnum, info.end, commit=stopText)]
 
             try:
                 preview = self.repo[info.stoppedSha].peel(Commit).message
@@ -717,6 +716,10 @@ class RepoWidget(QWidget):
                 textParts.append(_("No conflicts. Stage or discard your changes to continue."))
                 gotoWdText = _("Go to Working Directory")
                 textParts[-1] += f" (<a href='{NavLocator.inWorkdir().url()}'>{gotoWdText}</a>)"
+                actions[_("Continue rebase")] = None
+            elif not info.msgnum:
+                textParts = [_("You are editing a rebase plan outside {app}. "
+                               "When you are done, you will be able to continue here.", app=qAppName())]
                 actions[_("Continue rebase")] = None
             else:
                 textParts.append(_("You can continue."))

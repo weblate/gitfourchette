@@ -9,6 +9,7 @@ import textwrap
 
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.rebasedialog import RebaseDialog
+from gitfourchette.gitdriver import GitDriver
 from gitfourchette.nav import NavLocator
 from gitfourchette.rebase.rebasemodel import RebaseOp, RebaseOpLetters
 from gitfourchette.rebase.rebasesequencedropindicator import RebaseSequenceDropIndicator
@@ -907,3 +908,29 @@ def testRebaseWithChangesInWorkingDirectory(tempDir, mainWindow):
     rw.jump(NavLocator.inCommit(onto, ""))
     triggerContextMenuAction(rw.graphView.viewport(), "rebase")
     acceptQMessageBox(rw, "working directory contains changes")
+
+
+def testRebaseStartedOutsideApp(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    pausedTextFilePath = f"{wd}/rebase_paused.txt"
+
+    # Start interactive rebase and pause it on the editor
+    driver = GitDriver("rebase", "-i", "master")
+    ToolCommands.setQProcessEnvironment(driver, {
+        "GIT_SEQUENCE_EDITOR": f"{shlex.quote(getTestDataPath('pause.py'))} {shlex.quote(pausedTextFilePath)}",
+    })
+    ToolCommands.wrapFlatpakCommand(driver)
+    driver.setWorkingDirectory(wd)
+    driver.start()
+    waitUntilTrue(lambda: Path(pausedTextFilePath).is_file())
+    rw.refreshRepo()
+
+    banner = rw.mergeBanner
+    assert banner.isVisible()
+    assert findTextInWidget(banner.label, "you are editing a rebase plan outside")
+    assert findChildWithText(banner, "abort rebase", t=QAbstractButton).isEnabled()
+    assert not findChildWithText(banner, "continue rebase", t=QAbstractButton).isEnabled()
+
+    ToolCommands.terminatePlus(driver)

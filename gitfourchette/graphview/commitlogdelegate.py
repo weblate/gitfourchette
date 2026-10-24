@@ -233,7 +233,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         # ...Left-to-right zones...
 
         # Rebase state
-        if self.repoModel.rebase:
+        if self.repoModel.rebase and self.repoModel.rebase.msgnum:
             self._paintRebase(painter, rect, oid)
 
         # Hash
