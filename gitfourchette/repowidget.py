@@ -587,20 +587,28 @@ class RepoWidget(QWidget):
 
     def refreshWindowTitle(self):
         title = self.getTitle()
-        inBrackets = ""
+        brackets = []
         repo = self.repo
+        state = repo.state()
 
         if repo.head_is_unborn:
-            inBrackets = _("Unborn HEAD")
+            brackets.append(_("Unborn HEAD"))
+        elif self.repoModel.rebase:
+            state = RepositoryState.REBASE  # Simplify wording if interactive rebase
+            _dummy, headName = RefPrefix.split(self.repoModel.rebase.headName)
+            brackets.append(headName)
         elif repo.head_is_detached:
             oid = repo.head_commit_id
-            inBrackets = f'{_("Detached HEAD")} @ {shortHash(oid)}'
+            brackets.append(shortHash(oid))
         else:
             with suppress(GitError):
-                inBrackets = repo.head_branch_shorthand
+                brackets.append(repo.head_branch_shorthand)
 
-        if inBrackets:
-            title = f"{title} [{inBrackets}]"
+        if state != RepositoryState.NONE:
+            brackets.append(trtables.enum(state).upper())
+
+        if brackets:
+            title = f"{title} [{', '.join(brackets)}]"
 
         self.setWindowTitle(title)
 
