@@ -22,6 +22,7 @@ class RebaseSequenceView(QListView):
     opShortcut = Signal(RebaseOp)
     commitSelected = Signal(Oid)
 
+    delegate: RebaseSequenceDelegate
     sequenceModel: RebaseSequenceModel
 
     def __init__(self, parent=None):
@@ -29,6 +30,7 @@ class RebaseSequenceView(QListView):
 
         delegate = RebaseSequenceDelegate(self)
         self.setItemDelegate(delegate)
+        self.delegate = delegate
 
         self.setDragEnabled(True)
         self.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
@@ -44,6 +46,7 @@ class RebaseSequenceView(QListView):
 
         self.sequenceModel = RebaseSequenceModel(self)
         self.setModel(self.sequenceModel)
+        self.viewport().setMouseTracking(True)
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         super().selectionChanged(selected, deselected)
@@ -157,3 +160,44 @@ class RebaseSequenceView(QListView):
         drag.setHotSpot(QPoint(lMargin//2, height // 2))
 
         return drag
+
+    def viewportEvent(self, event: QEvent) -> bool:
+        delegate = self.delegate
+
+        if event.type() == QEvent.Type.Leave:
+            delegate.hoverPill = False
+            self.viewport().unsetCursor()
+
+        elif event.type() == QEvent.Type.MouseMove and isinstance(event, QMouseEvent):
+            pos = event.position().toPoint()
+            index = self.indexAt(pos)
+            line = index.data(RebaseSequenceModel.RebaseLineRole)
+
+            if line and not line.op.isFake() and self._isInPillZone(pos):
+                self.viewport().setCursor(Qt.CursorShape.PointingHandCursor)
+                delegate.hoverPill = True
+            else:
+                self.viewport().unsetCursor()
+                delegate.hoverPill = False
+
+            self.update(index)  # repaint line
+
+        elif event.type() == QEvent.Type.MouseButtonPress and isinstance(event, QMouseEvent):
+            pos = event.position().toPoint()
+            if event.button() == Qt.MouseButton.LeftButton and self._isInPillZone(pos):
+                result = super().viewportEvent(event)  # do standard selection first
+                index = self.indexAt(pos)
+                rect = self.visualRect(index)
+                menuPos = QPoint(rect.left() + 16, rect.bottom() + rect.height() // 2)
+                self.customContextMenuRequested.emit(menuPos)
+                return result
+
+        return super().viewportEvent(event)
+
+    def _isInPillZone(self, pos: QPoint) -> bool:
+        index = self.indexAt(pos)
+        if not index.isValid():
+            return False
+
+        rect = self.visualRect(index)
+        return rect.left() <= pos.x() < rect.left() + self.delegate.lastPillWidth

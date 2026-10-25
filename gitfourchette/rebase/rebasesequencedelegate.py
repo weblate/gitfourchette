@@ -24,6 +24,8 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self.ignoreMouseOverState = False
         self.textLeft = 0
+        self.hoverPill = False
+        self.lastPillWidth = 0
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         height = settings.prefs.calcRowHeight(option.fontMetrics)
@@ -37,6 +39,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
 
         widget = option.widget
         isActive = bool(option.state & QStyle.StateFlag.State_Active)
+        isHovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
         isSelected = bool(option.state & QStyle.StateFlag.State_Selected)
         colorGroup = QPalette.ColorGroup.Active if isActive else QPalette.ColorGroup.Inactive
 
@@ -57,7 +60,9 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
 
         # Draw pill
         blendOlder, blendNewer = self.pillBlending(index)
-        self.drawPill(painter, rect, item.op, blendOlder, blendNewer)
+        self.drawPill(painter, rect, item.op, blendOlder, blendNewer,
+                      hoverPill=self.hoverPill and isHovered)
+        self.lastPillWidth = rect.left()
         rect.adjust(_ColumnPadding, 0, 0, 0)
 
         # Draw hash
@@ -140,6 +145,7 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
             newerOp: RebaseOp | None = None,
             width: int = 0,
             meldingSeqNum: int = 0,
+            hoverPill: bool = False,
     ):
         bottomUp = settings.prefs.rebaseBottomUp
         opAbove = newerOp if bottomUp else olderOp
@@ -178,6 +184,10 @@ class RebaseSequenceDelegate(QStyledItemDelegate):
         colorBelow = RebaseOpColors.get(opBelow or op, _FallbackColor)
         colorAbove = mixColors(colorCenter, colorAbove)
         colorBelow = mixColors(colorCenter, colorBelow)
+
+        if hoverPill:
+            colorCenter = colorCenter.darker(120)
+
         gradientSpan = .2
         gradient = QLinearGradient(0, rect.top(), 0, rect.bottom() + 1)
         gradient.setColorAt(0, colorAbove)

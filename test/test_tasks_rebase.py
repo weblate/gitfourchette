@@ -934,3 +934,38 @@ def testRebaseStartedOutsideApp(tempDir, mainWindow):
     assert not findChildWithText(banner, "continue rebase", t=QAbstractButton).isEnabled()
 
     ToolCommands.terminatePlus(driver)
+
+
+def testRebaseHoverAndLeftClickPill(tempDir, mainWindow, qtbot):
+    onto = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    rw.jump(NavLocator.inCommit(onto, ""))
+    rebaseDialog = _driveRebaseDialog(rw, onto, [])
+
+    view = rebaseDialog.ui.sequence
+    viewport = view.viewport()
+
+    viewport.grabMouse()  # offscreen quirk: need this for mouseMove to be picked up
+
+    assert not view.delegate.hoverPill
+
+    rect0 = qlvVisualRect(view, 0)  # "pick" first commit
+    pillPos0 = rect0.topLeft() + QPoint(4, 4)
+
+    # Hover over the pill in the first row
+    QTest.mouseMove(viewport, pos=pillPos0)
+    waitUntilTrue(lambda: view.delegate.hoverPill)
+    assert viewport.cursor().shape() == Qt.CursorShape.PointingHandCursor
+
+    # Left-clicking the first row should pop up the context menu
+    QTest.mouseClick(viewport, Qt.MouseButton.LeftButton, pos=pillPos0)
+    menu = next(tlw for tlw in QApplication.topLevelWidgets()
+                if isinstance(tlw, QMenu) and tlw.isVisible())
+    assert findMenuAction(menu, "stop for amending")
+    menu.close()
+    menu.deleteLater()
+
+    viewport.releaseMouse()
+    rebaseDialog.reject()
