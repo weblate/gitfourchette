@@ -33,18 +33,25 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
     # Bring up RebaseDialog
     triggerContextMenuAction(rw.graphView.viewport(), "rebase")
     rebaseDialog = waitForQDialog(rw, "rebase|rebasing", t=RebaseDialog)
-
     sequenceView = rebaseDialog.ui.sequence
+
+    assert sequenceView.sequenceModel.sequence[0].op == RebaseOp.FakeStart
+    assert sequenceView.sequenceModel.sequence[0].oid == onto
 
     # Apply all operations
     for todo in todoList:
-        sequenceView.setFocus()
-        waitUntilTrue(sequenceView.hasFocus)
-
         # Select row
         bottomUpRow = sequenceView.model().rowCount() - 1 - todo.row
         bottomUpRow -= 1  # account for fake start row
         qlvClickNthRow(sequenceView, bottomUpRow)
+
+        # In the unit testing environment, Jump may hand focus back to GraphView.
+        # This doesn't occur in the real world (RebaseDialog still has focus).
+        # Make sure RebaseDialog still has focus.
+        rebaseDialog.activateWindow()
+        waitUntilTrue(rebaseDialog.isActiveWindow)
+        sequenceView.setFocus()
+        waitUntilTrue(sequenceView.hasFocus)
 
         # Press keyboard shortcut for desired operation
         QTest.keyClicks(sequenceView.viewport(), RebaseOpLetters[todo.op])
@@ -59,16 +66,19 @@ def _driveRebaseDialog(rw, onto: Oid, todoList: list[_Todo]):
             # QLineEdit should have been brought up by hotkey
             lineEdit: QLineEdit = sequenceView.findChild(QLineEdit)
             assert lineEdit is not None
-            assert lineEdit.hasFocus()
             assert lineEdit.isVisible()
+            waitUntilTrue(lineEdit.hasFocus)
 
             # Fill it in
-            QTest.keyClicks(lineEdit, todo.message)
+            lineEdit.setText(todo.message)
+            assert lineEdit.text() == todo.message
 
             # Warning: in real life, Return commits the current text in the
             # QLineEdit, but in offscreen mode, this accepts the entire dialog.
             lineEdit.clearFocus()
             QTest.qWait(0)
+
+            assert itemsSoFar[todo.row].payload.strip() == todo.message.strip()
 
         # Give delegate time to repaint (for coverage)
         QTest.qWait(0)
@@ -780,7 +790,6 @@ def testRebaseUndoRedoCommandCompression(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     rebaseDialog = _driveRebaseDialog(rw, onto, [])
-    rebaseDialog.ui.sequence.setFocus()
 
     def getHashes():
         hashes = []
@@ -800,9 +809,17 @@ def testRebaseUndoRedoCommandCompression(tempDir, mainWindow):
         rebaseDialog.sequenceModel.moveRow(QModelIndex_default, 4+i, QModelIndex_default, 0+i)
     assert getHashes() == s2
 
+    # Make sure RebaseDialog has focus after Jump (offscreen tests quirk)
+    rebaseDialog.activateWindow()
+    waitUntilTrue(rebaseDialog.isActiveWindow)
+
     # Undo - must return to sequence 1 thanks to command compression (mergeWith)
     QTest.keySequence(rebaseDialog, QKeySequence.StandardKey.Undo)
     assert getHashes() == s1
+
+    # Make sure RebaseDialog has focus after Jump (offscreen tests quirk)
+    rebaseDialog.activateWindow()
+    waitUntilTrue(rebaseDialog.isActiveWindow)
 
     # Redo - must return to sequence 2
     QTest.keySequence(rebaseDialog, QKeySequence.StandardKey.Redo)
