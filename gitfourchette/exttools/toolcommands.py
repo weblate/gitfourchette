@@ -179,6 +179,14 @@ class ToolCommands:
     @classmethod
     def filterQProcessEnvironment(cls, process: QProcess) -> dict[str, str]:
         processEnvironment = process.processEnvironment()
+
+        # Flatpak: Explicitly forward any diffs from the initial environment
+        # even if we inherit the parent environment. We want to pass these with
+        # --env if we use flatpak-spawn.
+        if FLATPAK and processEnvironment.inheritsFromParent():
+            assert not bool(processEnvironment.keys())
+            processEnvironment = QProcessEnvironment.systemEnvironment()
+
         env = {}
         for key in processEnvironment.keys():  # noqa: SIM118
             value = processEnvironment.value(key)

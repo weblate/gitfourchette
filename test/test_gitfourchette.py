@@ -760,7 +760,11 @@ def testGitProcessStuck(tempDir, mainWindow, taskThread, needSigkill):
         rw.diffArea.stageButton.click()
         processDialog = waitForQDialog(rw, "stage files", timeout=1000, t=ProcessDialog)
 
-    waitUntilTrue(lambda: findTextInWidget(processDialog.statusForm.ui.statusLabel, r"delaying.+git.+for.+seconds"))
+    delayPattern = "delaying.+git.+for.+seconds"
+    if FLATPAK:
+        delayPattern = "delaying.+flatpak-spawn.+for.+seconds"
+
+    waitUntilTrue(lambda: findTextInWidget(processDialog.statusForm.ui.statusLabel, delayPattern))
     assert findTextInWidget(processDialog.statusForm.ui.titleLabel, "git add")
 
     assert findTextInWidget(processDialog.abortButton, "abort")
