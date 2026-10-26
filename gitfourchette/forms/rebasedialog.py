@@ -33,7 +33,7 @@ class RebaseDialog(QDialog):
         self.ui = Ui_RebaseDialog()
         self.ui.setupUi(self)
 
-        self.rebaseDateArg = ""
+        self.rebaseDateArg = settings.prefs.rebaseDateArg
         self.undoStack = QUndoStack(self)
 
         # Install initial sequence into model
@@ -195,7 +195,12 @@ class RebaseDialog(QDialog):
         return menu
 
     def _onToggleDateSwitch(self, toggled: bool, switch: str):
-        self.rebaseDateArg = switch if toggled else ""
+        if toggled:
+            self.rebaseDateArg = switch
+            settings.prefs.rebaseDateArg = switch
+            settings.prefs.setDirty()
+        else:
+            self.rebaseDateArg = ""
 
     # --------------------------------------------------------------------------
     # Sequence edit callbacks

@@ -654,7 +654,7 @@ def testRebaseDateOptions(tempDir, mainWindow):
 
     rebaseDialog = _driveRebaseDialog(rw, onto, todo)
     menu = rebaseDialog.ui.optionsButton.menu()
-    assert findMenuAction(menu, "separate author.committer dates").isChecked()
+    assert findMenuAction(menu, "separate author.committer dates").isChecked()  # default option pre-checked
     rebaseDialog.accept()
 
     head = rw.repo.head_commit
@@ -671,7 +671,8 @@ def testRebaseDateOptions(tempDir, mainWindow):
 
     rebaseDialog = _driveRebaseDialog(rw, onto, todo)
     menu = rebaseDialog.ui.optionsButton.menu()
-    findMenuAction(menu, "set committer date to author date").setChecked(True)
+    assert findMenuAction(menu, "separate author.committer dates").isChecked()  # last option was saved
+    findMenuAction(menu, "set committer date to author date").setChecked(True)  # check --committer-date-is-author-date
     rebaseDialog.accept()
 
     head = rw.repo.head_commit
@@ -687,7 +688,8 @@ def testRebaseDateOptions(tempDir, mainWindow):
 
     rebaseDialog = _driveRebaseDialog(rw, onto, todo)
     menu = rebaseDialog.ui.optionsButton.menu()
-    findMenuAction(menu, "set author date").setChecked(True)
+    assert findMenuAction(menu, "set committer date").isChecked()  # last option was saved
+    findMenuAction(menu, "set author date").setChecked(True)  # check --reset-author-date
     rebaseDialog.accept()
 
     head = rw.repo.head_commit
