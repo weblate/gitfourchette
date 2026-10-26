@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GitFourchette\n"
 "Report-Msgid-Bugs-To: https://github.com/jorio/gitfourchette/issues\n"
-"PO-Revision-Date: 2026-08-15 11:28+0000\n"
+"PO-Revision-Date: 2026-09-03 23:51+0000\n"
 "Last-Translator: Michal Várady <miko.vaji@gmail.com>\n"
 "Language-Team: Czech <https://hosted.weblate.org/projects/gitfourchette/gitfourchette/cs/>\n"
 "Language: cs\n"
@@ -12,7 +12,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=((n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2);\n"
-"X-Generator: Weblate 2026.9.dev0\n"
+"X-Generator: Weblate 2026.9\n"
 
 #: application.py:134 forms/aboutdialog.py:59
 msgid "The comfortable Git UI for Linux."
@@ -292,9 +292,8 @@ msgid "Unstage Hunk {0}"
 msgstr "Zrušit přípravu bloku změn {0}"
 
 #: diffview/diffview.py:291 tasks/blametasks.py:272
-#, fuzzy
 msgid "Blame Line"
-msgstr "Zobrazit autorství souboru"
+msgstr "Zobrazit autorství řádku"
 
 #: diffview/diffview.py:343
 msgid "Export selected lines"
@@ -943,9 +942,8 @@ msgstr[2] "{n} konfliktů při slučování"
 #: filelists/dirtyfiles.py:81 forms/conflictview.py:340
 #: forms/conflictview.py:358 forms/conflictview.py:366
 #: forms/conflictview.py:384 tasks/indextasks.py:393
-#, fuzzy
 msgid "Keep OUR version"
-msgstr "NAŠE verze"
+msgstr "Ponechat NAŠI verzi"
 
 #: filelists/dirtyfiles.py:82 forms/conflictview.py:342
 #: forms/conflictview.py:351 forms/conflictview.py:376
@@ -1492,29 +1490,29 @@ msgstr "Autor zápisu:"
 #, python-brace-format
 msgid "Run {h} hook"
 msgid_plural "Run hooks {h}"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Spustit zásuvný modul {h}"
+msgstr[1] "Spustit zásuvné moduly {h}"
+msgstr[2] "Spustit zásuvné moduly {h}"
 
 #: forms/commithookbutton.py:42
 msgid "and"
-msgstr ""
+msgstr "a"
 
 #: forms/commithookbutton.py:49
 #, python-brace-format
 msgid "Hook {h} will run."
 msgid_plural "Hooks {h} will run."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Zásuvný modul {h} bude spuštěn."
+msgstr[1] "Zásuvné moduly {h} budou spuštěny."
+msgstr[2] "Zásuvné moduly {h} budou spuštěny."
 
 #: forms/commithookbutton.py:52
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "Bypassing {h} hook for this commit."
 msgid_plural "Bypassing hooks {h} for this commit."
-msgstr[0] "Zapnout &podepisování tohoto commitu pomocí GPG"
-msgstr[1] "Zapnout &podepisování tohoto commitu pomocí GPG"
-msgstr[2] "Zapnout &podepisování tohoto commitu pomocí GPG"
+msgstr[0] "Zásuvný modul {h} bude pro tento commit přeskočen."
+msgstr[1] "Zásuvné moduly {h} budou pro tento commit přeskočeny."
+msgstr[2] "Zásuvné moduly {h} budou pro tento commit přeskočeny."
 
 #: forms/commitinfodialog.py:75
 msgid "Hide Full &Message"
@@ -1555,15 +1553,13 @@ msgstr "Tento soubor byl změněn jak v <i>naší</i>, tak v <i>jejich</i> větv
 
 #: forms/conflictview.py:341 forms/conflictview.py:359
 #: forms/conflictview.py:367 forms/conflictview.py:385
-#, fuzzy
 msgid "Keep the file intact in our branch"
-msgstr "Soubor nebude znovu přidán do vaší větve."
+msgstr "Ponechat soubor v naší větvi beze změny"
 
 #: forms/conflictview.py:343 forms/conflictview.py:352
 #: forms/conflictview.py:387
-#, fuzzy
 msgid "Replace the file in our branch with the incoming version"
-msgstr "Soubor bude <b>nahrazen</b> příchozí verzí."
+msgstr "Nahradit soubor v naší větvi příchozí verzí"
 
 #: forms/conflictview.py:347
 msgid "This file was deleted from <i>our</i> branch, but <i>their</i> branch kept it and made changes to it."
@@ -1576,21 +1572,19 @@ msgstr "Ponechat NAŠE odstranění"
 #: forms/conflictview.py:350 forms/conflictview.py:394
 #: forms/conflictview.py:396
 msgid "Don’t resurrect the file in our branch"
-msgstr ""
+msgstr "Neobnovovat soubor v naší větvi"
 
 #: forms/conflictview.py:356
 msgid "We’ve made changes to this file in <i>our</i> branch, but <i>their</i> branch has deleted it."
 msgstr "V <i>naší</i> větvi jsme tento soubor změnili, ale <i>jejich</i> větev jej odstranila."
 
 #: forms/conflictview.py:360
-#, fuzzy
 msgid "Accept THEIR deletion"
-msgstr "Přijmout odstranění"
+msgstr "Přijmout JEJICH odstranění"
 
 #: forms/conflictview.py:361 forms/conflictview.py:369
-#, fuzzy
 msgid "Delete the file in our branch"
-msgstr "Odstranit místní větev"
+msgstr "Odstranit soubor z naší větve"
 
 #: forms/conflictview.py:365 forms/conflictview.py:373
 msgid "No common ancestor."
@@ -1606,13 +1600,12 @@ msgid "Don’t add"
 msgstr "Nepřidávat"
 
 #: forms/conflictview.py:375
-#, fuzzy
 msgid "Don’t add anything to our branch"
-msgstr "Soubor nebude znovu přidán do vaší větve."
+msgstr "Do naší větve nic nepřidávat"
 
 #: forms/conflictview.py:377
 msgid "Add the file to our branch"
-msgstr ""
+msgstr "Přidat soubor do naší větve"
 
 #: forms/conflictview.py:381
 msgid "This file has been created in both <i>our</i> branch and <i>their</i> branch, independently from each other. There is no common ancestor."
@@ -1997,17 +1990,17 @@ msgstr "Výchozí nastavení systému"
 
 #: forms/prefsdialog.py:645
 msgid "System colors"
-msgstr ""
+msgstr "Systémové barvy"
 
 #: forms/prefsdialog.py:655
 #, python-brace-format
 msgid "Dark {color}"
-msgstr ""
+msgstr "Tmavá {color}"
 
 #: forms/prefsdialog.py:655
 #, python-brace-format
 msgid "Light {color}"
-msgstr ""
+msgstr "Světlá {color}"
 
 #: forms/prefsdialog.py:695
 #, python-brace-format
@@ -2395,7 +2388,6 @@ msgstr "Konflikt při slučování souboru {0}"
 #: forms/ui_conflictview.py:238 forms/ui_conflictview.py:239
 #: forms/ui_conflictview.py:242 forms/ui_conflictview.py:243
 #: tasks/indextasks.py:489
-#, fuzzy
 msgctxt "ConflictView"
 msgid "Preview"
 msgstr "Náhled"
@@ -4036,13 +4028,12 @@ msgid "File {0} has no history in the repository."
 msgstr "Soubor {0} nemá v repozitáři žádnou historii."
 
 #: tasks/blametasks.py:269
-#, fuzzy
 msgid "Couldn’t blame the exact line you selected, because the file contains both staged and unstaged changes."
-msgstr "Operaci {verb} nyní nelze provést, protože soubor obsahuje připravené i nepřipravené změny."
+msgstr "U vybraného řádku se nepodařilo přesně zjistit autorství, protože soubor obsahuje připravené i nepřipravené změny."
 
 #: tasks/blametasks.py:271
 msgid "Try staging the entire file for more reliable results."
-msgstr ""
+msgstr "Zkuste připravit celý soubor, aby byly výsledky spolehlivější."
 
 #: tasks/blametasks.py:343
 msgid "Binary blob"
@@ -4409,9 +4400,9 @@ msgid "Commit {0} amended. New hash: {1}."
 msgstr "Commit {0} upraven. Nový otisk: {1}."
 
 #: tasks/committasks.py:312
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "Proceed to {0}"
-msgstr "Pokračovat k vytvoření commitu"
+msgstr "Pokračovat: {0}"
 
 #: tasks/committasks.py:368
 #, python-brace-format
@@ -4675,39 +4666,37 @@ msgstr[1] "Vyřešeny {n} konflikty."
 msgstr[2] "Vyřešeno {n} konfliktů."
 
 #: tasks/indextasks.py:392
-#, fuzzy, python-brace-format
+#, python-brace-format
 msgid "Resolve conflict"
 msgid_plural "Resolve {n} conflicts"
-msgstr[0] "Konflikt při slučování"
-msgstr[1] "Konflikt při slučování"
-msgstr[2] "Konflikt při slučování"
+msgstr[0] "Vyřešit konflikt"
+msgstr[1] "Vyřešit {n} konflikty"
+msgstr[2] "Vyřešit {n} konfliktů"
 
 #: tasks/indextasks.py:400
-#, fuzzy
 msgid "Accept incoming changes"
-msgstr "Přijmout nebo odmítnout příchozí změny"
+msgstr "Přijmout příchozí změny"
 
 #: tasks/indextasks.py:400
-#, fuzzy
 msgid "Reject incoming changes"
-msgstr "Přijmout nebo odmítnout příchozí změny"
+msgstr "Odmítnout příchozí změny"
 
 #: tasks/indextasks.py:409
 #, python-brace-format
 msgid "<b>{verb}</b> to resolve the conflict on {single}?"
-msgstr ""
+msgstr "<b>{verb}</b> a tím vyřešit konflikt v souboru {single}?"
 
 #: tasks/indextasks.py:412
 #, python-brace-format
 msgid "<b>{verb}</b> to resolve the conflict on {n} file?"
 msgid_plural "<b>{verb}</b> to resolve conflicts on {n} files?"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "<b>{verb}</b> a tím vyřešit konflikt v {n} souboru?"
+msgstr[1] "<b>{verb}</b> a tím vyřešit konflikty ve {n} souborech?"
+msgstr[2] "<b>{verb}</b> a tím vyřešit konflikty v {n} souborech?"
 
 #: tasks/indextasks.py:489
 msgid "Show anyway"
-msgstr ""
+msgstr "Přesto zobrazit"
 
 #: tasks/indextasks.py:528
 #, python-brace-format
@@ -6585,44 +6574,43 @@ msgstr "Zavřít kartu"
 
 #: trtables.py:305
 msgid "Blue"
-msgstr ""
+msgstr "modrá"
 
 #: trtables.py:306
 msgid "Cyan"
-msgstr ""
+msgstr "azurová"
 
 #: trtables.py:307
 msgid "Green"
-msgstr ""
+msgstr "zelená"
 
 #: trtables.py:308
 msgid "Yellow"
-msgstr ""
+msgstr "žlutá"
 
 #: trtables.py:309
 msgid "Orange"
-msgstr ""
+msgstr "oranžová"
 
 #: trtables.py:310
-#, fuzzy
 msgid "Red"
-msgstr "Znovu na&číst"
+msgstr "červená"
 
 #: trtables.py:311
 msgid "Pink"
-msgstr ""
+msgstr "růžová"
 
 #: trtables.py:312
 msgid "Gray"
-msgstr ""
+msgstr "šedá"
 
 #: trtables.py:313
 msgid "Indigo"
-msgstr ""
+msgstr "indigová"
 
 #: trtables.py:314
 msgid "Purple"
-msgstr ""
+msgstr "fialová"
 
 #: trtables.py:322
 msgid "Do not ignore whitespace changes"
