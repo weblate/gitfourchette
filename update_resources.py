@@ -40,6 +40,7 @@ WEBLATE_LANGUAGES = {
     "Czech": "cs",
     "French": "fr",
     "German": "de",
+    "Hungarian": "hu",
     "Italian": "it",
     "Korean": "ko",
     "Portuguese (Brazil)": "pt_BR",
