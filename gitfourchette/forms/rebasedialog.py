@@ -96,7 +96,7 @@ class RebaseDialog(QDialog):
             return
 
         def qmbFinished(result: int):
-            if result == QMessageBox.StandardButton.Close:
+            if result == QMessageBox.StandardButton.Discard:
                 self.setWindowModified(False)
                 self.reject()
 
@@ -104,9 +104,8 @@ class RebaseDialog(QDialog):
             self,
             "question",
             _p("RebaseDialog", "Rebase"),
-            _("Really close this rebase plan? It won’t be saved."),
-            QMessageBox.StandardButton.Close | QMessageBox.StandardButton.Cancel,
-        )
+            _("Really discard this rebase plan? It won’t be saved."),
+            QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel)
         qmb.finished.connect(qmbFinished)
         qmb.show()
 

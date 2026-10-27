@@ -101,8 +101,8 @@ def testCancelRebaseDialog(tempDir, mainWindow, withChanges):
 
     if withChanges:
         assert rebaseDialog.isVisible()
-        qmb = findQMessageBox(rebaseDialog, "really close")
-        findWidgetWithText(qmb.buttons(), "close").click()
+        qmb = findQMessageBox(rebaseDialog, "really discard this rebase plan")
+        findWidgetWithText(qmb.buttons(), "discard").click()
 
     assert rw.repo.state() == RepositoryState.NONE
 
@@ -537,8 +537,8 @@ def testRebaseSequenceViewQDrag(tempDir, mainWindow, monkeypatch):
     # modified rebase plan.
     if allowActualMove:
         assert rebaseDialog.ui.sequence.effectiveSequence()[0].displayMessage() == "On master again"
-        qmb = findQMessageBox(rebaseDialog, "really close this rebase plan")
-        findWidgetWithText(qmb.buttons(), "close").click()
+        qmb = findQMessageBox(rebaseDialog, "really discard this rebase plan")
+        findWidgetWithText(qmb.buttons(), "discard").click()
 
 
 def testRebaseRichTextMenu(tempDir, mainWindow, monkeypatch):
@@ -728,8 +728,8 @@ def testRebaseUndoRedo(tempDir, mainWindow):
     """).strip()
 
     rebaseDialog.reject()
-    qmb = findQMessageBox(rebaseDialog, "really close")
-    findWidgetWithText(qmb.buttons(), "close").click()
+    qmb = findQMessageBox(rebaseDialog, "really discard this rebase plan")
+    findWidgetWithText(qmb.buttons(), "discard").click()
 
 
 def testRebaseSequenceDelegatePaintCoverage(tempDir, mainWindow):
@@ -828,8 +828,8 @@ def testRebaseUndoRedoCommandCompression(tempDir, mainWindow):
     assert getHashes() == s2
 
     rebaseDialog.reject()
-    qmb = findQMessageBox(rebaseDialog, "really close")
-    findWidgetWithText(qmb.buttons(), "close").click()
+    qmb = findQMessageBox(rebaseDialog, "really discard this rebase plan")
+    findWidgetWithText(qmb.buttons(), "discard").click()
 
 
 def testRebaseCommitDialogInfoMessage(tempDir, mainWindow):
