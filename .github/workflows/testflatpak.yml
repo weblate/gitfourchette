@@ -6,11 +6,11 @@ on:
 jobs:
   test-flatpak:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Get Date
       id: get-date
