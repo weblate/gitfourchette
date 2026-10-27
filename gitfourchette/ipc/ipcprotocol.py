@@ -135,5 +135,10 @@ class GFIpcProtocol:
         return cls.simpleBlockingClient(args.socket, handshakeObj)
 
 
-if __name__ == '__main__':
+# Required for PyInstaller app bundle
+def main():
     GFIpcProtocol.clientMain()
+
+
+if __name__ == '__main__':
+    main()

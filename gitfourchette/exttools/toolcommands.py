@@ -362,6 +362,13 @@ class ToolCommands:
         """
         assert module.startswith("gitfourchette"), module
 
+        # In test mode, check that the module exports a main() function so that
+        # we can use it from a PyInstaller app bundle.
+        if APP_TESTMODE:
+            imported = importlib.import_module(module)
+            exported = getattr(imported, "__all__", dir(imported))
+            assert "main" in exported, f"{module} should export 'main' for PyInstaller compat!"
+
         # The new instance is supposed to be a child process, so it inherits
         # the current process's environment variables. We don't need to copy
         # them to 'env' explicitly. An exception to this is PYTHONPATH, which is
