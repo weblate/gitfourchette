@@ -31,7 +31,7 @@ def passphraseProtectedKey(tempDir):
 @requiresNetwork
 def testHttpsCloneRepo(tempDir, mainWindow, taskThread):
     triggerMenuAction(mainWindow.menuBar(), "file/clone")
-    cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
+    cloneDialog = waitForQDialog(mainWindow, "clone", t=CloneDialog)
     cloneDialog.ui.urlEdit.setEditText("  https://github.com/libgit2/TestGitRepository  ")  # whitespace should be stripped
     cloneDialog.ui.pathEdit.setText(tempDir.name + "/cloned")
     cloneDialog.cloneButton.click()
@@ -46,7 +46,7 @@ def testHttpsCloneRepo(tempDir, mainWindow, taskThread):
 @requiresNetwork
 def testSshCloneRepo(tempDir, mainWindow, taskThread, passphraseProtectedKey):
     triggerMenuAction(mainWindow.menuBar(), "file/clone")
-    cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
+    cloneDialog = waitForQDialog(mainWindow, "clone", t=CloneDialog)
     cloneDialog.ui.urlEdit.setEditText("https://github.com/libgit2/TestGitRepository")
     cloneDialog.ui.pathEdit.setText(tempDir.name + "/cloned")
 
@@ -83,7 +83,7 @@ def testSshCloneRepo(tempDir, mainWindow, taskThread, passphraseProtectedKey):
 @requiresNetwork
 def testSshCloneRepoCancelAskpass(tempDir, mainWindow, taskThread, passphraseProtectedKey):
     triggerMenuAction(mainWindow.menuBar(), "file/clone")
-    cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
+    cloneDialog = waitForQDialog(mainWindow, "clone", t=CloneDialog)
     cloneDialog.ui.urlEdit.setEditText("git@github.com:libgit2/TestGitRepository")
     cloneDialog.ui.pathEdit.setText(tempDir.name + "/cloned")
 
@@ -106,7 +106,7 @@ def testSshCloneRepoCancelAskpass(tempDir, mainWindow, taskThread, passphrasePro
 @requiresNetwork
 def testHttpsShallowClone(tempDir, mainWindow, taskThread):
     triggerMenuAction(mainWindow.menuBar(), "file/clone")
-    cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
+    cloneDialog = waitForQDialog(mainWindow, "clone", t=CloneDialog)
     cloneDialog.ui.urlEdit.setEditText("https://github.com/libgit2/TestGitRepository")
     cloneDialog.ui.pathEdit.setText(tempDir.name + "/cloned")
     cloneDialog.ui.shallowCloneCheckBox.setChecked(True)
@@ -136,7 +136,7 @@ def testHttpsAddRemoteAndFetch(tempDir, mainWindow, taskThread):
     assert "origin/master" not in rw.repo.branches.remote
 
     triggerMenuAction(mainWindow.menuBar(), "repo/add remote")
-    remoteDialog: RemoteDialog = findQDialog(rw, "add remote")
+    remoteDialog = waitForQDialog(rw, "add remote", t=RemoteDialog)
     remoteDialog.ui.urlEdit.setText("https://github.com/libgit2/TestGitRepository")
     remoteDialog.ui.nameEdit.setText("origin")
     remoteDialog.accept()
@@ -159,7 +159,7 @@ def testSshAddRemoteAndFetchWithPassphrase(tempDir, mainWindow, taskThread, pass
     # Set passphrase-protected keyfile
 
     triggerMenuAction(mainWindow.menuBar(), "repo/settings")
-    repoSettings = findQDialog(rw, "repo settings", RepoSettingsDialog)
+    repoSettings = waitForQDialog(rw, "repo settings", t=RepoSettingsDialog)
     repoSettings.ui.keyFilePicker.setPath(passphraseProtectedKey)
     repoSettings.accept()
 
@@ -167,7 +167,7 @@ def testSshAddRemoteAndFetchWithPassphrase(tempDir, mainWindow, taskThread, pass
     # Add remote
 
     triggerMenuAction(mainWindow.menuBar(), "repo/add remote")
-    remoteDialog = findQDialog(rw, "add remote", RemoteDialog)
+    remoteDialog = waitForQDialog(rw, "add remote", t=RemoteDialog)
     remoteDialog.ui.urlEdit.setText("ssh://git@github.com/pygit2/empty")
     remoteDialog.ui.nameEdit.setText("origin")
     assert remoteDialog.ui.fetchAfterAddCheckBox.isChecked()
