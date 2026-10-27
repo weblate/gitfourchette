@@ -9,6 +9,7 @@ from __future__ import annotations  # TODO: Remove once we can drop support for 
 from typing import Any
 
 from gitfourchette import settings
+from gitfourchette.localization import *
 from gitfourchette.qt import *
 from gitfourchette.rebase.rebasemodel import TRebaseSequence, RebaseLine, RebaseOp
 from gitfourchette.toolbox import QModelIndex_default
@@ -136,6 +137,9 @@ class RebaseSequenceModel(QAbstractListModel):
         if role == Qt.ItemDataRole.EditRole:
             # Message filling in QLineEdit
             return item.displayMessage()
+
+        if role == Qt.ItemDataRole.ToolTipRole and item.op == RebaseOp.FakeStart:
+                return _("The starting commit cannot be modified.")
 
         if role == RebaseSequenceModel.RebaseLineRole:
             return item

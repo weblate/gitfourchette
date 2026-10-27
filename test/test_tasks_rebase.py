@@ -972,6 +972,12 @@ def testRebaseHoverAndLeftClickPill(tempDir, mainWindow, qtbot):
 
     rect0 = qlvVisualRect(view, 0)  # "pick" first commit
     pillPos0 = rect0.topLeft() + QPoint(4, 4)
+    rect2 = qlvVisualRect(view, 2)  # "start" commit
+    pillPos2 = rect2.topLeft() + QPoint(4, 4)
+
+    # Start commit tooltip
+    tip = summonToolTip(viewport, pillPos2)
+    assert re.search(r"starting commit cannot be modified", tip, re.IGNORECASE)
 
     # Hover over the pill in the first row
     QTest.mouseMove(viewport, pos=pillPos0)
