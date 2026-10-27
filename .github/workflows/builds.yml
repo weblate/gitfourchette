@@ -6,7 +6,7 @@ on:
 
 env:
   PYVER: "3.14"
-  QT_API: "pyqt6"
+  QT_API: "PyQt6"
 
 jobs:
   appimage:
@@ -24,15 +24,47 @@ jobs:
         with: { python-version: "${{ env.PYVER }}" }
       - run: python -m pip install --upgrade pip setuptools wheel pygit2  # build dependencies
       - run: python -m pip install --upgrade git+https://github.com/niess/python-appimage@6807bbd
+      - run: sudo apt update
+      - run: mkdir qt_extrastuff
+      - name: Detect Qt runtime version (for install-qt-action)
+        run: |
+          pip install $QT_API
+          python -c "from $QT_API.QtCore import qVersion; print('QT_RUNTIME_VERSION='+qVersion())" >> $GITHUB_ENV
+      - name: Install Qt to build QAdwaitaDecorations
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{env.QT_RUNTIME_VERSION}}
+          dir: ${{ github.workspace }}/qt6
+          setup-python: false
+          cache: true
+      - name: Build QAdwaitaDecorations (for DEs like GNOME that expect client-side decorations)
+        run: |
+          echo QT_ROOT_DIR appears to be $QT_ROOT_DIR
+          sudo apt install libwayland-dev libvulkan-dev
+          git clone https://github.com/FedoraQt/QAdwaitaDecorations
+          cd QAdwaitaDecorations
+          git checkout 440d4b0
+          cmake -S . -B build -DUSE_QT6=ON -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
+          cmake --build build --parallel
+          cmake --install build --prefix "$GITHUB_WORKSPACE/qt_extrastuff"
+      - name: Build libxcb-cursor (AppImage catalog requirement)
+        run: |
+          sudo apt install autoconf xutils-dev libtool libxcb-render0-dev libxcb-render-util0-dev libxcb-image0-dev gperf
+          git clone --recursive https://gitlab.freedesktop.org/xorg/lib/libxcb-cursor.git
+          cd libxcb-cursor
+          git checkout --recurse-submodules ed42261d
+          ./autogen.sh --prefix=/ --disable-static
+          make
+          make DESTDIR="$GITHUB_WORKSPACE/qt_extrastuff" install
       - name: Build AppImage
         run: |
-          PYVER=$PYVER QT_API=$QT_API ./pkg/appimage/build-appimage.sh
+          PYVER=$PYVER QT_API=$QT_API QT_EXTRASTUFF="$GITHUB_WORKSPACE/qt_extrastuff" ./pkg/appimage/build-appimage.sh
           echo "ARTIFACT_NAME=$(cd build && ls GitFourchette*.AppImage)" >> $GITHUB_ENV
       - uses: actions/upload-artifact@v7
         with:
           path: build/GitFourchette*.AppImage
           name: ${{env.ARTIFACT_NAME}}
-          compression-level: 0
+          archive: false
 
   pyinstaller:
     strategy:
@@ -66,3 +98,4 @@ jobs:
         with:
           name: ${{env.ARTIFACT_NAME}}
           path: dist
+          archive: ${{ runner.os != 'macOS' }}  # pre-zipped on macOS

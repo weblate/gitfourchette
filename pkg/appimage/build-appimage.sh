@@ -1,10 +1,11 @@
- #!/usr/bin/env bash
+#!/usr/bin/env bash
 
 set -e
 set -x
 
-export QT_API=${QT_API:-pyqt6}
 export PYVER=${PYVER:-"3.14"}
+export QT_API=${QT_API:-PyQt6}
+export QT_API_LOWERCASE=${QT_API,,}
 
 HERE="$(dirname "$(readlink -f -- "$0")" )"
 ROOT="$(readlink -f -- "$HERE/../..")"
@@ -28,10 +29,21 @@ echo -e "$PINNED_REQUIREMENTS\n$ROOT[$QT_API,pygments,mfusepy]" > "$HERE/require
 # Use python_appimage to create AppImage contents directory
 python3 -m python_appimage --verbose build app --python-version $PYVER --no-packaging "$HERE"
 
-# Remove junk that we don't need
 pushd GitFourchette-$ARCH
-junklist=$(cat "$HERE/junklist.txt")
-rm -rfv $junklist
+    # Copy extra Qt libs
+    if [ ! -z "$QT_EXTRASTUFF" ]; then
+        echo "Copying extra Qt stuff from $QT_EXTRASTUFF"
+        QT_LIBS_DIR="opt/python$PYVER/lib/python$PYVER/site-packages/$QT_API/Qt6"
+        cp -rv "$QT_EXTRASTUFF"/* "$QT_LIBS_DIR"/
+        # Prevent Qt's built-in libadwaita.so from taking precedence over our libqadwaitadecorations.so
+        rm -v "$QT_LIBS_DIR/plugins/wayland-decoration-client/libadwaita.so"
+    else
+        echo "Won't copy any extra Qt stuff (QT_EXTRASTUFF not set)"
+    fi
+
+    # Remove junk that we don't need
+    junklist=$(cat "$HERE/junklist.txt")
+    rm -rfv $junklist
 popd
 
 # Package the AppImage ourselves
